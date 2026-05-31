@@ -1,0 +1,4857 @@
+// ═══════════════════════════════════════════════════════════════
+// Sukuu ERP — Prisma Schema
+// Generated from sukuu-erp-schema-v3
+// 265 models · 24 modules · sukuux schema · school_id on all business tables
+// ═══════════════════════════════════════════════════════════════
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["sukuux"]
+}
+
+// ── ENUMS ────────────────────────────────────────────────────
+
+enum AcademicStandingStanding {
+  DEANS_LIST
+  GOOD_STANDING
+  PROBATION
+  SUSPENDED
+  WARNING
+  @@schema("sukuux")
+}
+
+enum AccessLogAccessMethod {
+  ADMIN
+  API
+  PORTAL
+  QR_CODE
+  TOKEN
+  @@schema("sukuux")
+}
+
+enum AccountAccountType {
+  ASSET
+  EQUITY
+  EXPENSE
+  INCOME
+  LIABILITY
+  @@schema("sukuux")
+}
+
+enum ActionStatus {
+  COMPLETED
+  IN_PROGRESS
+  PENDING
+  @@schema("sukuux")
+}
+
+enum AddressAddressType {
+  HOSTEL
+  POSTAL
+  RESIDENTIAL
+  @@schema("sukuux")
+}
+
+enum AllowanceAllowanceType {
+  HOUSING
+  MEAL
+  MEDICAL
+  OTHER
+  PHONE
+  TRANSPORT
+  @@schema("sukuux")
+}
+
+enum ApplicantGender {
+  FEMALE
+  MALE
+  OTHER
+  @@schema("sukuux")
+}
+
+enum ApplicantStatus {
+  ENROLLED
+  INTERVIEWED
+  OFFERED
+  PENDING
+  REJECTED
+  UNDER_REVIEW
+  WITHDRAWN
+  @@schema("sukuux")
+}
+
+enum ApplicationReviewDecision {
+  HOLD
+  PROGRESS
+  REJECT
+  @@schema("sukuux")
+}
+
+enum ApplicationStageStatus {
+  FAILED
+  IN_PROGRESS
+  PASSED
+  PENDING
+  SKIPPED
+  @@schema("sukuux")
+}
+
+enum ApprovalApprovalLevel {
+  ADMIN
+  HOD
+  PRINCIPAL
+  @@schema("sukuux")
+}
+
+enum ApprovalDecision {
+  APPROVED
+  ESCALATED
+  REJECTED
+  @@schema("sukuux")
+}
+
+enum ApprovalStatus {
+  APPROVED
+  PENDING
+  REJECTED
+  @@schema("sukuux")
+}
+
+enum AssessmentAssessmentType {
+  CA
+  CLASS_TEST
+  END_OF_TERM
+  MID_TERM
+  PRACTICAL
+  PROJECT
+  @@schema("sukuux")
+}
+
+enum AssessmentStatus {
+  ACTIVE
+  CLOSED
+  DRAFT
+  PUBLISHED
+  @@schema("sukuux")
+}
+
+enum AssetStatus {
+  ACTIVE
+  DAMAGED
+  DISPOSED
+  LOST
+  @@schema("sukuux")
+}
+
+enum AttendancePolicyAttendanceMethod {
+  BIOMETRIC
+  MANUAL
+  QR_CODE
+  @@schema("sukuux")
+}
+
+enum AttendanceStatus {
+  ABSENT
+  HOLIDAY
+  LATE
+  ON_LEAVE
+  PRESENT
+  @@schema("sukuux")
+}
+
+enum BackupBackupType {
+  FULL
+  INCREMENTAL
+  SCHEMA
+  @@schema("sukuux")
+}
+
+enum BackupStatus {
+  COMPLETED
+  FAILED
+  PENDING
+  RUNNING
+  @@schema("sukuux")
+}
+
+enum BankDetailsAccountType {
+  CURRENT
+  SAVINGS
+  @@schema("sukuux")
+}
+
+enum BatchStatus {
+  CLOSED
+  COMPLETE
+  OPEN
+  PROCESSING
+  @@schema("sukuux")
+}
+
+enum BedStatus {
+  AVAILABLE
+  MAINTENANCE
+  OCCUPIED
+  RESERVED
+  @@schema("sukuux")
+}
+
+enum BehaviorProfileRecordType {
+  COMMENDATION
+  COUNSELLING
+  EXPULSION
+  SUSPENSION
+  WARNING
+  @@schema("sukuux")
+}
+
+enum BonusBonusType {
+  END_OF_YEAR
+  HOUSING
+  PERFORMANCE
+  SPECIAL
+  TRANSPORT
+  @@schema("sukuux")
+}
+
+enum BroadcastAudienceType {
+  ALL
+  CLASS
+  PARENTS_ONLY
+  STAFF_ONLY
+  STREAM
+  @@schema("sukuux")
+}
+
+enum BudgetStatus {
+  ACTIVE
+  APPROVED
+  CLOSED
+  DRAFT
+  @@schema("sukuux")
+}
+
+enum CalendarEventEventType {
+  ACTIVITY
+  CLOSURE
+  EXAM
+  HOLIDAY
+  TERM_END
+  TERM_START
+  @@schema("sukuux")
+}
+
+enum CalendarEventType {
+  ACTIVITY
+  EXAM
+  HOLIDAY
+  TERM_END
+  TERM_START
+  @@schema("sukuux")
+}
+
+enum ChannelChannel {
+  EMAIL
+  PUSH
+  SMS
+  @@schema("sukuux")
+}
+
+enum ComplianceStatus {
+  EXPIRED
+  NOT_APPLICABLE
+  PENDING
+  VALID
+  @@schema("sukuux")
+}
+
+enum ConflictConflictType {
+  ROOM_DOUBLE_BOOKED
+  STREAM_OVERLAP
+  TEACHER_DOUBLE_BOOKED
+  @@schema("sukuux")
+}
+
+enum ContactContactType {
+  EMAIL
+  PHONE
+  WHATSAPP
+  @@schema("sukuux")
+}
+
+enum ContractContractType {
+  FIXED_TERM
+  PART_TIME
+  PERMANENT
+  PROBATION
+  @@schema("sukuux")
+}
+
+enum ContractStatus {
+  ACTIVE
+  EXPIRED
+  RENEWED
+  TERMINATED
+  @@schema("sukuux")
+}
+
+enum ConversationConversationType {
+  BROADCAST
+  DIRECT
+  GROUP
+  SYSTEM
+  @@schema("sukuux")
+}
+
+enum CopyStatus {
+  AVAILABLE
+  BORROWED
+  DAMAGED
+  LOST
+  RESERVED
+  @@schema("sukuux")
+}
+
+enum DeductionDeductionType {
+  ABSENCE
+  INCOME_TAX
+  LOAN
+  OTHER
+  SSNIT
+  UNION_DUES
+  @@schema("sukuux")
+}
+
+enum DeliveryStatus {
+  DELIVERED
+  PENDING
+  READ
+  SENT
+  @@schema("sukuux")
+}
+
+enum DiscountApplicableTo {
+  FULL_INVOICE
+  SPECIFIC_COMPONENT
+  TUITION_ONLY
+  @@schema("sukuux")
+}
+
+enum DiscountDiscountType {
+  FLAT_AMOUNT
+  PERCENTAGE
+  @@schema("sukuux")
+}
+
+enum EmailLogStatus {
+  BOUNCED
+  DELIVERED
+  FAILED
+  OPENED
+  SENT
+  @@schema("sukuux")
+}
+
+enum EmploymentEmploymentType {
+  CONTRACT
+  PART_TIME
+  PERMANENT
+  VOLUNTEER
+  @@schema("sukuux")
+}
+
+enum EnrollmentEnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  TRANSFERRED
+  WITHDRAWN
+  @@schema("sukuux")
+}
+
+enum EntryType {
+  CREDIT
+  DEBIT
+  @@schema("sukuux")
+}
+
+enum ExamExamType {
+  END_OF_TERM
+  ENTRANCE
+  MID_TERM
+  MOCK
+  @@schema("sukuux")
+}
+
+enum ExamStatus {
+  COMPLETED
+  DRAFT
+  IN_PROGRESS
+  PUBLISHED
+  @@schema("sukuux")
+}
+
+enum ExitRecordExitType {
+  DEATH
+  REDUNDANCY
+  RESIGNATION
+  RETIREMENT
+  TERMINATION
+  @@schema("sukuux")
+}
+
+enum FineStatus {
+  PAID
+  PENDING
+  WAIVED
+  @@schema("sukuux")
+}
+
+enum GpaPolicyCalculationMethod {
+  CREDIT_HOUR
+  UNWEIGHTED
+  WEIGHTED
+  @@schema("sukuux")
+}
+
+enum GraduationRequirementRequirementType {
+  ATTENDANCE
+  CLEARANCE
+  MIN_CGPA
+  MIN_CREDITS
+  SUBJECT_PASS
+  @@schema("sukuux")
+}
+
+enum GraduationStatusStatus {
+  DEFERRED
+  ELIGIBLE
+  GRADUATED
+  INCOMPLETE
+  @@schema("sukuux")
+}
+
+enum GuardianRelationship {
+  FATHER
+  GRANDPARENT
+  GUARDIAN
+  MOTHER
+  OTHER
+  SIBLING
+  @@schema("sukuux")
+}
+
+enum HolidayHolidayType {
+  NATIONAL
+  PUBLIC
+  RELIGIOUS
+  SCHOOL
+  @@schema("sukuux")
+}
+
+enum HostelGender {
+  FEMALE
+  MALE
+  MIXED
+  @@schema("sukuux")
+}
+
+enum IdentityDocumentDocumentType {
+  BIRTH_CERT
+  GHANA_CARD
+  NHIS
+  PASSPORT
+  @@schema("sukuux")
+}
+
+enum InstanceStatus {
+  APPROVED
+  CANCELLED
+  IN_PROGRESS
+  PENDING
+  REJECTED
+  @@schema("sukuux")
+}
+
+enum InterviewRecommendation {
+  ADMIT
+  REJECT
+  WAITLIST
+  @@schema("sukuux")
+}
+
+enum InterviewStatus {
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  SCHEDULED
+  @@schema("sukuux")
+}
+
+enum InvigilatorRole {
+  ASSISTANT
+  CHIEF
+  SUPERVISOR
+  @@schema("sukuux")
+}
+
+enum InvoiceStatus {
+  CANCELLED
+  DRAFT
+  ISSUED
+  OVERDUE
+  PAID
+  PARTIAL
+  WAIVED
+  @@schema("sukuux")
+}
+
+enum IssueLogDeliveryMethod {
+  COURIER
+  DIGITAL
+  EMAIL
+  IN_PERSON
+  @@schema("sukuux")
+}
+
+enum JobQueueStatus {
+  COMPLETED
+  FAILED
+  PROCESSING
+  QUEUED
+  RETRYING
+  @@schema("sukuux")
+}
+
+enum JournalJournalType {
+  ADJUSTMENT
+  PAYMENT
+  PAYROLL
+  RECEIPT
+  REFUND
+  @@schema("sukuux")
+}
+
+enum LeaveApprovalDecision {
+  APPROVED
+  REJECTED
+  @@schema("sukuux")
+}
+
+enum LeaveBalanceLeaveType {
+  ANNUAL
+  OTHER
+  SICK
+  STUDY
+  @@schema("sukuux")
+}
+
+enum LeaveLeaveType {
+  ANNUAL
+  COMPASSIONATE
+  MATERNITY
+  PATERNITY
+  SICK
+  STUDY
+  @@schema("sukuux")
+}
+
+enum LeaveStatus {
+  APPROVED
+  CANCELLED
+  PENDING
+  REJECTED
+  @@schema("sukuux")
+}
+
+enum LogEventType {
+  ACCESS_DENIED
+  CREATE
+  DELETE
+  EXPORT
+  LOGIN
+  LOGOUT
+  UPDATE
+  @@schema("sukuux")
+}
+
+enum MasteryState {
+  ADVANCED
+  DEVELOPING
+  EMERGING
+  MASTERED
+  @@schema("sukuux")
+}
+
+enum MessageMessageType {
+  ATTACHMENT
+  SYSTEM
+  TEXT
+  @@schema("sukuux")
+}
+
+enum MfaMethod {
+  EMAIL
+  SMS
+  TOTP
+  @@schema("sukuux")
+}
+
+enum ModerationModerationType {
+  DEDUCTION
+  FLAT_ADDITION
+  INDIVIDUAL
+  SCALE_FACTOR
+  @@schema("sukuux")
+}
+
+enum ModerationStatus {
+  COMPLETE
+  IN_PROGRESS
+  PENDING
+  @@schema("sukuux")
+}
+
+enum OfferStatus {
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  PENDING
+  @@schema("sukuux")
+}
+
+enum ParticipantRole {
+  INITIATOR
+  OBSERVER
+  PARTICIPANT
+  @@schema("sukuux")
+}
+
+enum PaymentPaymentMethod {
+  BANK_TRANSFER
+  CARD
+  CASH
+  CHEQUE
+  MOMO
+  @@schema("sukuux")
+}
+
+enum PaymentStatus {
+  CONFIRMED
+  FAILED
+  PENDING
+  REVERSED
+  @@schema("sukuux")
+}
+
+enum PerformanceReviewOverallRating {
+  EXCELLENT
+  GOOD
+  NEEDS_IMPROVEMENT
+  SATISFACTORY
+  @@schema("sukuux")
+}
+
+enum PeriodPeriodType {
+  ASSEMBLY
+  BREAK
+  FREE
+  LESSON
+  @@schema("sukuux")
+}
+
+enum PeriodStatus {
+  CLOSED
+  OPEN
+  PROCESSING
+  @@schema("sukuux")
+}
+
+enum PersonType {
+  STAFF
+  STUDENT
+  @@schema("sukuux")
+}
+
+enum PurchaseOrderStatus {
+  APPROVED
+  CANCELLED
+  DRAFT
+  RECEIVED
+  SUBMITTED
+  @@schema("sukuux")
+}
+
+enum PushSubscriptionPlatform {
+  ANDROID
+  IOS
+  WEB
+  @@schema("sukuux")
+}
+
+enum QualificationQualificationType {
+  CERTIFICATE
+  DEGREE
+  DIPLOMA
+  PROFESSIONAL
+  @@schema("sukuux")
+}
+
+enum QueueStatus {
+  FAILED
+  PROCESSING
+  QUEUED
+  SENT
+  @@schema("sukuux")
+}
+
+enum QuizQuestionQuestionType {
+  MCQ
+  SHORT_ANSWER
+  TRUE_FALSE
+  @@schema("sukuux")
+}
+
+enum RefundRefundMethod {
+  BANK_TRANSFER
+  CASH
+  MOMO
+  @@schema("sukuux")
+}
+
+enum RefundStatus {
+  COMPLETED
+  FAILED
+  PENDING
+  @@schema("sukuux")
+}
+
+enum RequestStatus {
+  ISSUED
+  PENDING
+  PROCESSING
+  REJECTED
+  @@schema("sukuux")
+}
+
+enum RequirementRequirementType {
+  AGE
+  DOCUMENT
+  EXAM
+  QUALIFICATION
+  @@schema("sukuux")
+}
+
+enum ResourceResourceType {
+  FILE
+  IMAGE
+  LINK
+  VIDEO
+  @@schema("sukuux")
+}
+
+enum RevisionChangeType {
+  ADDITION
+  DELETION
+  PERIOD_CHANGE
+  ROOM_CHANGE
+  TEACHER_CHANGE
+  @@schema("sukuux")
+}
+
+enum RoleCategory {
+  ADMINISTRATIVE
+  MANAGEMENT
+  SUPPORT
+  TEACHING
+  @@schema("sukuux")
+}
+
+enum RoomRoomType {
+  CLASSROOM
+  GYM
+  HALL
+  LABORATORY
+  LIBRARY
+  @@schema("sukuux")
+}
+
+enum RunStatus {
+  APPROVED
+  DRAFT
+  PAID
+  PENDING_APPROVAL
+  PROCESSING
+  REVERSED
+  @@schema("sukuux")
+}
+
+enum ScholarshipCoverageType {
+  FULL
+  PARTIAL
+  @@schema("sukuux")
+}
+
+enum SchoolSchoolType {
+  BASIC
+  COMBINED
+  JHS
+  SHS
+  TERTIARY
+  @@schema("sukuux")
+}
+
+enum ScriptStatus {
+  MARKED
+  MODERATED
+  RETURNED
+  SUBMITTED
+  @@schema("sukuux")
+}
+
+enum SeverityLevel {
+  CRITICAL
+  HIGH
+  LOW
+  MEDIUM
+  @@schema("sukuux")
+}
+
+enum StaffEmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  SUSPENDED
+  TERMINATED
+  @@schema("sukuux")
+}
+
+enum StudentStatus {
+  ACTIVE
+  GRADUATED
+  SUSPENDED
+  TRANSFERRED
+  WITHDRAWN
+  @@schema("sukuux")
+}
+
+enum SubjectGroupGroupType {
+  COMBINATION
+  CORE_GROUP
+  ELECTIVE
+  @@schema("sukuux")
+}
+
+enum SubjectSubjectType {
+  CORE
+  ELECTIVE
+  EXTRA_CURRICULAR
+  @@schema("sukuux")
+}
+
+enum SubscriptionBillingCycle {
+  ANNUAL
+  MONTHLY
+  @@schema("sukuux")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  GRACE
+  SUSPENDED
+  @@schema("sukuux")
+}
+
+enum SubstitutionStatus {
+  CANCELLED
+  COVERED
+  FREE_PERIOD
+  @@schema("sukuux")
+}
+
+enum TemplateChannel {
+  EMAIL
+  IN_APP
+  PUSH
+  SMS
+  @@schema("sukuux")
+}
+
+enum TimezoneTimeFormat {
+  12H
+  24H
+  @@schema("sukuux")
+}
+
+enum TopicDeliveryDeliveryStatus {
+  DELIVERED
+  PARTIAL
+  PLANNED
+  SKIPPED
+  @@schema("sukuux")
+}
+
+enum TrainingTrainingType {
+  CONFERENCE
+  EXTERNAL
+  IN_HOUSE
+  ONLINE
+  @@schema("sukuux")
+}
+
+enum TransferTransferType {
+  TRANSFER_IN
+  TRANSFER_OUT
+  @@schema("sukuux")
+}
+
+enum TripLogTripType {
+  AFTERNOON
+  FIELD_TRIP
+  MORNING
+  OTHER
+  @@schema("sukuux")
+}
+
+enum VehicleStatus {
+  ACTIVE
+  MAINTENANCE
+  RETIRED
+  @@schema("sukuux")
+}
+
+enum VehicleVehicleType {
+  BUS
+  CAR
+  MINIBUS
+  VAN
+  @@schema("sukuux")
+}
+
+enum VerificationVerificationMethod {
+  API
+  MANUAL
+  QR_CODE
+  TOKEN
+  @@schema("sukuux")
+}
+
+enum WaitlistStatus {
+  EXPIRED
+  OFFERED
+  WAITING
+  WITHDRAWN
+  @@schema("sukuux")
+}
+
+
+// ── SYSTEMX ────────────────────────────────────────────────
+
+/// Global platform configuration key-value store
+model SystemSettings {
+  id                             String  @id @default(uuid())
+  key                            String
+  value                          String
+  description                    String?
+  is_public                      Boolean
+  updated_at                     DateTime  @updatedAt
+  updated_by                     String
+
+  @@schema("sukuux")
+  @@map("system_settings")
+}
+
+/// Immutable system event log — append-only audit trail
+model SystemLog {
+  id                             String  @id @default(uuid())
+  event_type                     LogEventType
+  entity_type                    String
+  entity_id                      String?
+  user_id                        String?
+  school_id                      String?
+  ip_address                     String?
+  payload                        String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_log")
+}
+
+/// Platform user identity — authentication anchor for all roles
+model SystemUser {
+  id                             String  @id @default(uuid())
+  email                          String
+  phone                          String?
+  password_hash                  String
+  is_active                      Boolean
+  is_verified                    Boolean
+  last_login_at                  DateTime?
+  failed_login_count             Int
+  locked_until                   DateTime?
+  must_reset_password            Boolean
+  created_at                     DateTime  @default(now())
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("system_user")
+}
+
+/// Named roles — defines available permission sets
+model SystemRole {
+  id                             String  @id @default(uuid())
+  name                           String
+  label                          String
+  description                    String?
+  is_system                      Boolean
+  school_id                      String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_role")
+}
+
+/// Granular permission definitions — atomic access units
+model SystemPermission {
+  id                             String  @id @default(uuid())
+  module                         String
+  action                         String
+  resource                       String
+  label                          String
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("system_permission")
+}
+
+/// Many-to-many join: roles ↔ permissions
+model SystemRolePermission {
+  id                             String  @id @default(uuid())
+  role_id                        String
+  permission_id                  String
+  granted_at                     DateTime
+  granted_by                     String?
+
+  @@schema("sukuux")
+  @@map("system_role_permission")
+}
+
+/// Many-to-many join: users ↔ roles, scoped to a school
+model SystemUserRole {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  role_id                        String
+  school_id                      String
+  assigned_at                    DateTime
+  assigned_by                    String?
+  expires_at                     DateTime?
+
+  @@schema("sukuux")
+  @@map("system_user_role")
+}
+
+/// Active user sessions — JWT session tracking
+model SystemSession {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  refresh_token_hash             String
+  ip_address                     String?
+  user_agent                     String?
+  device_id                      String?
+  is_active                      Boolean
+  created_at                     DateTime  @default(now())
+  expires_at                     DateTime
+  last_activity_at               DateTime
+  invalidated_at                 DateTime?
+
+  @@schema("sukuux")
+  @@map("system_session")
+}
+
+/// Trusted device registry for remember-me functionality
+model SystemDevice {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  device_fingerprint             String
+  device_name                    String?
+  device_type                    String?
+  is_trusted                     Boolean
+  first_seen_at                  DateTime
+  last_seen_at                   DateTime
+
+  @@schema("sukuux")
+  @@map("system_device")
+}
+
+/// API key management for programmatic access
+model SystemApiKey {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  key_hash                       String
+  label                          String
+  scopes                         String
+  is_active                      Boolean
+  created_by                     String
+  created_at                     DateTime  @default(now())
+  expires_at                     DateTime?
+  last_used_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("system_api_key")
+}
+
+/// Historical login attempt log for security auditing
+model SystemLoginHistory {
+  id                             String  @id @default(uuid())
+  user_id                        String?
+  email_attempted                String
+  success                        Boolean
+  failure_reason                 String?
+  ip_address                     String?
+  attempted_at                   DateTime
+
+  @@schema("sukuux")
+  @@map("system_login_history")
+}
+
+/// Previous password hashes — prevents password reuse
+model SystemPasswordHistory {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  password_hash                  String
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_password_history")
+}
+
+/// Multi-factor authentication configuration per user
+model SystemMfa {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  method                         MfaMethod
+  secret                         String?
+  is_enabled                     Boolean
+  backup_codes                   String
+  verified_at                    DateTime?
+
+  @@schema("sukuux")
+  @@map("system_mfa")
+}
+
+/// Feature toggles — enable/disable platform features per school
+model SystemFeatureFlag {
+  id                             String  @id @default(uuid())
+  flag_key                       String
+  is_enabled                     Boolean
+  school_id                      String?
+  description                    String?
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("system_feature_flag")
+}
+
+/// Backup job records and status tracking
+model SystemBackup {
+  id                             String  @id @default(uuid())
+  school_id                      String?
+  backup_type                    BackupBackupType
+  status                         BackupStatus
+  file_size_bytes                BigInt?
+  initiated_by                   String?
+  started_at                     DateTime?
+  completed_at                   DateTime?
+  error_message                  String?
+
+  @@schema("sukuux")
+  @@map("system_backup")
+}
+
+/// Background job tracking via BullMQ — persisted job records
+model SystemJobQueue {
+  id                             String  @id @default(uuid())
+  job_type                       String
+  payload                        String
+  status                         JobQueueStatus
+  school_id                      String?
+  triggered_by                   String?
+  attempts                       Int
+  max_attempts                   Int
+  queued_at                      DateTime
+  started_at                     DateTime?
+  completed_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("system_job_queue")
+}
+
+/// Outbound webhook configuration for third-party integrations
+model SystemWebhook {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  url                            String
+  secret                         String
+  events                         String
+  is_active                      Boolean
+  created_by                     String
+  last_triggered_at              DateTime?
+
+  @@schema("sukuux")
+  @@map("system_webhook")
+}
+
+/// Structured audit event store — detailed change tracking
+model SystemAuditEvent {
+  id                             String  @id @default(uuid())
+  user_id                        String?
+  school_id                      String?
+  action                         String
+  entity_type                    String
+  entity_id                      String?
+  before_state                   String?
+  after_state                    String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_audit_event")
+}
+
+/// Per-user notification channel preferences
+model SystemNotificationPreference {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  event_type                     String
+  in_app                         Boolean
+  sms                            Boolean
+  email                          Boolean
+  push                           Boolean
+
+  @@schema("sukuux")
+  @@map("system_notification_preference")
+}
+
+/// School subscription record — billing tier and status
+model SystemSubscription {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  plan_id                        String
+  status                         SubscriptionStatus
+  billing_cycle                  SubscriptionBillingCycle
+  paystack_subscription_code     String?
+  current_period_start           DateTime
+  current_period_end             DateTime
+  grace_period_end               DateTime?
+  cancelled_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("system_subscription")
+}
+
+/// Available subscription plan definitions
+model SystemTenantPlan {
+  id                             String  @id @default(uuid())
+  name                           String
+  max_students                   Int?
+  max_staff                      Int?
+  max_campuses                   Int
+  monthly_price_ghs              Decimal
+  annual_price_ghs               Decimal
+  sms_quota                      Int
+  features                       String
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("system_tenant_plan")
+}
+
+
+// ── SCHOOLX ────────────────────────────────────────────────
+
+/// Master school record — the root tenant entity
+model SchoolSchool {
+  id                             String  @id @default(uuid())
+  name                           String
+  code                           String
+  school_type                    SchoolSchoolType
+  registration_number            String?
+  address                        String
+  city                           String
+  region                         String
+  country                        String
+  phone                          String?
+  email                          String?
+  website                        String?
+  logo_url                       String?
+  is_active                      Boolean
+  created_at                     DateTime  @default(now())
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("school_school")
+}
+
+/// Individual campuses within a multi-campus school
+model SchoolCampus {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  code                           String
+  address                        String?
+  phone                          String?
+  is_primary                     Boolean
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("school_campus")
+}
+
+/// School departments — links academic and staff structures
+model SchoolDepartment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  code                           String
+  head_id                        String?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("school_department")
+}
+
+/// Visual identity assets — colours, crest, report headers
+model SchoolBranding {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  primary_color                  String?
+  secondary_color                String?
+  motto                          String?
+  crest_url                      String?
+  banner_url                     String?
+  report_header_url              String?
+  signature_url                  String?
+
+  @@schema("sukuux")
+  @@map("school_branding")
+}
+
+/// Multiple contact records — phones, emails, social media
+model SchoolContact {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  contact_type                   ContactContactType
+  value                          String
+  label                          String?
+  is_primary                     Boolean
+
+  @@schema("sukuux")
+  @@map("school_contact")
+}
+
+/// School-level operational settings — overrides platform defaults
+model SchoolSettings {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  key                            String
+  value                          String
+  updated_at                     DateTime  @updatedAt
+  updated_by                     String?
+
+  @@schema("sukuux")
+  @@map("school_settings")
+}
+
+/// School-side billing view — mirrors system_subscription
+model SchoolSubscription {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  plan_name                      String
+  status                         SubscriptionStatus
+  next_billing_date              DateTime
+  amount_ghs                     Decimal
+
+  @@schema("sukuux")
+  @@map("school_subscription")
+}
+
+/// Term structure and duration rules per school
+model SchoolTermPolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  terms_per_year                 Int
+  term_names                     String
+  min_weeks_per_term             Int?
+
+  @@schema("sukuux")
+  @@map("school_term_policy")
+}
+
+/// School-level grading framework — GES scale or custom
+model SchoolGradingPolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  policy_name                    String
+  pass_mark                      Decimal
+  ca_weight                      Decimal
+  exam_weight                    Decimal
+  uses_gpa                       Boolean
+  gpa_scale                      Decimal
+
+  @@schema("sukuux")
+  @@map("school_grading_policy")
+}
+
+/// Academic calendar events — terms, holidays, exams
+model SchoolCalendar {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  academic_year_id               String
+  event_name                     String
+  event_type                     CalendarEventType
+  start_date                     String
+  end_date                       String
+  is_blackout                    Boolean
+
+  @@schema("sukuux")
+  @@map("school_calendar")
+}
+
+/// Public and school-specific holiday definitions
+model SchoolHoliday {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  date                           String
+  is_recurring                   Boolean
+  holiday_type                   HolidayHolidayType
+
+  @@schema("sukuux")
+  @@map("school_holiday")
+}
+
+/// Extended configuration — JSON-flexible grouped parameters
+model SchoolConfiguration {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  config_group                   String
+  config_data                    String
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("school_configuration")
+}
+
+/// Onboarding progress tracker — setup checklist per school
+model SchoolOnboarding {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  step                           String
+  is_complete                    Boolean
+  completed_at                   DateTime?
+  completed_by                   String?
+
+  @@schema("sukuux")
+  @@map("school_onboarding")
+}
+
+/// Institutional documents — licences, certificates
+model SchoolDocument {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  document_type                  String
+  file_url                       String
+  issue_date                     String?
+  expiry_date                    String?
+  uploaded_by                    String
+  uploaded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("school_document")
+}
+
+/// Fee collection rules — advance limits, late penalties
+model SchoolFeePolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  max_advance_terms              Int
+  late_payment_penalty_pct       Decimal?
+  grace_days                     Int
+  allow_partial_payment          Boolean
+
+  @@schema("sukuux")
+  @@map("school_fee_policy")
+}
+
+/// Attendance rules and minimum thresholds
+model SchoolAttendancePolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  min_attendance_pct             Decimal
+  attendance_method              AttendancePolicyAttendanceMethod
+  notify_parent_after_absences   Int
+
+  @@schema("sukuux")
+  @@map("school_attendance_policy")
+}
+
+/// Currency and locale — Pan-African expansion support
+model SchoolCurrency {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  currency_code                  String
+  currency_symbol                String
+  decimal_places                 Int
+  locale                         String
+
+  @@schema("sukuux")
+  @@map("school_currency")
+}
+
+/// Timezone and date format preferences
+model SchoolTimezone {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  timezone                       String
+  date_format                    String
+  time_format                    TimezoneTimeFormat
+
+  @@schema("sukuux")
+  @@map("school_timezone")
+}
+
+
+// ── ACADEMICX ──────────────────────────────────────────────
+
+/// Academic year definition — top-level time unit
+model AcademicsAcademicYear {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  start_date                     String
+  end_date                       String
+  is_active                      Boolean
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("academics_academic_year")
+}
+
+/// Terms within an academic year
+model AcademicsTerm {
+  id                             String  @id @default(uuid())
+  academic_year_id               String
+  school_id                      String
+  name                           String
+  term_order                     Int
+  start_date                     String
+  end_date                       String
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("academics_term")
+}
+
+/// Class level definitions — primary student grouping
+model AcademicsClass {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  code                           String
+  level_order                    Int
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("academics_class")
+}
+
+/// Parallel streams within a class — Arts, Science, Stream A/B
+model AcademicsStream {
+  id                             String  @id @default(uuid())
+  class_id                       String
+  school_id                      String
+  name                           String
+  code                           String
+  capacity                       Int?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("academics_stream")
+}
+
+/// School subject catalogue — all taught subjects
+model AcademicsSubject {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  department_id                  String?
+  name                           String
+  code                           String
+  subject_type                   SubjectSubjectType
+  credit_hours                   Int?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("academics_subject")
+}
+
+/// Academic department — mirrors school_department for AcaX linkage
+model AcademicsDepartment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  code                           String
+  head_id                        String?
+
+  @@schema("sukuux")
+  @@map("academics_department")
+}
+
+/// Teacher-to-subject formal assignment records
+model AcademicsSubjectAssignment {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  subject_id                     String
+  school_id                      String
+  academic_year_id               String
+  assigned_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("academics_subject_assignment")
+}
+
+/// Subjects offered at each class level
+model AcademicsClassSubject {
+  id                             String  @id @default(uuid())
+  class_id                       String
+  subject_id                     String
+  school_id                      String
+  is_compulsory                  Boolean
+
+  @@schema("sukuux")
+  @@map("academics_class_subject")
+}
+
+/// Subject-to-stream assignments — streams can differ in subject sets
+model AcademicsStreamSubject {
+  id                             String  @id @default(uuid())
+  stream_id                      String
+  subject_id                     String
+  school_id                      String
+  is_compulsory                  Boolean
+
+  @@schema("sukuux")
+  @@map("academics_stream_subject")
+}
+
+/// Subject groupings — elective groups and core combinations
+model AcademicsSubjectGroup {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  group_type                     SubjectGroupGroupType
+  max_selections                 Int?
+  min_selections                 Int?
+
+  @@schema("sukuux")
+  @@map("academics_subject_group")
+}
+
+/// Curriculum definitions — GES or custom syllabi per subject/class/term
+model AcademicsCurriculum {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  subject_id                     String
+  class_id                       String
+  term_id                        String
+  title                          String
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("academics_curriculum")
+}
+
+/// Topics within a curriculum — the teaching units
+model AcademicsCurriculumTopic {
+  id                             String  @id @default(uuid())
+  curriculum_id                  String
+  title                          String
+  topic_order                    Int
+  week_start                     Int?
+  week_end                       Int?
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("academics_curriculum_topic")
+}
+
+/// Learning objectives per curriculum topic
+model AcademicsCurriculumObjective {
+  id                             String  @id @default(uuid())
+  topic_id                       String
+  objective                      String
+  objective_order                Int
+
+  @@schema("sukuux")
+  @@map("academics_curriculum_objective")
+}
+
+/// Measurable learning outcomes — competency framework layer
+model AcademicsLearningOutcome {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  subject_id                     String
+  class_id                       String
+  outcome                        String
+  strand                         String?
+
+  @@schema("sukuux")
+  @@map("academics_learning_outcome")
+}
+
+/// End-of-year promotion criteria per class transition
+model AcademicsPromotionRule {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  from_class_id                  String
+  to_class_id                    String
+  min_gpa                        Decimal?
+  min_attendance_pct             Decimal?
+  max_failed_subjects            Int?
+  requires_manual_approval       Boolean
+
+  @@schema("sukuux")
+  @@map("academics_promotion_rule")
+}
+
+/// Homeroom / form teacher assignments per class-stream
+model AcademicsClassTeacherAssignment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  class_id                       String
+  stream_id                      String?
+  staff_id                       String
+  academic_year_id               String
+  assigned_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("academics_class_teacher_assignment")
+}
+
+
+// ── ADMISSIONX ─────────────────────────────────────────────
+
+/// Core applicant record — pre-enrolment identity
+model AdmissionApplicant {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  admission_batch_id             String?
+  first_name                     String
+  last_name                      String
+  gender                         ApplicantGender
+  date_of_birth                  String
+  nationality                    String
+  applying_for_class_id          String
+  guardian_name                  String
+  guardian_phone                 String
+  status                         ApplicantStatus
+  applied_date                   DateTime
+
+  @@schema("sukuux")
+  @@map("admission_applicant")
+}
+
+/// Interview scheduling and scoring
+model AdmissionInterview {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  interviewer_id                 String
+  scheduled_date                 DateTime
+  score                          Decimal?
+  max_score                      Decimal
+  remarks                        String?
+  recommendation                 InterviewRecommendation?
+  status                         InterviewStatus
+
+  @@schema("sukuux")
+  @@map("admission_interview")
+}
+
+/// Formal offer of admission issued to applicant
+model AdmissionOffer {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  school_id                      String
+  class_id                       String
+  stream_id                      String?
+  academic_year_id               String
+  status                         OfferStatus
+  issued_date                    DateTime
+  expiry_date                    DateTime?
+  accepted_date                  DateTime?
+
+  @@schema("sukuux")
+  @@map("admission_offer")
+}
+
+/// Staged workflow — each stage in the admissions pipeline
+model AdmissionApplicationStage {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  stage_name                     String
+  stage_order                    Int
+  status                         ApplicationStageStatus
+  notes                          String?
+  completed_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("admission_application_stage")
+}
+
+/// Documents submitted with an application
+model AdmissionApplicationDocument {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  document_type                  String
+  file_url                       String
+  is_verified                    Boolean
+  verified_by                    String?
+  uploaded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("admission_application_document")
+}
+
+/// Review notes and decisions by admissions staff
+model AdmissionApplicationReview {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  reviewed_by                    String
+  review_date                    DateTime
+  decision                       ApplicationReviewDecision
+  notes                          String?
+
+  @@schema("sukuux")
+  @@map("admission_application_review")
+}
+
+/// Full status change audit trail per application
+model AdmissionStatusHistory {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  from_status                    String
+  to_status                      String
+  changed_by                     String?
+  change_reason                  String?
+  changed_at                     DateTime
+
+  @@schema("sukuux")
+  @@map("admission_status_history")
+}
+
+/// Final admissions decision with justification
+model AdmissionDecision {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  decision                       InterviewRecommendation
+  decided_by                     String
+  decision_date                  DateTime
+  notes                          String?
+  aggregate_score                Decimal?
+
+  @@schema("sukuux")
+  @@map("admission_decision")
+}
+
+/// Admissions cohort batches — organises applications by intake
+model AdmissionBatch {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  academic_year_id               String
+  name                           String
+  open_date                      String
+  close_date                     String
+  target_enrolment               Int?
+  status                         BatchStatus
+
+  @@schema("sukuux")
+  @@map("admission_batch")
+}
+
+/// Waitlisted applicants — managed queue for vacancy allocation
+model AdmissionWaitlist {
+  id                             String  @id @default(uuid())
+  applicant_id                   String
+  school_id                      String
+  class_id                       String
+  position                       Int
+  added_at                       DateTime
+  status                         WaitlistStatus
+
+  @@schema("sukuux")
+  @@map("admission_waitlist")
+}
+
+/// Document and criteria requirements per batch
+model AdmissionRequirement {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  batch_id                       String?
+  requirement_type               RequirementRequirementType
+  description                    String
+  is_mandatory                   Boolean
+
+  @@schema("sukuux")
+  @@map("admission_requirement")
+}
+
+
+// ── STUDENTX ───────────────────────────────────────────────
+
+/// Core student identity record
+model StudentsStudent {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  first_name                     String
+  middle_name                    String?
+  last_name                      String
+  gender                         ApplicantGender
+  date_of_birth                  String
+  nationality                    String
+  photo_url                      String?
+  status                         StudentStatus
+  admission_date                 String
+  created_at                     DateTime  @default(now())
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("students_student")
+}
+
+/// Guardian and parent records linked to students
+model StudentsGuardian {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  school_id                      String
+  full_name                      String
+  relationship                   GuardianRelationship
+  phone                          String
+  email                          String?
+  occupation                     String?
+  is_primary                     Boolean
+  is_financial_responsible       Boolean
+  has_portal_access              Boolean
+  custody_notes                  String?
+  user_id                        String?
+
+  @@schema("sukuux")
+  @@map("students_guardian")
+}
+
+/// Term-by-term enrolment — tracks class and stream per period
+model StudentsEnrollment {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  school_id                      String
+  academic_year_id               String
+  class_id                       String
+  stream_id                      String?
+  admission_date                 String
+  enrollment_status              EnrollmentEnrollmentStatus
+  roll_number                    String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("students_enrollment")
+}
+
+/// Student medical profile — health information for school use
+model StudentsMedical {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  blood_group                    String?
+  allergies                      String?
+  chronic_conditions             String?
+  current_medications            String?
+  emergency_contact_name         String
+  emergency_contact_phone        String
+  emergency_contact_relationship String
+  notes                          String?
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("students_medical")
+}
+
+/// Student document library — uploaded supporting records
+model StudentsDocument {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  document_type                  String
+  file_url                       String
+  upload_date                    DateTime
+  uploaded_by                    String
+
+  @@schema("sukuux")
+  @@map("students_document")
+}
+
+/// Student status change audit trail
+model StudentsStatusHistory {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  from_status                    String
+  to_status                      String
+  reason                         String?
+  changed_by                     String
+  changed_at                     DateTime
+
+  @@schema("sukuux")
+  @@map("students_status_history")
+}
+
+/// Transfer records — in and out transfers
+model StudentsTransfer {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  transfer_type                  TransferTransferType
+  from_school                    String?
+  to_school                      String?
+  transfer_date                  String
+  reason                         String?
+  transfer_letter_url            String?
+
+  @@schema("sukuux")
+  @@map("students_transfer")
+}
+
+/// Graduation records — formal completion of studies
+model StudentsGraduation {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  school_id                      String
+  graduation_date                String
+  final_class_id                 String
+  final_gpa                      Decimal?
+  honours                        String?
+  certificate_url                String?
+
+  @@schema("sukuux")
+  @@map("students_graduation")
+}
+
+/// Student residential and postal address records
+model StudentsAddress {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  address_type                   AddressAddressType
+  street                         String?
+  city                           String
+  region                         String
+  digital_address                String?
+  is_primary                     Boolean
+
+  @@schema("sukuux")
+  @@map("students_address")
+}
+
+/// Additional student contact records beyond guardians
+model StudentsContact {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  contact_type                   ContactContactType
+  value                          String
+  label                          String?
+
+  @@schema("sukuux")
+  @@map("students_contact")
+}
+
+/// National identity documents for student verification
+model StudentsIdentityDocument {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  document_type                  IdentityDocumentDocumentType
+  document_number                String
+  issue_date                     String?
+  expiry_date                    String?
+  verified                       Boolean
+
+  @@schema("sukuux")
+  @@map("students_identity_document")
+}
+
+/// Health incidents and sick bay records during school hours
+model StudentsHealthIncident {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  school_id                      String
+  incident_date                  DateTime
+  description                    String
+  action_taken                   String?
+  parent_notified                Boolean
+  recorded_by                    String
+
+  @@schema("sukuux")
+  @@map("students_health_incident")
+}
+
+/// Behaviour records — commendations and disciplinary events
+model StudentsBehaviorProfile {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  record_type                    BehaviorProfileRecordType
+  description                    String
+  action_taken                   String?
+  recorded_by                    String
+  incident_date                  String
+  parent_notified                Boolean
+
+  @@schema("sukuux")
+  @@map("students_behavior_profile")
+}
+
+/// Aggregated attendance statistics per student per term
+model StudentsAttendanceSummary {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  term_id                        String
+  total_school_days              Int
+  days_present                   Int
+  days_absent                    Int
+  days_late                      Int
+  attendance_pct                 Decimal
+
+  @@schema("sukuux")
+  @@map("students_attendance_summary")
+}
+
+/// Student fee assignment — links student to fee structures
+model StudentsFeeProfile {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  fee_structure_id               String
+  scholarship_id                 String?
+  discount_id                    String?
+  notes                          String?
+  assigned_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("students_fee_profile")
+}
+
+/// Student portal access configuration
+model StudentsPortalAccess {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  user_id                        String
+  is_enabled                     Boolean
+  enabled_at                     DateTime?
+  last_access_at                 DateTime?
+
+  @@schema("sukuux")
+  @@map("students_portal_access")
+}
+
+/// Staff notes and observations — internal only
+model StudentsNotes {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  note                           String
+  category                       String?
+  is_confidential                Boolean
+  created_by                     String
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("students_notes")
+}
+
+/// Categorisation tags for students — custom labels
+model StudentsTag {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  tag                            String
+  tagged_by                      String
+  tagged_at                      DateTime
+
+  @@schema("sukuux")
+  @@map("students_tag")
+}
+
+/// Scholarship awards linked to students
+model StudentsScholarship {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  scholarship_name               String
+  sponsor                        String?
+  coverage_type                  ScholarshipCoverageType
+  coverage_pct                   Decimal?
+  start_date                     String
+  end_date                       String?
+
+  @@schema("sukuux")
+  @@map("students_scholarship")
+}
+
+/// Student house assignment for house-system schools
+model StudentsHouse {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  house_name                     String
+  assigned_at                    DateTime
+  is_current                     Boolean
+
+  @@schema("sukuux")
+  @@map("students_house")
+}
+
+/// School transport and route assignments
+model StudentsTransportAssignment {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  route_name                     String
+  pickup_point                   String
+  dropoff_point                  String?
+  is_active                      Boolean
+  assigned_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("students_transport_assignment")
+}
+
+
+// ── STAFFX ─────────────────────────────────────────────────
+
+/// Core staff identity record
+model StaffStaff {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  staff_id                       String
+  user_id                        String
+  first_name                     String
+  last_name                      String
+  gender                         ApplicantGender
+  date_of_birth                  String
+  phone                          String
+  email                          String
+  address                        String?
+  photo_url                      String?
+  ssnit_id                       String?
+  tax_identification_number      String?
+  employment_status              StaffEmploymentStatus
+  created_at                     DateTime  @default(now())
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("staff_staff")
+}
+
+/// Employment history and current position
+model StaffEmployment {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  school_id                      String
+  role_id                        String
+  department_id                  String?
+  employment_type                EmploymentEmploymentType
+  start_date                     String
+  end_date                       String?
+  is_current                     Boolean
+
+  @@schema("sukuux")
+  @@map("staff_employment")
+}
+
+/// Staff role definitions — job titles and categories
+model StaffRole {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  category                       RoleCategory
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("staff_role")
+}
+
+/// Leave applications and approval records
+model StaffLeave {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  leave_type                     LeaveLeaveType
+  start_date                     String
+  end_date                       String
+  days_requested                 Int
+  reason                         String?
+  status                         LeaveStatus
+
+  @@schema("sukuux")
+  @@map("staff_leave")
+}
+
+/// Daily staff attendance records
+model StaffAttendance {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  date                           String
+  status                         AttendanceStatus
+  check_in                       DateTime?
+  check_out                      DateTime?
+  notes                          String?
+
+  @@schema("sukuux")
+  @@map("staff_attendance")
+}
+
+/// Bank account details for payroll processing
+model StaffBankDetails {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  bank_name                      String
+  account_number                 String
+  account_name                   String
+  account_type                   BankDetailsAccountType
+  mobile_money_number            String?
+  is_primary                     Boolean
+
+  @@schema("sukuux")
+  @@map("staff_bank_details")
+}
+
+/// Emergency contacts for staff members
+model StaffEmergencyContact {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  name                           String
+  relationship                   String
+  phone                          String
+  address                        String?
+
+  @@schema("sukuux")
+  @@map("staff_emergency_contact")
+}
+
+/// Academic and professional qualifications
+model StaffQualification {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  qualification_type             QualificationQualificationType
+  title                          String
+  institution                    String
+  year_obtained                  Int
+  is_verified                    Boolean
+
+  @@schema("sukuux")
+  @@map("staff_qualification")
+}
+
+/// Compliance tracking — licences, CPD, safeguarding
+model StaffCompliance {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  compliance_type                String
+  status                         ComplianceStatus
+  issue_date                     String?
+  expiry_date                    String?
+  document_url                   String?
+
+  @@schema("sukuux")
+  @@map("staff_compliance")
+}
+
+/// Formal subject-to-staff assignment
+model StaffSubjectAssignment {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  subject_id                     String
+  school_id                      String
+  academic_year_id               String
+  assigned_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("staff_subject_assignment")
+}
+
+/// Staff-to-department assignment records
+model StaffDepartmentAssignment {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  department_id                  String
+  role_in_department             String?
+  assigned_at                    DateTime
+  is_current                     Boolean
+
+  @@schema("sukuux")
+  @@map("staff_department_assignment")
+}
+
+/// Employment contract records and terms
+model StaffContract {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  contract_type                  ContractContractType
+  start_date                     String
+  end_date                       String?
+  salary_agreed                  Decimal
+  probation_end_date             String?
+  status                         ContractStatus
+
+  @@schema("sukuux")
+  @@map("staff_contract")
+}
+
+/// Disciplinary proceedings and outcomes
+model StaffDisciplinaryRecord {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  incident_date                  String
+  incident_type                  String
+  description                    String
+  action_taken                   String
+  recorded_by                    String
+  recorded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("staff_disciplinary_record")
+}
+
+/// Annual and periodic performance reviews
+model StaffPerformanceReview {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  reviewer_id                    String
+  review_period                  String
+  overall_rating                 PerformanceReviewOverallRating
+  comments                       String?
+  review_date                    String
+  staff_acknowledged             Boolean
+
+  @@schema("sukuux")
+  @@map("staff_performance_review")
+}
+
+/// Training and professional development records
+model StaffTraining {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  training_name                  String
+  provider                       String?
+  training_type                  TrainingTrainingType
+  start_date                     String
+  end_date                       String
+  cost                           Decimal?
+
+  @@schema("sukuux")
+  @@map("staff_training")
+}
+
+/// Leave balance tracking per type per year
+model StaffLeaveBalance {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  leave_type                     LeaveBalanceLeaveType
+  year                           Int
+  entitlement_days               Int
+  used_days                      Int
+  remaining_days                 Int
+
+  @@schema("sukuux")
+  @@map("staff_leave_balance")
+}
+
+/// Leave approval workflow records
+model StaffLeaveApproval {
+  id                             String  @id @default(uuid())
+  leave_id                       String
+  approved_by                    String
+  decision                       LeaveApprovalDecision
+  decision_date                  DateTime
+  comments                       String?
+
+  @@schema("sukuux")
+  @@map("staff_leave_approval")
+}
+
+/// Staff departure — resignation, termination, retirement
+model StaffExitRecord {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  exit_type                      ExitRecordExitType
+  exit_date                      String
+  notice_given                   Boolean
+  reason                         String?
+  clearance_complete             Boolean
+
+  @@schema("sukuux")
+  @@map("staff_exit_record")
+}
+
+
+// ── SCHEDULEX ──────────────────────────────────────────────
+
+/// Room and venue inventory
+model ScheduleRoom {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  campus_id                      String?
+  room_code                      String
+  name                           String
+  room_type                      RoomRoomType
+  capacity                       Int
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("schedule_room")
+}
+
+/// Period definitions — daily time slots
+model SchedulePeriod {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  period_order                   Int
+  name                           String
+  period_type                    PeriodPeriodType
+  start_time                     String
+  end_time                       String
+
+  @@schema("sukuux")
+  @@map("schedule_period")
+}
+
+/// School day definitions
+model ScheduleDay {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  day_order                      Int
+  name                           String
+  is_school_day                  Boolean
+
+  @@schema("sukuux")
+  @@map("schedule_day")
+}
+
+/// Master timetable entries — the core schedule matrix
+model ScheduleTimetable {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  academic_year_id               String
+  term_id                        String
+  class_id                       String
+  stream_id                      String?
+  subject_id                     String
+  teacher_id                     String
+  room_id                        String
+  day_id                         String
+  period_id                      String
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("schedule_timetable")
+}
+
+/// Teacher-centric schedule view
+model ScheduleTeacherSchedule {
+  id                             String  @id @default(uuid())
+  teacher_id                     String
+  timetable_id                   String
+  day_id                         String
+  period_id                      String
+  class_id                       String
+  subject_id                     String
+
+  @@schema("sukuux")
+  @@map("schedule_teacher_schedule")
+}
+
+/// Room occupancy — conflict prevention layer
+model ScheduleRoomSchedule {
+  id                             String  @id @default(uuid())
+  room_id                        String
+  timetable_id                   String
+  day_id                         String
+  period_id                      String
+  class_id                       String
+
+  @@schema("sukuux")
+  @@map("schedule_room_schedule")
+}
+
+/// School calendar events — terms, exams, activities, blackouts
+model ScheduleCalendarEvent {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  event_type                     CalendarEventEventType
+  name                           String
+  start_date                     String
+  end_date                       String
+  is_blackout                    Boolean
+  visible_to_parents             Boolean
+
+  @@schema("sukuux")
+  @@map("schedule_calendar_event")
+}
+
+/// Timetable lock — prevents editing after term start
+model ScheduleLock {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  academic_year_id               String
+  term_id                        String
+  locked_by                      String
+  locked_at                      DateTime
+  unlock_reason                  String?
+  unlocked_by                    String?
+
+  @@schema("sukuux")
+  @@map("schedule_lock")
+}
+
+/// Detected schedule conflicts log
+model ScheduleConflict {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  conflict_type                  ConflictConflictType
+  timetable_entry_1              String
+  timetable_entry_2              String
+  detected_at                    DateTime
+  resolved                       Boolean
+
+  @@schema("sukuux")
+  @@map("schedule_conflict")
+}
+
+/// Teacher substitution — covers absences and exceptions
+model ScheduleSubstitution {
+  id                             String  @id @default(uuid())
+  timetable_id                   String
+  original_teacher_id            String
+  substitute_teacher_id          String?
+  date                           String
+  reason                         String?
+  status                         SubstitutionStatus
+
+  @@schema("sukuux")
+  @@map("schedule_substitution")
+}
+
+/// Reusable timetable templates for new terms
+model ScheduleTemplate {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  created_from_term_id           String?
+  created_by                     String
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("schedule_template")
+}
+
+/// Timetable change history — version tracking
+model ScheduleRevision {
+  id                             String  @id @default(uuid())
+  timetable_id                   String
+  change_type                    RevisionChangeType
+  before_state                   String
+  after_state                    String
+  changed_by                     String
+  changed_at                     DateTime
+  change_reason                  String?
+
+  @@schema("sukuux")
+  @@map("schedule_revision")
+}
+
+/// Examination timetable slots — separate from regular timetable
+model ScheduleExamSlot {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  term_id                        String
+  class_id                       String
+  subject_id                     String
+  room_id                        String
+  invigilator_id                 String?
+  exam_date                      String
+  start_time                     String
+  duration_minutes               Int
+
+  @@schema("sukuux")
+  @@map("schedule_exam_slot")
+}
+
+
+// ── GRADINGX ───────────────────────────────────────────────
+
+/// Assessment definitions — exams, tests, CA
+model GradingAssessment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  subject_id                     String
+  class_id                       String
+  stream_id                      String?
+  term_id                        String
+  name                           String
+  assessment_type                AssessmentAssessmentType
+  max_score                      Decimal
+  weightage                      Decimal
+  assessment_date                String?
+  status                         AssessmentStatus
+
+  @@schema("sukuux")
+  @@map("grading_assessment")
+}
+
+/// Individual student scores per assessment
+model GradingScore {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  assessment_id                  String
+  score                          Decimal?
+  is_absent                      Boolean
+  is_excused                     Boolean
+  remarks                        String?
+  entered_by                     String
+  entered_at                     DateTime
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("grading_score")
+}
+
+/// Grade scale definitions — GES A1-F9, letter grades, custom
+model GradingScale {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  scale_name                     String
+  min_score                      Decimal
+  max_score                      Decimal
+  grade                          String
+  grade_point                    Decimal?
+  description                    String?
+  is_passing                     Boolean
+
+  @@schema("sukuux")
+  @@map("grading_scale")
+}
+
+/// Computed term results per student — aggregated from scores
+model GradingResult {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  term_id                        String
+  total_score                    Decimal?
+  gpa                            Decimal?
+  cgpa                           Decimal?
+  position                       Int?
+  stream_position                Int?
+  remarks                        String?
+  is_published                   Boolean
+  published_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("grading_result")
+}
+
+/// CA component breakdown — individual components within a grade
+model GradingComponent {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  subject_id                     String
+  term_id                        String
+  class_id                       String
+  component_name                 String
+  weight_pct                     Decimal
+
+  @@schema("sukuux")
+  @@map("grading_component")
+}
+
+/// Grading computation rules per class and term
+model GradingPolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  class_id                       String
+  term_id                        String
+  ca_weight_pct                  Decimal
+  exam_weight_pct                Decimal
+  pass_mark                      Decimal
+  grading_scale_id               String
+
+  @@schema("sukuux")
+  @@map("grading_policy")
+}
+
+/// Teacher subject remarks per student per term
+model GradingRemark {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  subject_id                     String
+  term_id                        String
+  teacher_id                     String
+  remark                         String
+  class_teacher_remark           String?
+
+  @@schema("sukuux")
+  @@map("grading_remark")
+}
+
+/// Result approval workflow — sign-off before publication
+model GradingApproval {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  term_id                        String
+  class_id                       String
+  approver_id                    String
+  approval_level                 ApprovalApprovalLevel
+  status                         ApprovalStatus
+  approved_at                    DateTime?
+
+  @@schema("sukuux")
+  @@map("grading_approval")
+}
+
+/// Result publication records — visibility timestamps
+model GradingPublication {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  term_id                        String
+  class_id                       String
+  published_by                   String
+  published_at                   DateTime
+  visible_to_students            Boolean
+  visible_to_parents             Boolean
+
+  @@schema("sukuux")
+  @@map("grading_publication")
+}
+
+/// Class and stream position rankings per term
+model GradingRank {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  term_id                        String
+  class_rank                     Int
+  stream_rank                    Int?
+  class_size                     Int
+  aggregate_score                Decimal
+
+  @@schema("sukuux")
+  @@map("grading_rank")
+}
+
+/// Score moderation — adjustments applied to raw scores
+model GradingModeration {
+  id                             String  @id @default(uuid())
+  assessment_id                  String
+  moderated_by                   String
+  moderation_type                ModerationModerationType
+  moderation_value               Decimal
+  reason                         String
+  applied_at                     DateTime
+
+  @@schema("sukuux")
+  @@map("grading_moderation")
+}
+
+/// Result lock — prevents post-publication editing
+model GradingLock {
+  id                             String  @id @default(uuid())
+  term_id                        String
+  class_id                       String
+  locked_by                      String
+  locked_at                      DateTime
+
+  @@schema("sukuux")
+  @@map("grading_lock")
+}
+
+/// Score change history — audit trail for all modifications
+model GradingHistory {
+  id                             String  @id @default(uuid())
+  score_id                       String
+  previous_score                 Decimal?
+  new_score                      Decimal?
+  changed_by                     String
+  change_reason                  String?
+  changed_at                     DateTime
+
+  @@schema("sukuux")
+  @@map("grading_history")
+}
+
+
+// ── TRANSCRIPTX ────────────────────────────────────────────
+
+/// Master transcript record per student per period
+model TranscriptRecord {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  school_id                      String
+  term_id                        String
+  gpa                            Decimal
+  cgpa                           Decimal
+  is_locked                      Boolean
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("transcript_record")
+}
+
+/// Subject-level course results within a transcript
+model TranscriptCourseRecord {
+  id                             String  @id @default(uuid())
+  transcript_record_id           String
+  subject_id                     String
+  score                          Decimal
+  grade                          String
+  grade_point                    Decimal
+  credit_hours                   Int
+  remarks                        String?
+
+  @@schema("sukuux")
+  @@map("transcript_course_record")
+}
+
+/// GPA summary per student per term
+model TranscriptGpaSummary {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  term_id                        String
+  term_gpa                       Decimal
+  cumulative_gpa                 Decimal
+  total_credits_attempted        Int
+  total_credits_earned           Int
+
+  @@schema("sukuux")
+  @@map("transcript_gpa_summary")
+}
+
+/// Formal graduation status per student
+model TranscriptGraduationStatus {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  status                         GraduationStatusStatus
+  graduation_date                String?
+  final_cgpa                     Decimal?
+  honours                        String?
+  awarded_by                     String?
+
+  @@schema("sukuux")
+  @@map("transcript_graduation_status")
+}
+
+/// Student transcript request records
+model TranscriptRequest {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  school_id                      String
+  request_date                   DateTime
+  purpose                        String?
+  recipient_institution          String?
+  copies_requested               Int
+  status                         RequestStatus
+  fee_paid                       Boolean
+
+  @@schema("sukuux")
+  @@map("transcript_request")
+}
+
+/// Record of each transcript copy issued
+model TranscriptIssueLog {
+  id                             String  @id @default(uuid())
+  request_id                     String
+  issued_by                      String
+  issued_date                    DateTime
+  delivery_method                IssueLogDeliveryMethod
+  recipient_name                 String?
+  tracking_reference             String?
+
+  @@schema("sukuux")
+  @@map("transcript_issue_log")
+}
+
+/// Third-party transcript verification records
+model TranscriptVerification {
+  id                             String  @id @default(uuid())
+  transcript_id                  String
+  verification_method            VerificationVerificationMethod
+  verifying_institution          String?
+  verified_by                    String?
+  verified_at                    DateTime
+  is_authentic                   Boolean
+
+  @@schema("sukuux")
+  @@map("transcript_verification")
+}
+
+/// Transcript layout and formatting templates
+model TranscriptTemplate {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  layout_config                  String
+  is_default                     Boolean
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("transcript_template")
+}
+
+/// Grade scale used in transcript computation
+model TranscriptGradeScale {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  min_score                      Decimal
+  max_score                      Decimal
+  grade                          String
+  grade_point                    Decimal
+
+  @@schema("sukuux")
+  @@map("transcript_grade_scale")
+}
+
+/// Academic standing designations per term
+model TranscriptAcademicStanding {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  term_id                        String
+  standing                       AcademicStandingStanding
+  remarks                        String?
+  recorded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("transcript_academic_standing")
+}
+
+/// Transfer credits from prior institutions
+model TranscriptTransferCredit {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  from_institution               String
+  subject_name                   String
+  equivalent_subject_id          String?
+  credit_hours                   Int
+  grade_obtained                 String
+  approved_by                    String
+
+  @@schema("sukuux")
+  @@map("transcript_transfer_credit")
+}
+
+/// Transcript record lock — prevents post-issue modification
+model TranscriptLock {
+  id                             String  @id @default(uuid())
+  transcript_id                  String
+  locked_by                      String
+  locked_at                      DateTime
+  reason                         String?
+
+  @@schema("sukuux")
+  @@map("transcript_lock")
+}
+
+/// Digital signature records on issued transcripts
+model TranscriptSignature {
+  id                             String  @id @default(uuid())
+  transcript_id                  String
+  signer_name                    String
+  signer_position                String
+  signature_url                  String?
+  signed_at                      DateTime
+
+  @@schema("sukuux")
+  @@map("transcript_signature")
+}
+
+/// Version history — full snapshots of transcript records
+model TranscriptVersion {
+  id                             String  @id @default(uuid())
+  transcript_id                  String
+  version_number                 Int
+  snapshot                       String
+  created_by                     String
+  created_at                     DateTime  @default(now())
+  change_notes                   String?
+
+  @@schema("sukuux")
+  @@map("transcript_version")
+}
+
+/// GPA computation methodology definitions
+model TranscriptGpaPolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  calculation_method             GpaPolicyCalculationMethod
+  scale_max                      Decimal
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("transcript_gpa_policy")
+}
+
+/// Graduation requirements per class level
+model TranscriptGraduationRequirement {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  class_id                       String
+  requirement_type               GraduationRequirementRequirementType
+  description                    String
+  threshold_value                Decimal?
+
+  @@schema("sukuux")
+  @@map("transcript_graduation_requirement")
+}
+
+/// Log of every access to a transcript record
+model TranscriptAccessLog {
+  id                             String  @id @default(uuid())
+  transcript_id                  String
+  accessed_by                    String?
+  access_method                  AccessLogAccessMethod
+  ip_address                     String?
+  accessed_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("transcript_access_log")
+}
+
+
+// ── FINANCEX ───────────────────────────────────────────────
+
+/// Chart of accounts — financial account ledger
+model FinanceAccount {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  account_code                   String
+  account_type                   AccountAccountType
+  parent_account_id              String?
+  current_balance                Decimal
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("finance_account")
+}
+
+/// Financial transaction log — all money movements
+model FinanceTransaction {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  account_id                     String
+  transaction_type               EntryType
+  amount                         Decimal
+  description                    String
+  transaction_date               String
+  created_by                     String
+
+  @@schema("sukuux")
+  @@map("finance_transaction")
+}
+
+/// Student fee invoices per term
+model FinanceInvoice {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  enrollment_id                  String
+  term_id                        String
+  invoice_number                 String
+  total_amount                   Decimal
+  amount_paid                    Decimal
+  balance_due                    Decimal
+  due_date                       String
+  status                         InvoiceStatus
+
+  @@schema("sukuux")
+  @@map("finance_invoice")
+}
+
+/// Payment records against invoices
+model FinancePayment {
+  id                             String  @id @default(uuid())
+  invoice_id                     String
+  school_id                      String
+  amount                         Decimal
+  payment_method                 PaymentPaymentMethod
+  paystack_reference             String?
+  paid_date                      DateTime
+  received_by                    String?
+  status                         PaymentStatus
+
+  @@schema("sukuux")
+  @@map("finance_payment")
+}
+
+/// Departmental and school-level budget allocations
+model FinanceBudget {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  department_id                  String?
+  financial_year_id              String
+  budget_name                    String
+  budgeted_amount                Decimal
+  spent_amount                   Decimal
+  remaining_amount               Decimal
+  status                         BudgetStatus
+
+  @@schema("sukuux")
+  @@map("finance_budget")
+}
+
+/// Fee structures per class and term — the billing template
+model FinanceFeeStructure {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  class_id                       String
+  term_id                        String
+  total_amount                   Decimal
+  due_date                       String
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("finance_fee_structure")
+}
+
+/// Individual fee line items within a structure
+model FinanceFeeComponent {
+  id                             String  @id @default(uuid())
+  fee_structure_id               String
+  name                           String
+  amount                         Decimal
+  is_compulsory                  Boolean
+  account_id                     String?
+
+  @@schema("sukuux")
+  @@map("finance_fee_component")
+}
+
+/// Links students to fee structures — handles variations
+model FinanceFeeAssignment {
+  id                             String  @id @default(uuid())
+  student_id                     String
+  fee_structure_id               String
+  override_amount                Decimal?
+  assignment_reason              String?
+  assigned_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("finance_fee_assignment")
+}
+
+/// Line items within a student invoice
+model FinanceInvoiceItem {
+  id                             String  @id @default(uuid())
+  invoice_id                     String
+  fee_component_id               String?
+  description                    String
+  amount                         Decimal
+  is_adjustment                  Boolean
+
+  @@schema("sukuux")
+  @@map("finance_invoice_item")
+}
+
+/// Payment receipts issued to students/guardians
+model FinanceReceipt {
+  id                             String  @id @default(uuid())
+  payment_id                     String
+  receipt_number                 String
+  issued_to                      String
+  issued_at                      DateTime
+  pdf_url                        String?
+
+  @@schema("sukuux")
+  @@map("finance_receipt")
+}
+
+/// Payment refund records
+model FinanceRefund {
+  id                             String  @id @default(uuid())
+  payment_id                     String
+  amount                         Decimal
+  reason                         String
+  refund_method                  RefundRefundMethod
+  processed_by                   String
+  processed_at                   DateTime
+  status                         RefundStatus
+
+  @@schema("sukuux")
+  @@map("finance_refund")
+}
+
+/// Discount definitions — sibling, staff child, early payment
+model FinanceDiscount {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  discount_type                  DiscountDiscountType
+  value                          Decimal
+  applicable_to                  DiscountApplicableTo
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("finance_discount")
+}
+
+/// School-managed scholarship definitions
+model FinanceScholarship {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  sponsor                        String?
+  coverage_type                  ScholarshipCoverageType
+  coverage_pct                   Decimal?
+  max_beneficiaries              Int?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("finance_scholarship")
+}
+
+/// Double-entry ledger entries — accounting core
+model FinanceLedgerEntry {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  journal_id                     String
+  account_id                     String
+  entry_type                     EntryType
+  amount                         Decimal
+  description                    String
+
+  @@schema("sukuux")
+  @@map("finance_ledger_entry")
+}
+
+/// Journal batches grouping related ledger entries
+model FinanceJournal {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  journal_type                   JournalJournalType
+  reference                      String
+  description                    String
+  journal_date                   String
+  created_by                     String
+  is_posted                      Boolean
+
+  @@schema("sukuux")
+  @@map("finance_journal")
+}
+
+/// School expense records — non-payroll expenditures
+model FinanceExpense {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  account_id                     String
+  budget_id                      String?
+  description                    String
+  amount                         Decimal
+  expense_date                   String
+  receipt_url                    String?
+  approved_by                    String?
+
+  @@schema("sukuux")
+  @@map("finance_expense")
+}
+
+/// Bank statement reconciliation records
+model FinanceBankReconciliation {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  account_id                     String
+  period_start                   String
+  period_end                     String
+  statement_balance              Decimal
+  book_balance                   Decimal
+  difference                     Decimal
+  is_reconciled                  Boolean
+  reconciled_by                  String?
+
+  @@schema("sukuux")
+  @@map("finance_bank_reconciliation")
+}
+
+/// Financial year definitions for budgeting and reporting
+model FinanceFinancialYear {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  start_date                     String
+  end_date                       String
+  is_active                      Boolean
+  is_closed                      Boolean
+
+  @@schema("sukuux")
+  @@map("finance_financial_year")
+}
+
+/// Financial audit trail — all finance module write operations
+model FinanceAudit {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  action                         String
+  entity_type                    String
+  entity_id                      String
+  performed_by                   String
+  performed_at                   DateTime
+  notes                          String?
+
+  @@schema("sukuux")
+  @@map("finance_audit")
+}
+
+
+// ── PAYROLLX ───────────────────────────────────────────────
+
+/// Base salary configuration per staff member
+model PayrollSalary {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  school_id                      String
+  base_salary                    Decimal
+  effective_from                 String
+  effective_to                   String?
+  is_current                     Boolean
+  approved_by                    String?
+
+  @@schema("sukuux")
+  @@map("payroll_salary")
+}
+
+/// Monthly payroll run execution records
+model PayrollRun {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  period_id                      String
+  status                         RunStatus
+  total_gross                    Decimal
+  total_deductions               Decimal
+  total_net                      Decimal
+  staff_count                    Int
+  run_by                         String
+  approved_by                    String?
+  run_at                         DateTime
+
+  @@schema("sukuux")
+  @@map("payroll_run")
+}
+
+/// Individual payslips per staff per run
+model PayrollPayslip {
+  id                             String  @id @default(uuid())
+  payroll_run_id                 String
+  staff_id                       String
+  gross_salary                   Decimal
+  total_allowances               Decimal
+  total_deductions               Decimal
+  net_salary                     Decimal
+  ssnit_employee                 Decimal
+  ssnit_employer                 Decimal
+  income_tax                     Decimal
+  pdf_url                        String?
+  is_paid                        Boolean
+  paid_at                        DateTime?
+
+  @@schema("sukuux")
+  @@map("payroll_payslip")
+}
+
+/// Recurring and one-off deductions
+model PayrollDeduction {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  deduction_type                 DeductionDeductionType
+  label                          String
+  amount                         Decimal?
+  percentage                     Decimal?
+  is_recurring                   Boolean
+  effective_from                 String
+  effective_to                   String?
+
+  @@schema("sukuux")
+  @@map("payroll_deduction")
+}
+
+/// Bonus payments awarded to staff
+model PayrollBonus {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  amount                         Decimal
+  bonus_type                     BonusBonusType
+  reason                         String?
+  date_awarded                   String
+  included_in_run_id             String?
+  approved_by                    String
+
+  @@schema("sukuux")
+  @@map("payroll_bonus")
+}
+
+/// Historical payroll records per staff member
+model PayrollHistory {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  payslip_id                     String
+  month                          Int
+  year                           Int
+  gross_salary                   Decimal
+  net_salary                     Decimal
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("payroll_history")
+}
+
+/// Ghana PAYE income tax band definitions
+model PayrollTaxRule {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  effective_year                 Int
+  band_label                     String
+  income_from                    Decimal
+  income_to                      Decimal?
+  rate_pct                       Decimal
+
+  @@schema("sukuux")
+  @@map("payroll_tax_rule")
+}
+
+/// SSNIT contribution rate configuration
+model PayrollSsnitRule {
+  id                             String  @id @default(uuid())
+  effective_from                 String
+  employee_rate_pct              Decimal
+  employer_rate_pct              Decimal
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("payroll_ssnit_rule")
+}
+
+/// Recurring allowances added to gross salary
+model PayrollAllowance {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  allowance_type                 AllowanceAllowanceType
+  label                          String
+  amount                         Decimal
+  is_taxable                     Boolean
+  effective_from                 String
+  effective_to                   String?
+
+  @@schema("sukuux")
+  @@map("payroll_allowance")
+}
+
+/// Pay period definitions — monthly cycles
+model PayrollPeriod {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  month                          Int
+  year                           Int
+  start_date                     String
+  end_date                       String
+  status                         PeriodStatus
+  closed_at                      DateTime?
+
+  @@schema("sukuux")
+  @@map("payroll_period")
+}
+
+
+// ── NOTIFICATIONX ──────────────────────────────────────────
+
+/// Individual notification records per user
+model NotificationNotification {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  school_id                      String
+  event_type                     String
+  title                          String
+  body                           String
+  entity_type                    String?
+  entity_id                      String?
+  is_read                        Boolean
+  read_at                        DateTime?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("notification_notification")
+}
+
+/// Reusable message templates per event type and channel
+model NotificationTemplate {
+  id                             String  @id @default(uuid())
+  school_id                      String?
+  event_type                     String
+  channel                        TemplateChannel
+  subject                        String?
+  body_template                  String
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("notification_template")
+}
+
+/// Delivery records per notification per channel
+model NotificationDelivery {
+  id                             String  @id @default(uuid())
+  notification_id                String
+  channel                        TemplateChannel
+  status                         DeliveryStatus
+  provider_reference             String?
+  attempted_at                   DateTime
+  delivered_at                   DateTime?
+  error_message                  String?
+
+  @@schema("sukuux")
+  @@map("notification_delivery")
+}
+
+/// Available notification channel configurations per school
+model NotificationChannel {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  channel                        ChannelChannel
+  is_enabled                     Boolean
+  config                         String?
+
+  @@schema("sukuux")
+  @@map("notification_channel")
+}
+
+/// Per-user notification preferences per event type
+model NotificationPreference {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  event_type                     String
+  in_app                         Boolean
+  sms                            Boolean
+  email                          Boolean
+  push                           Boolean
+
+  @@schema("sukuux")
+  @@map("notification_preference")
+}
+
+/// Outbound notification queue — pending delivery jobs
+model NotificationQueue {
+  id                             String  @id @default(uuid())
+  notification_id                String
+  channel                        String
+  recipient_address              String
+  payload                        String
+  scheduled_at                   DateTime
+  status                         QueueStatus
+  priority                       Int
+
+  @@schema("sukuux")
+  @@map("notification_queue")
+}
+
+/// Retry records for failed deliveries
+model NotificationRetry {
+  id                             String  @id @default(uuid())
+  delivery_id                    String
+  attempt_number                 Int
+  attempted_at                   DateTime
+  error_message                  String?
+  next_retry_at                  DateTime?
+
+  @@schema("sukuux")
+  @@map("notification_retry")
+}
+
+/// Device push notification tokens
+model NotificationPushSubscription {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  device_token                   String
+  platform                       PushSubscriptionPlatform
+  is_active                      Boolean
+  subscribed_at                  DateTime
+
+  @@schema("sukuux")
+  @@map("notification_push_subscription")
+}
+
+/// SMS delivery log with Twilio tracking
+model NotificationSmsLog {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  recipient_phone                String
+  message_body                   String
+  twilio_sid                     String?
+  twilio_status                  String?
+  segments                       Int?
+  sent_at                        DateTime
+
+  @@schema("sukuux")
+  @@map("notification_sms_log")
+}
+
+/// Email delivery log with Resend tracking
+model NotificationEmailLog {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  recipient_email                String
+  subject                        String
+  resend_id                      String?
+  status                         EmailLogStatus
+  sent_at                        DateTime
+  opened_at                      DateTime?
+
+  @@schema("sukuux")
+  @@map("notification_email_log")
+}
+
+
+// ── COMMUNICATIONX ─────────────────────────────────────────
+
+/// Individual messages — core message unit
+model CommunicationMessage {
+  id                             String  @id @default(uuid())
+  conversation_id                String
+  school_id                      String
+  sender_id                      String
+  message_type                   MessageMessageType
+  content                        String
+  is_edited                      Boolean
+  edited_at                      DateTime?
+  is_deleted                     Boolean
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("communication_message")
+}
+
+/// Conversation threads grouping related messages
+model CommunicationConversation {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  subject                        String?
+  conversation_type              ConversationConversationType
+  created_by                     String
+  last_message_at                DateTime?
+  is_archived                    Boolean
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("communication_conversation")
+}
+
+/// File attachments on messages
+model CommunicationAttachment {
+  id                             String  @id @default(uuid())
+  message_id                     String
+  file_name                      String
+  file_url                       String
+  file_type                      String
+  file_size_bytes                Int
+  uploaded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("communication_attachment")
+}
+
+/// Per-user message read receipts
+model CommunicationRead {
+  id                             String  @id @default(uuid())
+  message_id                     String
+  user_id                        String
+  read_at                        DateTime
+
+  @@schema("sukuux")
+  @@map("communication_read")
+}
+
+/// Conversation participants — who is in each thread
+model CommunicationParticipant {
+  id                             String  @id @default(uuid())
+  conversation_id                String
+  user_id                        String
+  role                           ParticipantRole
+  joined_at                      DateTime
+  is_active                      Boolean
+  muted                          Boolean
+
+  @@schema("sukuux")
+  @@map("communication_participant")
+}
+
+/// School-wide or class-level broadcast messages
+model CommunicationBroadcast {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  title                          String
+  body                           String
+  audience_type                  BroadcastAudienceType
+  class_id                       String?
+  sent_by                        String
+  sent_at                        DateTime
+  delivery_count                 Int
+
+  @@schema("sukuux")
+  @@map("communication_broadcast")
+}
+
+/// Broadcast delivery status per recipient
+model CommunicationDelivery {
+  id                             String  @id @default(uuid())
+  broadcast_id                   String
+  recipient_id                   String
+  status                         DeliveryStatus
+  delivered_at                   DateTime?
+  read_at                        DateTime?
+
+  @@schema("sukuux")
+  @@map("communication_delivery")
+}
+
+
+// ── ATTENDANCEX ────────────────────────────────────────────
+
+/// Class session — class + subject + teacher + period.
+model AttendanceSession {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  academic_year_id               String
+  term_id                        String
+  class_id                       String
+  stream_id                      String?
+  subject_id                     String
+  teacher_id                     String
+  day_id                         String
+  period_id                      String
+  session_date                   String
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("attendance_session")
+}
+
+/// Student attendance per session.
+model AttendanceStudent {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  session_id                     String
+  student_id                     String
+  status                         String
+  recorded_at                    DateTime
+  recorded_by                    String
+
+  @@schema("sukuux")
+  @@map("attendance_student")
+}
+
+/// Staff daily attendance. Canonical — replaces StaffX.staff_attendance.
+model AttendanceStaff {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  staff_id                       String
+  attendance_date                String
+  check_in                       DateTime?
+  check_out                      DateTime?
+  status                         String
+  recorded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("attendance_staff")
+}
+
+/// Biometric/RFID/face/mobile devices.
+model AttendanceDevice {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  device_name                    String
+  device_type                    String
+  location                       String
+  ip_address                     String?
+  is_active                      Boolean
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("attendance_device")
+}
+
+/// Raw device capture — all types. school_id denormalised for direct-query RLS.
+model AttendanceEvent {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  device_id                      String
+  person_type                    String
+  person_id                      String
+  event_time                     DateTime
+  event_type                     String
+
+  @@schema("sukuux")
+  @@map("attendance_event")
+}
+
+/// Corrections and overrides.
+model AttendanceException {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  session_id                     String
+  exception_type                 String
+  approved_by                    String
+  notes                          String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("attendance_exception")
+}
+
+/// Aggregated metrics. Canonical — replaces StudentX.students_attendance_summary.
+model AttendanceSummary {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  academic_year_id               String
+  term_id                        String
+  total_sessions                 Int
+  present_count                  Int
+  absent_count                   Int
+  late_count                     Int
+  attendance_percentage          Decimal
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("attendance_summary")
+}
+
+/// Attendance rules. Canonical — replaces SchoolX.school_attendance_policy.
+model AttendancePolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  policy_name                    String
+  minimum_attendance_percentage  Decimal
+  late_threshold_minutes         Int
+  auto_absent_threshold          Int
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("attendance_policy")
+}
+
+
+// ── EXAMX ──────────────────────────────────────────────────
+
+/// Exam definition.
+model ExamExam {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  exam_type                      ExamExamType
+  term_id                        String
+  start_date                     String
+  end_date                       String
+  status                         ExamStatus
+
+  @@schema("sukuux")
+  @@map("exam_exam")
+}
+
+/// Subject papers within an exam.
+model ExamSubjectPaper {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  exam_id                        String
+  subject_id                     String
+  paper_code                     String
+  duration_minutes               Int
+  total_marks                    Decimal
+
+  @@schema("sukuux")
+  @@map("exam_subject_paper")
+}
+
+/// Paper scheduling.
+model ExamSchedule {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  paper_id                       String
+  class_id                       String
+  date                           String
+  start_time                     String
+  end_time                       String
+  room_id                        String
+
+  @@schema("sukuux")
+  @@map("exam_schedule")
+}
+
+/// Examination venues.
+model ExamRoom {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  capacity                       Int
+  location                       String?
+
+  @@schema("sukuux")
+  @@map("exam_room")
+}
+
+/// Seat assignments.
+model ExamSeatingPlan {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  schedule_id                    String
+  student_id                     String
+  seat_number                    String
+  row_position                   Int
+  column_position                Int
+
+  @@schema("sukuux")
+  @@map("exam_seating_plan")
+}
+
+/// Invigilator assignments.
+model ExamInvigilator {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  schedule_id                    String
+  staff_id                       String
+  role                           InvigilatorRole
+
+  @@schema("sukuux")
+  @@map("exam_invigilator")
+}
+
+/// Answer scripts. Physical evidence — links to grading_score for marks.
+model ExamScript {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  paper_id                       String
+  script_code                    String
+  status                         ScriptStatus
+
+  @@schema("sukuux")
+  @@map("exam_script")
+}
+
+/// Score moderation per paper.
+model ExamModeration {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  paper_id                       String
+  moderator_id                   String
+  status                         ModerationStatus
+  remarks                        String?
+
+  @@schema("sukuux")
+  @@map("exam_moderation")
+}
+
+/// Malpractice incidents and decisions.
+model ExamMalpractice {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  paper_id                       String
+  incident_type                  String
+  description                    String
+  decision                       String
+
+  @@schema("sukuux")
+  @@map("exam_malpractice")
+}
+
+
+// ── LEARNX ─────────────────────────────────────────────────
+
+/// Course — subject + teacher + class grouping.
+model LearnCourse {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  subject_id                     String
+  teacher_id                     String
+  class_id                       String
+  stream_id                      String?
+  academic_year_id               String
+  title                          String
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("learn_course")
+}
+
+/// Lesson plan per topic.
+model LearnLessonPlan {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  course_id                      String
+  topic                          String
+  objectives                     String?
+  lesson_date                    String
+  duration_minutes               Int?
+  notes                          String?
+
+  @@schema("sukuux")
+  @@map("learn_lesson_plan")
+}
+
+/// Links lesson plan to AcaX curriculum topic — tracks GES curriculum coverage per teacher.
+model LearnTopicDelivery {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  lesson_plan_id                 String
+  curriculum_topic_id            String
+  delivery_status                TopicDeliveryDeliveryStatus
+  delivered_at                   DateTime?
+  teacher_notes                  String?
+
+  @@schema("sukuux")
+  @@map("learn_topic_delivery")
+}
+
+/// Assignment per course.
+model LearnAssignment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  course_id                      String
+  title                          String
+  instructions                   String?
+  due_date                       String
+  max_score                      Decimal
+
+  @@schema("sukuux")
+  @@map("learn_assignment")
+}
+
+/// Low-tech return record. Teacher marks returned or not — no device required. Parent sees via Sukuu app.
+model LearnHomeworkReturn {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  assignment_id                  String
+  student_id                     String
+  returned                       Boolean
+  return_date                    String?
+  teacher_comment                String?
+  marked_by                      String
+  marked_at                      DateTime
+
+  @@schema("sukuux")
+  @@map("learn_homework_return")
+}
+
+/// Digital submission against assignment.
+model LearnSubmission {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  assignment_id                  String
+  student_id                     String
+  submission_file                String?
+  submitted_at                   DateTime
+  score                          Decimal?
+  feedback                       String?
+
+  @@schema("sukuux")
+  @@map("learn_submission")
+}
+
+/// Per-student per-topic mastery. Derived from GradingX + LearnX. Sukuu Intelligence Bridge — flags weak topics to Sukuu Kids in Sukuu app.
+model LearnStudentMastery {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  curriculum_topic_id            String
+  mastery_state                  MasteryState
+  last_assessment_score          Decimal?
+  updated_at                     DateTime  @updatedAt
+  flagged_for_sukuu_kids         Boolean
+
+  @@schema("sukuux")
+  @@map("learn_student_mastery")
+}
+
+/// Quiz per course.
+model LearnQuiz {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  course_id                      String
+  title                          String
+  time_limit                     Int?
+  attempt_limit                  Int
+
+  @@schema("sukuux")
+  @@map("learn_quiz")
+}
+
+/// Questions.
+model LearnQuizQuestion {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  quiz_id                        String
+  question_text                  String
+  question_type                  QuizQuestionQuestionType
+  marks                          Decimal
+
+  @@schema("sukuux")
+  @@map("learn_quiz_question")
+}
+
+/// Student quiz attempts.
+model LearnQuizAttempt {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  quiz_id                        String
+  student_id                     String
+  score                          Decimal?
+  started_at                     DateTime
+  completed_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("learn_quiz_attempt")
+}
+
+/// HOD/headmaster observation. Structured feedback to teacher. Links to StaffX performance reviews.
+model LearnClassroomObservation {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  lesson_plan_id                 String
+  observer_id                    String
+  teacher_id                     String
+  observation_date               String
+  rating                         PerformanceReviewOverallRating
+  strengths                      String?
+  areas_for_improvement          String?
+  feedback_shared                Boolean
+
+  @@schema("sukuux")
+  @@map("learn_classroom_observation")
+}
+
+/// Graded reader tracking per student. Structured reading level programme.
+model LearnReadingRecord {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  teacher_id                     String
+  reading_level                  String
+  book_title                     String?
+  completed                      Boolean
+  assessment_notes               String?
+  recorded_date                  String
+  academic_year_id               String
+
+  @@schema("sukuux")
+  @@map("learn_reading_record")
+}
+
+/// Learning resources per course.
+model LearnResource {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  course_id                      String
+  title                          String
+  resource_type                  ResourceResourceType
+  file_url                       String?
+  external_url                   String?
+  uploaded_at                    DateTime
+
+  @@schema("sukuux")
+  @@map("learn_resource")
+}
+
+
+// ── DISCIPLINEX ────────────────────────────────────────────
+
+/// Reported incidents.
+model DisciplineIncident {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  reported_by                    String
+  incident_type                  String
+  severity                       SeverityLevel
+  description                    String
+  incident_date                  String
+
+  @@schema("sukuux")
+  @@map("discipline_incident")
+}
+
+/// Actions per incident.
+model DisciplineAction {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  incident_id                    String
+  action_type                    String
+  assigned_by                    String
+  start_date                     String
+  end_date                       String?
+  status                         ActionStatus
+
+  @@schema("sukuux")
+  @@map("discipline_action")
+}
+
+/// Formal suspensions.
+model DisciplineSuspension {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  reason                         String
+  start_date                     String
+  end_date                       String
+  approved_by                    String
+  parent_notified                Boolean
+
+  @@schema("sukuux")
+  @@map("discipline_suspension")
+}
+
+/// Commendations and awards.
+model DisciplineCommendation {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  commendation_type              String
+  awarded_by                     String
+  award_date                     String
+  remarks                        String?
+
+  @@schema("sukuux")
+  @@map("discipline_commendation")
+}
+
+/// Term-level computed risk score — distinct from students_behavior_profile (longitudinal).
+model DisciplineBehaviorScore {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  term_id                        String
+  score                          Decimal
+  risk_level                     SeverityLevel
+  generated_at                   DateTime
+
+  @@schema("sukuux")
+  @@map("discipline_behavior_score")
+}
+
+
+// ── HOSTELX ────────────────────────────────────────────────
+
+/// Hostel definition.
+model HostelHostel {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  gender                         HostelGender
+  capacity                       Int
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("hostel_hostel")
+}
+
+/// Dormitories.
+model HostelDormitory {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  hostel_id                      String
+  name                           String
+  capacity                       Int
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("hostel_dormitory")
+}
+
+/// Individual beds.
+model HostelBed {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  dormitory_id                   String
+  bed_number                     String
+  status                         BedStatus
+
+  @@schema("sukuux")
+  @@map("hostel_bed")
+}
+
+/// Student bed assignments.
+model HostelAssignment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  bed_id                         String
+  assigned_date                  String
+  vacated_date                   String?
+
+  @@schema("sukuux")
+  @@map("hostel_assignment")
+}
+
+/// Staff posted to hostels.
+model HostelStaffAssignment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  hostel_id                      String
+  staff_id                       String
+  role                           String
+
+  @@schema("sukuux")
+  @@map("hostel_staff_assignment")
+}
+
+/// Hostel incidents.
+model HostelIncident {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  hostel_id                      String
+  incident_type                  String
+  description                    String
+  incident_date                  String
+  reported_by                    String
+
+  @@schema("sukuux")
+  @@map("hostel_incident")
+}
+
+
+// ── LIBRARYX ───────────────────────────────────────────────
+
+/// Book catalogue.
+model LibraryBook {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  isbn                           String?
+  title                          String
+  publisher                      String?
+  publication_year               Int?
+  subject_area                   String?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("library_book")
+}
+
+/// Authors. school_id NULLABLE: null=global author, set=school-added.
+model LibraryAuthor {
+  id                             String  @id @default(uuid())
+  school_id                      String?
+  name                           String
+  bio                            String?
+
+  @@schema("sukuux")
+  @@map("library_author")
+}
+
+/// Physical copies.
+model LibraryBookCopy {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  book_id                        String
+  barcode                        String
+  status                         CopyStatus
+
+  @@schema("sukuux")
+  @@map("library_book_copy")
+}
+
+/// Borrowing records.
+model LibraryBorrow {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  copy_id                        String
+  borrower_type                  PersonType
+  borrower_id                    String
+  borrow_date                    String
+  due_date                       String
+  returned_date                  String?
+
+  @@schema("sukuux")
+  @@map("library_borrow")
+}
+
+/// Overdue fines.
+model LibraryFine {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  borrow_id                      String
+  amount                         Decimal
+  status                         FineStatus
+
+  @@schema("sukuux")
+  @@map("library_fine")
+}
+
+
+// ── INVENTORYX ─────────────────────────────────────────────
+
+/// Item catalogue.
+model InventoryItem {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  category                       String
+  unit                           String
+  reorder_level                  Int
+
+  @@schema("sukuux")
+  @@map("inventory_item")
+}
+
+/// Stock received.
+model InventoryStockEntry {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  item_id                        String
+  quantity                       Int
+  unit_cost                      Decimal
+  supplier_id                    String?
+  entry_date                     String
+
+  @@schema("sukuux")
+  @@map("inventory_stock_entry")
+}
+
+/// Stock issued.
+model InventoryStockIssue {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  item_id                        String
+  quantity                       Int
+  issued_to                      String
+  issue_date                     String
+
+  @@schema("sukuux")
+  @@map("inventory_stock_issue")
+}
+
+/// Supplier records.
+model InventorySupplier {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  phone                          String?
+  email                          String?
+  address                        String?
+
+  @@schema("sukuux")
+  @@map("inventory_supplier")
+}
+
+/// Purchase orders.
+model InventoryPurchaseOrder {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  supplier_id                    String
+  order_date                     String
+  status                         PurchaseOrderStatus
+  total_amount                   Decimal
+
+  @@schema("sukuux")
+  @@map("inventory_purchase_order")
+}
+
+/// Fixed asset register.
+model InventoryAsset {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  asset_code                     String
+  name                           String
+  purchase_date                  String
+  value                          Decimal
+  assigned_to                    String?
+  status                         AssetStatus
+
+  @@schema("sukuux")
+  @@map("inventory_asset")
+}
+
+
+// ── TRANSPORTX ─────────────────────────────────────────────
+
+/// School vehicles.
+model TransportVehicle {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  registration_number            String
+  capacity                       Int
+  vehicle_type                   VehicleVehicleType
+  status                         VehicleStatus
+
+  @@schema("sukuux")
+  @@map("transport_vehicle")
+}
+
+/// Driver records linked to staff.
+model TransportDriver {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  staff_id                       String
+  license_number                 String
+  license_expiry                 String
+
+  @@schema("sukuux")
+  @@map("transport_driver")
+}
+
+/// Transport routes.
+model TransportRoute {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  start_point                    String
+  end_point                      String
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("transport_route")
+}
+
+/// Route stops.
+model TransportStop {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  route_id                       String
+  stop_name                      String
+  pickup_time                    String
+  stop_order                     Int
+
+  @@schema("sukuux")
+  @@map("transport_stop")
+}
+
+/// Student route assignments.
+model TransportAssignment {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  route_id                       String
+  vehicle_id                     String?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("transport_assignment")
+}
+
+/// Trip records.
+model TransportTripLog {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  vehicle_id                     String
+  driver_id                      String
+  trip_date                      String
+  departure_time                 DateTime
+  arrival_time                   DateTime?
+  trip_type                      TripLogTripType
+
+  @@schema("sukuux")
+  @@map("transport_trip_log")
+}
+
+
+// ── CLINICX ────────────────────────────────────────────────
+
+/// Clinic visit records.
+model ClinicVisit {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  visit_date                     DateTime
+  complaint                      String
+  diagnosis                      String?
+  treatment                      String?
+  attended_by                    String?
+
+  @@schema("sukuux")
+  @@map("clinic_visit")
+}
+
+/// Medication stock.
+model ClinicMedication {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  dosage                         String
+  stock_quantity                 Int
+  reorder_level                  Int
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("clinic_medication")
+}
+
+/// Prescriptions per visit.
+model ClinicPrescription {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  visit_id                       String
+  medication_id                  String
+  dosage                         String
+  duration_days                  Int
+  instructions                   String?
+
+  @@schema("sukuux")
+  @@map("clinic_prescription")
+}
+
+/// External referrals.
+model ClinicReferral {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  visit_id                       String
+  hospital_name                  String
+  reason                         String
+  referral_date                  String
+  referral_letter_url            String?
+  parent_notified                Boolean
+
+  @@schema("sukuux")
+  @@map("clinic_referral")
+}
+
+/// Immunization records.
+model ClinicImmunization {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  vaccine_name                   String
+  date_administered              String
+  administered_by                String?
+  next_due_date                  String?
+
+  @@schema("sukuux")
+  @@map("clinic_immunization")
+}
+
+
+// ── WORKFLOWX ──────────────────────────────────────────────
+
+/// Workflow blueprint.
+model WorkflowDefinition {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  name                           String
+  entity_type                    String
+  description                    String?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("workflow_definition")
+}
+
+/// Steps within a workflow.
+model WorkflowStep {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  workflow_id                    String
+  step_order                     Int
+  step_name                      String
+  approver_role                  String
+  is_mandatory                   Boolean
+
+  @@schema("sukuux")
+  @@map("workflow_step")
+}
+
+/// Live workflow process — one per triggered entity.
+model WorkflowInstance {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  workflow_id                    String
+  entity_id                      String
+  entity_type                    String
+  status                         InstanceStatus
+  initiated_by                   String
+  initiated_at                   DateTime
+  completed_at                   DateTime?
+
+  @@schema("sukuux")
+  @@map("workflow_instance")
+}
+
+/// Step decisions within an instance.
+model WorkflowApproval {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  instance_id                    String
+  step_id                        String
+  approved_by                    String
+  decision                       ApprovalDecision
+  decision_date                  DateTime
+  comments                       String?
+
+  @@schema("sukuux")
+  @@map("workflow_approval")
+}
+
+
+// ── ANALYTICSX ─────────────────────────────────────────────
+
+/// KPI snapshots — institutional metrics.
+model AnalyticsKpi {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  metric_name                    String
+  metric_value                   Decimal
+  snapshot_date                  String
+  dimension                      String?
+  dimension_value                String?
+
+  @@schema("sukuux")
+  @@map("analytics_kpi")
+}
+
+/// Risk scores computed from attendance, grades, behaviour.
+model AnalyticsStudentRisk {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String
+  risk_score                     Decimal
+  risk_category                  SeverityLevel
+  contributing_factors           String?
+  generated_at                   DateTime
+  term_id                        String
+
+  @@schema("sukuux")
+  @@map("analytics_student_risk")
+}
+
+/// Generated institutional reports.
+model AnalyticsReport {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  report_name                    String
+  report_type                    String
+  parameters                     String?
+  generated_by                   String
+  generated_at                   DateTime
+  file_url                       String?
+  expires_at                     DateTime?
+
+  @@schema("sukuux")
+  @@map("analytics_report")
+}
+
+/// BI event stream. Distinct from system_audit_event (compliance) — this feeds dashboards.
+model AnalyticsEvent {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  event_type                     String
+  entity_type                    String
+  entity_id                      String?
+  properties                     String?
+  event_timestamp                DateTime
+  academic_year_id               String?
+  term_id                        String?
+
+  @@schema("sukuux")
+  @@map("analytics_event")
+}

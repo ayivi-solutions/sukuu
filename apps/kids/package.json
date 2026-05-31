@@ -1,0 +1,6 @@
+{
+  "name": "@sukuu/kids",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": { "dev": "echo '@sukuu/kids: Phase 4'" }
+}
