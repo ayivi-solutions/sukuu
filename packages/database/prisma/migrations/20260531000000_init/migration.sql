@@ -1,0 +1,1 @@
+-- Baseline: tables created directly in Supabase via SQL scripts

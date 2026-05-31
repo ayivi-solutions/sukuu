@@ -1,13 +1,18 @@
 {
   "name": "sukuu",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "turbo run build",
-    "dev":   "turbo run dev --parallel",
-    "lint":  "turbo run lint"
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint"
   },
   "devDependencies": {
+    "@prisma/client": "^5.14.0",
+    "prisma": "^5.14.0",
     "turbo": "^2.0.0"
   }
 }

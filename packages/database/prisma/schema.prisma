@@ -884,8 +884,8 @@ enum TemplateChannel {
 }
 
 enum TimezoneTimeFormat {
-  12H
-  24H
+  TIME_12H
+  TIME_24H
   @@schema("sukuux")
 }
 
