@@ -33,6 +33,10 @@ app.get('/health', (_req, res) => {
   });
 });
 
+app.get('/', (_req, res) => {
+  res.json({ service: 'sukuu-api', status: 'ok', docs: 'https://sukuux.com' });
+});
+
 app.use('/api/v1/auth', authRouter);
 app.use(notFound);
 app.use(errorHandler);
