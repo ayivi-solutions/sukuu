@@ -8,6 +8,7 @@ import { notFound } from './middleware/notFound';
 import { rateLimiter } from './middleware/rateLimiter';
 import { authRouter } from './modules/auth/auth.router';
 import { systemRouter } from './modules/system/system.router';
+import { schoolRouter } from './modules/school/school.router';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -40,6 +41,7 @@ app.get('/', (_req, res) => {
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/system', systemRouter);
+app.use('/api/v1/school', schoolRouter);
 app.use(notFound);
 app.use(errorHandler);
 
