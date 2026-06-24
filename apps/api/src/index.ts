@@ -7,6 +7,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { rateLimiter } from './middleware/rateLimiter';
 import { authRouter } from './modules/auth/auth.router';
+import { systemRouter } from './modules/system/system.router';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +39,7 @@ app.get('/', (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/system', systemRouter);
 app.use(notFound);
 app.use(errorHandler);
 
