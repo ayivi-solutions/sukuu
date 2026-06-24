@@ -1,3 +1,7 @@
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -144,7 +148,7 @@ async function main() {
     { id: 'SUB-PHY', dept: 'DEP-SCI', name: 'Physics',               code: 'PHY', type: 'ELECTIVE',  credits: 3 },
     { id: 'SUB-CHM', dept: 'DEP-SCI', name: 'Chemistry',             code: 'CHM', type: 'ELECTIVE',  credits: 3 },
     { id: 'SUB-PE',  dept: 'DEP-PE',  name: 'Physical Education',    code: 'PE',  type: 'EXTRA_CURRICULAR', credits: 2 },
-  ];
+  ] as const;
   for (const sub of subjects) {
     await prisma.academicsSubject.upsert({
       where: { id: sub.id },
@@ -220,16 +224,17 @@ async function main() {
       roleId: 'ROL-005', deptId: 'DEP-ADM', empType: 'CONTRACT',
       startDate: '2023-01-09', ssnit: 'G-0007-7890-G', tin: 'C0012347007',
     },
-  ];
+  ] as const;
 
   for (const s of staffSeed) {
     const hash = await bcrypt.hash(s.password, 12);
     await prisma.systemUser.upsert({
       where: { id: s.userId },
       update: {},
-      create: {
+create: {
         id: s.userId, email: s.email, phone: s.phone,
         password_hash: hash, is_active: true, is_verified: true,
+        failed_login_count: 0, must_reset_password: false,
       },
     });
     await prisma.staffStaff.upsert({
