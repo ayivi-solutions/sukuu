@@ -1,9 +1,16 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { getRoles, getPermissions, getRolePermissionsHandler } from './system.controller';
+import {
+  getRoles, getPermissions, getRolePermissionsHandler,
+  getUsers, postUser, patchSuspend, patchReinstate,
+} from './system.controller';
 
 export const systemRouter = Router();
 
 systemRouter.get('/roles', authenticate, getRoles);
 systemRouter.get('/permissions', authenticate, getPermissions);
 systemRouter.get('/roles/:roleId/permissions', authenticate, getRolePermissionsHandler);
+systemRouter.get('/users', authenticate, getUsers);
+systemRouter.post('/users', authenticate, postUser);
+systemRouter.patch('/users/:userId/suspend', authenticate, patchSuspend);
+systemRouter.patch('/users/:userId/reinstate', authenticate, patchReinstate);
