@@ -3,6 +3,7 @@ import { AuthRequest } from '../../middleware/authenticate';
 import {
   listRoles, listPermissions, getRolePermissions,
   listUsers, setUserActive, createUser,
+  listFeatureFlags, toggleFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog,
 } from './system.service';
 
 export async function getRoles(req: AuthRequest, res: Response) {
@@ -77,5 +78,64 @@ export async function patchReinstate(req: Request, res: Response) {
     res.json({ id: updated.id, status: 'ACTIVE' });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to reinstate user' });
+  }
+}
+
+export async function getFlags(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const flags = await listFeatureFlags(req.schoolId);
+    res.json(flags);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch feature flags' });
+  }
+}
+
+export async function patchFlag(req: Request, res: Response) {
+  try {
+    const { isEnabled } = req.body;
+    const updated = await toggleFeatureFlag(req.params.flagId, !!isEnabled);
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update feature flag' });
+  }
+}
+
+export async function getAuditLog(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const events = await listAuditEvents(req.schoolId);
+    res.json(events);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch audit log' });
+  }
+}
+
+export async function getSessions(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const users = await listUsers(req.schoolId);
+    const sessions = await listSessions(users.map(u => u.id));
+    res.json(sessions);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch sessions' });
+  }
+}
+
+export async function patchRevoke(req: Request, res: Response) {
+  try {
+    const revoked = await revokeSession(req.params.sessionId);
+    res.json({ id: revoked.id, status: 'REVOKED' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to revoke session' });
+  }
+}
+
+export async function getAuthLog(_req: Request, res: Response) {
+  try {
+    const logs = await listAuthLog();
+    res.json(logs);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch auth log' });
   }
 }

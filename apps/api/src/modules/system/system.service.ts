@@ -92,3 +92,40 @@ export async function createUser(schoolId: string, input: {
 
   return { user, tempPassword };
 }
+
+export async function listFeatureFlags(schoolId: string) {
+  return prisma.systemFeatureFlag.findMany({
+    where: { OR: [{ school_id: schoolId }, { school_id: null }] },
+    orderBy: { flag_key: 'asc' },
+  });
+}
+
+export async function toggleFeatureFlag(flagId: string, isEnabled: boolean) {
+  return prisma.systemFeatureFlag.update({ where: { id: flagId }, data: { is_enabled: isEnabled } });
+}
+
+export async function listAuditEvents(schoolId: string) {
+  return prisma.systemAuditEvent.findMany({
+    where: { school_id: schoolId },
+    orderBy: { created_at: 'desc' },
+    take: 100,
+  });
+}
+
+export async function listSessions(userIds: string[]) {
+  return prisma.systemSession.findMany({
+    where: { user_id: { in: userIds }, is_active: true },
+    orderBy: { last_activity_at: 'desc' },
+  });
+}
+
+export async function revokeSession(sessionId: string) {
+  return prisma.systemSession.update({
+    where: { id: sessionId },
+    data: { is_active: false, invalidated_at: new Date() },
+  });
+}
+
+export async function listAuthLog(limit = 50) {
+  return prisma.systemAuthenticationLog.findMany({ orderBy: { created_at: 'desc' }, take: limit });
+}

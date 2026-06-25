@@ -3,6 +3,7 @@ import { authenticate } from '../../middleware/authenticate';
 import {
   getRoles, getPermissions, getRolePermissionsHandler,
   getUsers, postUser, patchSuspend, patchReinstate,
+  getFlags, patchFlag, getAuditLog, getSessions, patchRevoke, getAuthLog,
 } from './system.controller';
 
 export const systemRouter = Router();
@@ -14,3 +15,11 @@ systemRouter.get('/users', authenticate, getUsers);
 systemRouter.post('/users', authenticate, postUser);
 systemRouter.patch('/users/:userId/suspend', authenticate, patchSuspend);
 systemRouter.patch('/users/:userId/reinstate', authenticate, patchReinstate);
+
+systemRouter.get('/flags', authenticate, getFlags);
+systemRouter.patch('/flags/:flagId', authenticate, patchFlag);
+systemRouter.get('/audit-log', authenticate, getAuditLog);
+systemRouter.get('/sessions', authenticate, getSessions);
+systemRouter.patch('/sessions/:sessionId/revoke', authenticate, patchRevoke);
+
+systemRouter.get('/auth-log', authenticate, getAuthLog);
