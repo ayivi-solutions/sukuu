@@ -104,3 +104,28 @@ button,input,select,textarea{font-family:inherit;border:none;outline:none;backgr
 .ber{background:var(--erB);color:var(--er)}
 .bin{background:var(--inB);color:var(--in)}
 .bgo{background:var(--goldF);color:var(--wn)}
+
+.tbl{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.data-table{width:100%;border-collapse:collapse;min-width:480px}
+.data-table thead{background:var(--soft)}
+.data-table th{padding:9px 12px;font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted);text-align:left;border-bottom:2px solid var(--bd);white-space:nowrap}
+.data-table td{padding:10px 12px;font-size:clamp(11px,1.8vw,13px);color:var(--ink);border-bottom:1px solid var(--bd);vertical-align:middle}
+.data-table tbody tr{cursor:pointer;transition:background .12s}
+.data-table tbody tr:hover{background:rgba(198,167,78,.04)}
+.data-table tbody tr:last-child td{border-bottom:none}
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:var(--rS);font-size:12px;line-height:1.5}
+.al-ic{font-size:15px;flex-shrink:0;margin-top:1px}
+.al-ok{background:var(--okB);color:var(--ok);border:1px solid rgba(22,97,58,.15)}
+.al-wn{background:var(--wnB);color:var(--wn);border:1px solid rgba(122,78,0,.15)}
+.al-er{background:var(--erB);color:var(--er);border:1px solid rgba(124,26,26,.15)}
+.al-in{background:var(--inB);color:var(--in);border:1px solid rgba(11,61,97,.15)}
+.fl{font-size:10px;font-weight:700;letter-spacing:.07em;color:var(--muted)}
+.fi{padding:9px 12px;border-radius:var(--rS);border:1.5px solid var(--bd);font-size:13px;color:var(--ink);background:var(--white);width:100%}
+.tog{width:40px;height:22px;border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;display:inline-block}
+.tog.on{background:var(--ok)}.tog.off{background:var(--bd)}
+.tog::after{content:'';position:absolute;top:3px;width:16px;height:16px;border-radius:50%;background:var(--white);transition:left .2s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.tog.on::after{left:21px}.tog.off::after{left:3px}
+.sys-tabs{display:flex;overflow-x:auto;background:var(--white);border-bottom:1px solid var(--bd)}
+.sys-tab-btn{padding:11px 16px;font-size:12px;font-weight:600;white-space:nowrap;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer}
+.sys-tab-btn.act{border-bottom-color:var(--gold);color:var(--navy)}
+.fg{margin-bottom:14px}
