@@ -10,9 +10,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["sukuux"]
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["sukuux"]
 }
 
 // ── ENUMS ────────────────────────────────────────────────────
@@ -4854,4 +4855,216 @@ model AnalyticsEvent {
 
   @@schema("sukuux")
   @@map("analytics_event")
+}
+
+/// Links ERP users to domain identities (student, staff, parent, etc.)
+model SystemUserIdentity {
+  id                             String  @id @default(uuid())
+  user_id                        String
+  identity_type                  UserIdentityType
+  identity_id                    String
+
+  @@schema("sukuux")
+  @@map("system_user_identity")
+}
+
+enum UserIdentityType {
+  STUDENT
+  STAFF
+  PARENT
+  GUARDIAN
+  ADMINISTRATOR
+  @@schema("sukuux")
+}
+
+/// Login attempt tracking — separate from system_log (which covers general events)
+model SystemAuthenticationLog {
+  id                             String  @id @default(uuid())
+  user_id                        String?
+  login_status                   AuthLoginStatus
+  ip_address                     String?
+  user_agent                     String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_authentication_log")
+}
+
+enum AuthLoginStatus {
+  SUCCESS
+  FAILED
+  LOCKED
+  @@schema("sukuux")
+}
+
+/// Password security rules — typically a single global row, or per-school override
+model SystemPasswordPolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String?
+  min_length                     Int
+  require_uppercase              Boolean
+  require_lowercase              Boolean
+  require_numbers                Boolean
+  require_symbols                Boolean
+  password_expiry_days           Int
+
+  @@schema("sukuux")
+  @@map("system_password_policy")
+}
+
+/// Global security policies — key/value, e.g. max_login_attempts, session_timeout
+model SystemSecurityPolicy {
+  id                             String  @id @default(uuid())
+  school_id                      String?
+  policy_name                    String
+  policy_value                  String
+
+  @@schema("sukuux")
+  @@map("system_security_policy")
+}
+
+/// Global platform configuration (timezone, currency, system name, etc.)
+model SystemConfiguration {
+  id                             String  @id @default(uuid())
+  config_key                     String
+  config_value                  String
+  updated_at                     DateTime  @updatedAt
+
+  @@schema("sukuux")
+  @@map("system_configuration")
+}
+
+/// Environment profiles (development, staging, production)
+model SystemEnvironment {
+  id                             String  @id @default(uuid())
+  name                           String
+  description                    String?
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("system_environment")
+}
+
+/// Platform-level administrative departments (distinct from per-school SchoolDepartment)
+model SystemDepartment {
+  id                             String  @id @default(uuid())
+  name                           String
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("system_department")
+}
+
+/// External service integrations (SMS gateway, email server, payment gateway, etc.)
+model SystemIntegration {
+  id                             String  @id @default(uuid())
+  name                           String
+  type                           String
+  config                         String?
+  is_active                      Boolean
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_integration")
+}
+
+/// Backup execution records
+model SystemBackupLog {
+  id                             String  @id @default(uuid())
+  backup_id                      String
+  status                         String
+  message                        String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_backup_log")
+}
+
+/// Background job execution results
+model SystemJobExecution {
+  id                             String  @id @default(uuid())
+  job_id                         String
+  status                         String
+  started_at                     DateTime?
+  completed_at                   DateTime?
+  result                         String?
+
+  @@schema("sukuux")
+  @@map("system_job_execution")
+}
+
+/// Infrastructure monitoring snapshots
+model SystemHealthCheck {
+  id                             String  @id @default(uuid())
+  metric_name                    String
+  metric_value                   String
+  status                         String
+  checked_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_health_check")
+}
+
+/// API rate limiting rules
+model SystemRateLimit {
+  id                             String  @id @default(uuid())
+  endpoint                       String
+  max_requests                   Int
+  time_window_seconds            Int
+
+  @@schema("sukuux")
+  @@map("system_rate_limit")
+}
+
+/// Data lifecycle / retention policies
+model SystemDataRetention {
+  id                             String  @id @default(uuid())
+  policy_name                    String
+  retention_years                Int
+  description                    String?
+
+  @@schema("sukuux")
+  @@map("system_data_retention")
+}
+
+/// System-level error tracking
+model SystemErrorLog {
+  id                             String  @id @default(uuid())
+  error_type                     String
+  message                        String
+  stack_trace                    String?
+  module_name                    String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_error_log")
+}
+
+/// Registered internal services (notification_service, report_service, etc.)
+model SystemService {
+  id                             String  @id @default(uuid())
+  service_name                   String
+  service_description            String?
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_service")
+}
+
+/// Runtime status of registered services
+model SystemServiceStatus {
+  id                             String  @id @default(uuid())
+  service_id                     String
+  status                         ServiceRuntimeStatus
+  last_check                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("system_service_status")
+}
+
+enum ServiceRuntimeStatus {
+  RUNNING
+  DEGRADED
+  STOPPED
+  @@schema("sukuux")
 }
