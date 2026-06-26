@@ -225,3 +225,19 @@ export async function listExitRecords(staffId: string) {
 export async function createExitRecord(staffId: string, data: any) {
   return prisma.staffExitRecord.create({ data: { staff_id: staffId, exit_type: data.exitType, exit_date: data.exitDate, notice_given: !!data.noticeGiven, reason: data.reason, clearance_complete: false } });
 }
+
+// ── Audit fixes ──────────────────────────────────────────
+export async function getRoleSchoolId(id: string) { return (await prisma.staffRole.findUnique({ where: { id } }))?.school_id; }
+export async function getLeaveStaffId(id: string) { return (await prisma.staffLeave.findUnique({ where: { id } }))?.staff_id; }
+export async function updateRole(id: string, data: any) {
+  return prisma.staffRole.update({ where: { id }, data: { ...(data.name && { name: data.name }), ...(data.category && { category: data.category }), ...(data.description !== undefined && { description: data.description }) } });
+}
+export async function updateDepartmentAssignment(id: string, data: any) {
+  return prisma.staffDepartmentAssignment.update({ where: { id }, data: { ...(data.roleInDepartment !== undefined && { role_in_department: data.roleInDepartment }), ...(data.isCurrent !== undefined && { is_current: data.isCurrent }) } });
+}
+export async function updateQualificationDetails(id: string, data: any) {
+  return prisma.staffQualification.update({ where: { id }, data: { ...(data.title && { title: data.title }), ...(data.institution && { institution: data.institution }), ...(data.yearObtained !== undefined && { year_obtained: data.yearObtained }) } });
+}
+export async function listLeaveApprovals(leaveId: string) {
+  return prisma.staffLeaveApproval.findMany({ where: { leave_id: leaveId } });
+}
