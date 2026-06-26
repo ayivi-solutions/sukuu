@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit } from './school.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -30,5 +30,44 @@ export async function getSettings(req: AuthRequest, res: Response) {
     res.json(settings);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to fetch school settings' });
+  }
+}
+
+export async function getAccreditations(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    res.json(await listAccreditations(req.schoolId));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch accreditations' });
+  }
+}
+
+export async function postAccreditation(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const created = await createAccreditation(req.schoolId, req.body);
+    await logSchoolAudit(req.schoolId, `CREATE accreditation: ${req.body.authority}`, req.userId || '');
+    res.status(201).json(created);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to create accreditation' });
+  }
+}
+
+export async function patchArchiveAccreditation(req: AuthRequest, res: Response) {
+  try {
+    const archived = await archiveAccreditation(req.params.accreditationId);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `ARCHIVE accreditation: ${req.params.accreditationId}`, req.userId || '');
+    res.json({ id: archived.id, archived: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to archive accreditation' });
+  }
+}
+
+export async function getSchoolAuditLog(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    res.json(await listSchoolAuditLog(req.schoolId));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch audit log' });
   }
 }
