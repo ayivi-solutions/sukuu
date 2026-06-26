@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { authedFetch } from '../../lib/api';
 import AppShell from '../../components/AppShell';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
 const TABS = [
   { key: 'users', label: 'Users' },
   { key: 'roles', label: 'Roles & Permissions' },
@@ -14,12 +14,6 @@ const TABS = [
   { key: 'ops', label: 'Platform Ops' },
 ];
 
-function authedFetch(path: string, token: string, opts: RequestInit = {}) {
-  return fetch(`${API_URL}${path}`, {
-    ...opts,
-    headers: { ...(opts.headers || {}), Authorization: `Bearer ${token}` },
-  }).then(res => res.json());
-}
 
 export default function SystemXPage() {
   const router = useRouter();

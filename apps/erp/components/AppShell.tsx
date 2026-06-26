@@ -31,6 +31,7 @@ export default function AppShell({ children, user, schoolName }: {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   function logout() {
+    if (!confirm('Are you sure you want to sign out?')) return;
     localStorage.removeItem('sukuu_token');
     localStorage.removeItem('sukuu_user');
     router.push('/login');
