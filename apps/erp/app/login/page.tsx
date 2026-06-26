@@ -1,8 +1,15 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { login } from '../../lib/api';
+
+function ExpiredBanner({ onExpired }: { onExpired: () => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get('expired') === '1') onExpired();
+  }, [searchParams, onExpired]);
+  return null;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,10 +17,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const searchParams = useSearchParams();
-  useEffect(() => {
-    if (searchParams.get('expired') === '1') setError('Your session expired. Please sign in again.');
-  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +40,9 @@ export default function LoginPage() {
       minHeight: '100vh', background: 'var(--navy)', position: 'relative', overflow: 'hidden',
       padding: 'clamp(20px,5vw,40px) clamp(16px,4vw,24px)',
     }}>
+      <Suspense fallback={null}>
+        <ExpiredBanner onExpired={() => setError('Your session expired. Please sign in again.')} />
+      </Suspense>
       <div style={{
         position: 'absolute', width: 'clamp(320px,80vw,600px)', height: 'clamp(320px,80vw,600px)',
         borderRadius: '50%', background: 'radial-gradient(circle, rgba(198,167,78,.08) 0%, transparent 70%)',
