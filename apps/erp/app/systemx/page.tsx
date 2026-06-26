@@ -35,6 +35,10 @@ export default function SystemXPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', roleId: '' });
   const [createMsg, setCreateMsg] = useState('');
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editForm, setEditForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
+  const [editingRole, setEditingRole] = useState<any>(null);
+  const [roleForm, setRoleForm] = useState({ label: '', description: '' });
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -60,6 +64,38 @@ export default function SystemXPage() {
   }
   async function handleReinstate(id: string) {
     await authedFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH' });
+    loadAll(token);
+  }
+  async function handleArchive(id: string) {
+    if (!confirm('Archive this user? They will be deactivated permanently but the record is retained.')) return;
+    await authedFetch(`/api/v1/system/users/${id}/archive`, token, { method: 'PATCH' });
+    loadAll(token);
+  }
+  function openEdit(u: any) {
+    setEditingUser(u);
+    const parts = u.name.split(' ');
+    setEditForm({ firstName: parts[0] || '', lastName: parts.slice(1).join(' ') || '', email: u.email, phone: u.phone || '' });
+  }
+  async function handleSaveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    await authedFetch(`/api/v1/system/users/${editingUser.id}`, token, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    });
+    setEditingUser(null);
+    loadAll(token);
+  }
+  function openRoleEdit(r: any) {
+    setEditingRole(r);
+    setRoleForm({ label: r.label, description: r.description || '' });
+  }
+  async function handleSaveRole(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await authedFetch(`/api/v1/system/roles/${editingRole.id}`, token, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(roleForm),
+    });
+    if (!res.error) setEditingRole(null);
     loadAll(token);
   }
   async function handleToggleFlag(flagId: string, current: boolean) {
@@ -93,19 +129,13 @@ export default function SystemXPage() {
           <div>
             <div className="ph-ey">SUKUU ERP · SYSTEMX · 37 TABLES · sukuux SCHEMA</div>
             <div className="ph-title">⚙️ SystemX</div>
-            <div className="ph-sub">Authentication · RBAC · Sessions · Audit · Feature Flags · Security</div>
+            <div className="ph-sub">Authentication · RBAC · Sessions · Audit · Feature Flags · Security · CRUAA enforced (no hard deletes)</div>
           </div>
           <button onClick={() => setShowCreate(true)} style={{
             background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px',
             borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600,
           }}>+ Create User</button>
         </div>
-      </div>
-
-      <div style={{ background: 'var(--inB)', padding: '10px var(--pad)', borderBottom: '1px solid rgba(11,61,97,.15)' }}>
-        <p style={{ fontSize: 12, color: 'var(--in)', lineHeight: 1.55, padding: '0 var(--pad)' }}>
-          Platform foundation managing all user accounts, role assignments, JWT sessions, audit log, feature flags, and security policy. Every action in Sukuu ERP is traceable here.
-        </p>
       </div>
 
       <div className="sys-tabs">
@@ -130,10 +160,12 @@ export default function SystemXPage() {
                   <td><span className={`bdg ${u.status === 'ACTIVE' ? 'bok' : 'ber'}`}>{u.status}</span></td>
                   <td style={{ textAlign: 'center' }}>{u.mfa ? '✅' : '—'}</td>
                   <td style={{ fontSize: 11, color: 'var(--muted)' }}>{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never'}</td>
-                  <td onClick={e => e.stopPropagation()}>
+                  <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', display: 'flex', gap: 6 }}>
+                    <button onClick={() => openEdit(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>
                     {u.status === 'ACTIVE'
-                      ? <button onClick={() => handleSuspend(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Suspend</button>
+                      ? <button onClick={() => handleSuspend(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
                       : <button onClick={() => handleReinstate(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>}
+                    <button onClick={() => handleArchive(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
                   </td>
                 </tr>
               ))}
@@ -146,7 +178,7 @@ export default function SystemXPage() {
       {tab === 'roles' && (
         <div className="tbl" style={{ padding: 'var(--pad)' }}>
           <table className="data-table">
-            <thead><tr><th>Role</th><th>Key</th><th>Users</th><th>Type</th></tr></thead>
+            <thead><tr><th>Role</th><th>Key</th><th>Users</th><th>Type</th><th></th></tr></thead>
             <tbody>
               {roles.map(r => (
                 <tr key={r.id}>
@@ -154,6 +186,10 @@ export default function SystemXPage() {
                   <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{r.name}</td>
                   <td><span className="bdg bin">{users.filter(u => u.role === r.name).length}</span></td>
                   <td><span className={`bdg ${r.is_system ? 'ber' : 'bok'}`}>{r.is_system ? 'System' : 'Custom'}</span></td>
+                  <td onClick={e => e.stopPropagation()}>
+                    {!r.is_system && <button onClick={() => openRoleEdit(r)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>}
+                    {r.is_system && <span style={{ fontSize: 10, color: 'var(--muted)' }}>Locked</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -247,27 +283,14 @@ export default function SystemXPage() {
       )}
 
       {showCreate && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', zIndex: 100,
-        }} onClick={() => setShowCreate(false)}>
-          <form onSubmit={handleCreateUser} onClick={e => e.stopPropagation()} style={{
-            background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)',
-          }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowCreate(false)}>
+          <form onSubmit={handleCreateUser} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Create User</h3>
             {createMsg && <div className="alert al-ok" style={{ marginBottom: 12 }}>{createMsg}</div>}
-            <div className="fg"><label className="fl">FIRST NAME</label>
-              <input className="fi" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} required />
-            </div>
-            <div className="fg"><label className="fl">LAST NAME</label>
-              <input className="fi" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} required />
-            </div>
-            <div className="fg"><label className="fl">EMAIL</label>
-              <input className="fi" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
-            </div>
-            <div className="fg"><label className="fl">PHONE</label>
-              <input className="fi" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
-            </div>
+            <div className="fg"><label className="fl">FIRST NAME</label><input className="fi" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">LAST NAME</label><input className="fi" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">EMAIL</label><input className="fi" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">PHONE</label><input className="fi" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
             <div className="fg"><label className="fl">ROLE</label>
               <select className="fi" value={form.roleId} onChange={e => setForm({ ...form, roleId: e.target.value })} required>
                 <option value="">Select a role…</option>
@@ -277,6 +300,36 @@ export default function SystemXPage() {
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Create</button>
               <button type="button" onClick={() => setShowCreate(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingUser(null)}>
+          <form onSubmit={handleSaveEdit} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit User</h3>
+            <div className="fg"><label className="fl">FIRST NAME</label><input className="fi" value={editForm.firstName} onChange={e => setEditForm({ ...editForm, firstName: e.target.value })} /></div>
+            <div className="fg"><label className="fl">LAST NAME</label><input className="fi" value={editForm.lastName} onChange={e => setEditForm({ ...editForm, lastName: e.target.value })} /></div>
+            <div className="fg"><label className="fl">EMAIL</label><input className="fi" type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} /></div>
+            <div className="fg"><label className="fl">PHONE</label><input className="fi" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingUser(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingRole && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingRole(null)}>
+          <form onSubmit={handleSaveRole} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Role</h3>
+            <div className="fg"><label className="fl">LABEL</label><input className="fi" value={roleForm.label} onChange={e => setRoleForm({ ...roleForm, label: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">DESCRIPTION</label><input className="fi" value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingRole(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
             </div>
           </form>
         </div>
