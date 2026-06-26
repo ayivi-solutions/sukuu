@@ -3,7 +3,7 @@ import { AuthRequest } from '../../middleware/authenticate';
 import {
   listRoles, listPermissions, getRolePermissions,
   listUsers, setUserActive, createUser,
-  listFeatureFlags, toggleFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog,
+  listFeatureFlags, toggleFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog, updateUser, archiveUser, updateRole,
 } from './system.service';
 
 export async function getRoles(req: AuthRequest, res: Response) {
@@ -137,5 +137,32 @@ export async function getAuthLog(_req: Request, res: Response) {
     res.json(logs);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to fetch auth log' });
+  }
+}
+
+export async function patchUser(req: AuthRequest, res: Response) {
+  try {
+    await updateUser(req.params.userId, req.body);
+    res.json({ id: req.params.userId, updated: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to update user' });
+  }
+}
+
+export async function patchArchiveUser(req: Request, res: Response) {
+  try {
+    const archived = await archiveUser(req.params.userId);
+    res.json({ id: archived.id, status: 'ARCHIVED' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to archive user' });
+  }
+}
+
+export async function patchRole(req: Request, res: Response) {
+  try {
+    const updated = await updateRole(req.params.roleId, req.body);
+    res.json(updated);
+  } catch (err: any) {
+    res.status(403).json({ error: err.message || 'Failed to update role' });
   }
 }

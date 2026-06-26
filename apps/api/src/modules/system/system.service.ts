@@ -129,3 +129,39 @@ export async function revokeSession(sessionId: string) {
 export async function listAuthLog(limit = 50) {
   return prisma.systemAuthenticationLog.findMany({ orderBy: { created_at: 'desc' }, take: limit });
 }
+
+export async function updateUser(userId: string, data: {
+  firstName?: string; lastName?: string; email?: string; phone?: string;
+}) {
+  if (data.email || data.phone) {
+    await prisma.systemUser.update({
+      where: { id: userId },
+      data: { ...(data.email && { email: data.email }), ...(data.phone && { phone: data.phone }) },
+    });
+  }
+  const staff = await prisma.staffStaff.findFirst({ where: { user_id: userId } });
+  if (staff) {
+    await prisma.staffStaff.update({
+      where: { id: staff.id },
+      data: {
+        ...(data.firstName && { first_name: data.firstName }),
+        ...(data.lastName && { last_name: data.lastName }),
+        ...(data.email && { email: data.email }),
+        ...(data.phone && { phone: data.phone }),
+      },
+    });
+  }
+}
+
+export async function archiveUser(userId: string) {
+  return prisma.systemUser.update({
+    where: { id: userId },
+    data: { is_active: false, archived_at: new Date() },
+  });
+}
+
+export async function updateRole(roleId: string, data: { label?: string; description?: string }) {
+  const role = await prisma.systemRole.findUnique({ where: { id: roleId } });
+  if (role?.is_system) throw new Error('System roles cannot be edited');
+  return prisma.systemRole.update({ where: { id: roleId }, data });
+}

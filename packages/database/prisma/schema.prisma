@@ -998,6 +998,7 @@ model SystemUser {
   must_reset_password            Boolean
   created_at                     DateTime  @default(now())
   updated_at                     DateTime  @updatedAt
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("system_user")
@@ -1012,6 +1013,7 @@ model SystemRole {
   is_system                      Boolean
   school_id                      String?
   created_at                     DateTime  @default(now())
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("system_role")
@@ -5067,4 +5069,28 @@ enum ServiceRuntimeStatus {
   DEGRADED
   STOPPED
   @@schema("sukuux")
+}
+
+model SchoolAccreditation {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  authority                      String
+  accreditation_number           String
+  issue_date                     String
+  expiry_date                    String
+  archived_at                    DateTime?
+
+  @@schema("sukuux")
+  @@map("school_accreditation")
+}
+
+model SchoolAuditLog {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  action                         String
+  performed_by                   String
+  created_at                     DateTime  @default(now())
+
+  @@schema("sukuux")
+  @@map("school_audit_log")
 }
