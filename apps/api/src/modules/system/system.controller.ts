@@ -3,7 +3,7 @@ import { AuthRequest } from '../../middleware/authenticate';
 import {
   listRoles, listPermissions, getRolePermissions,
   listUsers, setUserActive, createUser,
-  listFeatureFlags, toggleFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog, updateUser, archiveUser, updateRole, logAuditEvent, listUserIdentities, createUserIdentity, getPasswordPolicy, upsertPasswordPolicy, listSecurityPolicies, upsertSecurityPolicy, listApiKeys, createApiKey, revokeApiKey, listWebhooks, createWebhook, toggleWebhook, assignPermission, removePermission,
+  listFeatureFlags, toggleFeatureFlag, createFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog, updateUser, archiveUser, updateRole, createRole, logAuditEvent, listUserIdentities, createUserIdentity, getPasswordPolicy, upsertPasswordPolicy, listSecurityPolicies, upsertSecurityPolicy, listApiKeys, createApiKey, revokeApiKey, listWebhooks, createWebhook, toggleWebhook, assignPermission, removePermission,
 } from './system.service';
 
 export async function getRoles(req: AuthRequest, res: Response) {
@@ -233,5 +233,26 @@ export async function deleteRemovePermission(req: AuthRequest, res: Response) {
     const result = await removePermission(req.params.roleId, req.params.permissionId);
     if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'REVOKE_PERMISSION', 'system_role', req.params.roleId);
     res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+
+export async function postRole(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const { name, label, description } = req.body;
+    if (!name || !label) return res.status(400).json({ error: 'name and label are required' });
+    const r = await createRole(req.schoolId, name, label, description);
+    await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_ROLE', 'system_role', r.id);
+    res.status(201).json(r);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to create role' });
+  }
+}
+
+export async function postFlag(req: AuthRequest, res: Response) {
+  try {
+    const r = await createFeatureFlag(req.schoolId || '', req.body.flagKey, req.body.description);
+    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_FLAG', 'system_feature_flag', r.id);
+    res.status(201).json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 }

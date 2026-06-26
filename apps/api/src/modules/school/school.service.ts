@@ -112,3 +112,18 @@ export async function upsertSetting(schoolId: string, key: string, value: string
   if (existing) return prisma.schoolSettings.update({ where: { id: existing.id }, data: { value, updated_by: updatedBy } });
   return prisma.schoolSettings.create({ data: { school_id: schoolId, key, value, updated_by: updatedBy } });
 }
+
+export async function updateCampus(id: string, data: { name?: string; address?: string; phone?: string }) {
+  return prisma.schoolCampus.update({ where: { id }, data });
+}
+export async function updateAccreditation(id: string, data: { authority?: string; accreditationNumber?: string; issueDate?: string; expiryDate?: string }) {
+  return prisma.schoolAccreditation.update({
+    where: { id },
+    data: {
+      ...(data.authority && { authority: data.authority }),
+      ...(data.accreditationNumber && { accreditation_number: data.accreditationNumber }),
+      ...(data.issueDate && { issue_date: data.issueDate }),
+      ...(data.expiryDate && { expiry_date: data.expiryDate }),
+    },
+  });
+}

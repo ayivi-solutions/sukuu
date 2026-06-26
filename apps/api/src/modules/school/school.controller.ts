@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation } from './school.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -156,6 +156,21 @@ export async function putSetting(req: AuthRequest, res: Response) {
   try {
     const r = await upsertSetting(req.schoolId || '', req.body.key, req.body.value, req.userId || '');
     if (req.schoolId) await logSchoolAudit(req.schoolId, `SET setting: ${req.body.key}`, req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+
+export async function patchCampusDetails(req: AuthRequest, res: Response) {
+  try {
+    const r = await updateCampus(req.params.id, req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE campus: ${req.params.id}`, req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function patchAccreditation(req: AuthRequest, res: Response) {
+  try {
+    const r = await updateAccreditation(req.params.accreditationId, req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE accreditation: ${req.params.accreditationId}`, req.userId || '');
     res.json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 }

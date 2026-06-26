@@ -236,3 +236,11 @@ export async function removePermission(roleId: string, permissionId: string) {
   if (link) await prisma.systemRolePermission.delete({ where: { id: link.id } });
   return { removed: true };
 }
+
+export async function createRole(schoolId: string, name: string, label: string, description?: string) {
+  return prisma.systemRole.create({ data: { name, label, description, is_system: false, school_id: schoolId } });
+}
+
+export async function createFeatureFlag(schoolId: string, flagKey: string, description?: string) {
+  return prisma.systemFeatureFlag.create({ data: { flag_key: flagKey, is_enabled: false, school_id: schoolId, description } });
+}

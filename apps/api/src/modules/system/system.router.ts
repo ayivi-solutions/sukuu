@@ -9,6 +9,7 @@ systemRouter.get('/roles/:roleId/permissions', authenticate, ctrl.getRolePermiss
 systemRouter.post('/roles/:roleId/permissions', authenticate, ctrl.postAssignPermission);
 systemRouter.delete('/roles/:roleId/permissions/:permissionId', authenticate, ctrl.deleteRemovePermission);
 systemRouter.patch('/roles/:roleId', authenticate, ctrl.patchRole);
+systemRouter.post('/roles', authenticate, ctrl.postRole);
 systemRouter.get('/users', authenticate, ctrl.getUsers);
 systemRouter.post('/users', authenticate, ctrl.postUser);
 systemRouter.patch('/users/:userId', authenticate, ctrl.patchUser);
@@ -19,6 +20,7 @@ systemRouter.get('/users/:userId/identities', authenticate, ctrl.getUserIdentiti
 systemRouter.post('/users/:userId/identities', authenticate, ctrl.postUserIdentity);
 systemRouter.get('/flags', authenticate, ctrl.getFlags);
 systemRouter.patch('/flags/:flagId', authenticate, ctrl.patchFlag);
+systemRouter.post('/flags', authenticate, ctrl.postFlag);
 systemRouter.get('/audit-log', authenticate, ctrl.getAuditLog);
 systemRouter.get('/sessions', authenticate, ctrl.getSessions);
 systemRouter.patch('/sessions/:sessionId/revoke', authenticate, ctrl.patchRevoke);
