@@ -165,3 +165,74 @@ export async function updateRole(roleId: string, data: { label?: string; descrip
   if (role?.is_system) throw new Error('System roles cannot be edited');
   return prisma.systemRole.update({ where: { id: roleId }, data });
 }
+
+export async function logAuditEvent(schoolId: string, userId: string, action: string, entityType: string, entityId?: string) {
+  return prisma.systemAuditEvent.create({
+    data: { school_id: schoolId, user_id: userId, action, entity_type: entityType, entity_id: entityId },
+  }).catch(err => { console.error("[AuditEvent write failed]", err.message); return null; });
+}
+
+// User identities
+export async function listUserIdentities(userId: string) {
+  return prisma.systemUserIdentity.findMany({ where: { user_id: userId } });
+}
+export async function createUserIdentity(userId: string, identityType: any, identityId: string) {
+  return prisma.systemUserIdentity.create({ data: { user_id: userId, identity_type: identityType, identity_id: identityId } });
+}
+
+// Password policy (single row per school)
+export async function getPasswordPolicy(schoolId: string) {
+  return prisma.systemPasswordPolicy.findFirst({ where: { school_id: schoolId } });
+}
+export async function upsertPasswordPolicy(schoolId: string, data: any) {
+  const existing = await prisma.systemPasswordPolicy.findFirst({ where: { school_id: schoolId } });
+  if (existing) return prisma.systemPasswordPolicy.update({ where: { id: existing.id }, data });
+  return prisma.systemPasswordPolicy.create({ data: { school_id: schoolId, ...data } });
+}
+
+// Security policies (key/value per school)
+export async function listSecurityPolicies(schoolId: string) {
+  return prisma.systemSecurityPolicy.findMany({ where: { school_id: schoolId } });
+}
+export async function upsertSecurityPolicy(schoolId: string, policyName: string, policyValue: string) {
+  const existing = await prisma.systemSecurityPolicy.findFirst({ where: { school_id: schoolId, policy_name: policyName } });
+  if (existing) return prisma.systemSecurityPolicy.update({ where: { id: existing.id }, data: { policy_value: policyValue } });
+  return prisma.systemSecurityPolicy.create({ data: { school_id: schoolId, policy_name: policyName, policy_value: policyValue } });
+}
+
+// API keys
+export async function listApiKeys(schoolId: string) {
+  return prisma.systemApiKey.findMany({ where: { school_id: schoolId } });
+}
+export async function createApiKey(schoolId: string, label: string, scopes: string, createdBy: string) {
+  const rawKey = 'sk_' + Buffer.from(Math.random().toString(36) + Date.now()).toString('base64').slice(0, 32);
+  const hash = await bcrypt.hash(rawKey, 8);
+  const created = await prisma.systemApiKey.create({
+    data: { school_id: schoolId, key_hash: hash, label, scopes, is_active: true, created_by: createdBy },
+  });
+  return { ...created, rawKey };
+}
+export async function revokeApiKey(id: string) {
+  return prisma.systemApiKey.update({ where: { id }, data: { is_active: false } });
+}
+
+// Webhooks
+export async function listWebhooks(schoolId: string) {
+  return prisma.systemWebhook.findMany({ where: { school_id: schoolId } });
+}
+export async function createWebhook(schoolId: string, url: string, events: string, createdBy: string) {
+  return prisma.systemWebhook.create({ data: { school_id: schoolId, url, secret: Math.random().toString(36).slice(2), events, is_active: true, created_by: createdBy } });
+}
+export async function toggleWebhook(id: string, isActive: boolean) {
+  return prisma.systemWebhook.update({ where: { id }, data: { is_active: isActive } });
+}
+
+// Role-permission assignment
+export async function assignPermission(roleId: string, permissionId: string, grantedBy: string) {
+  return prisma.systemRolePermission.create({ data: { role_id: roleId, permission_id: permissionId, granted_at: new Date(), granted_by: grantedBy } });
+}
+export async function removePermission(roleId: string, permissionId: string) {
+  const link = await prisma.systemRolePermission.findFirst({ where: { role_id: roleId, permission_id: permissionId } });
+  if (link) await prisma.systemRolePermission.delete({ where: { id: link.id } });
+  return { removed: true };
+}

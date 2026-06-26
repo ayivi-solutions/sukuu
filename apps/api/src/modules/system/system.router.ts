@@ -1,25 +1,35 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import {
-  getRoles, getPermissions, getRolePermissionsHandler,
-  getUsers, postUser, patchSuspend, patchReinstate,
-  getFlags, patchFlag, getAuditLog, getSessions, patchRevoke, getAuthLog,
-  patchUser, patchArchiveUser, patchRole,
-} from './system.controller';
+import * as ctrl from './system.controller';
+
 export const systemRouter = Router();
-systemRouter.get('/roles', authenticate, getRoles);
-systemRouter.get('/permissions', authenticate, getPermissions);
-systemRouter.get('/roles/:roleId/permissions', authenticate, getRolePermissionsHandler);
-systemRouter.patch('/roles/:roleId', authenticate, patchRole);
-systemRouter.get('/users', authenticate, getUsers);
-systemRouter.post('/users', authenticate, postUser);
-systemRouter.patch('/users/:userId', authenticate, patchUser);
-systemRouter.patch('/users/:userId/suspend', authenticate, patchSuspend);
-systemRouter.patch('/users/:userId/reinstate', authenticate, patchReinstate);
-systemRouter.patch('/users/:userId/archive', authenticate, patchArchiveUser);
-systemRouter.get('/flags', authenticate, getFlags);
-systemRouter.patch('/flags/:flagId', authenticate, patchFlag);
-systemRouter.get('/audit-log', authenticate, getAuditLog);
-systemRouter.get('/sessions', authenticate, getSessions);
-systemRouter.patch('/sessions/:sessionId/revoke', authenticate, patchRevoke);
-systemRouter.get('/auth-log', authenticate, getAuthLog);
+systemRouter.get('/roles', authenticate, ctrl.getRoles);
+systemRouter.get('/permissions', authenticate, ctrl.getPermissions);
+systemRouter.get('/roles/:roleId/permissions', authenticate, ctrl.getRolePermissionsHandler);
+systemRouter.post('/roles/:roleId/permissions', authenticate, ctrl.postAssignPermission);
+systemRouter.delete('/roles/:roleId/permissions/:permissionId', authenticate, ctrl.deleteRemovePermission);
+systemRouter.patch('/roles/:roleId', authenticate, ctrl.patchRole);
+systemRouter.get('/users', authenticate, ctrl.getUsers);
+systemRouter.post('/users', authenticate, ctrl.postUser);
+systemRouter.patch('/users/:userId', authenticate, ctrl.patchUser);
+systemRouter.patch('/users/:userId/suspend', authenticate, ctrl.patchSuspend);
+systemRouter.patch('/users/:userId/reinstate', authenticate, ctrl.patchReinstate);
+systemRouter.patch('/users/:userId/archive', authenticate, ctrl.patchArchiveUser);
+systemRouter.get('/users/:userId/identities', authenticate, ctrl.getUserIdentities);
+systemRouter.post('/users/:userId/identities', authenticate, ctrl.postUserIdentity);
+systemRouter.get('/flags', authenticate, ctrl.getFlags);
+systemRouter.patch('/flags/:flagId', authenticate, ctrl.patchFlag);
+systemRouter.get('/audit-log', authenticate, ctrl.getAuditLog);
+systemRouter.get('/sessions', authenticate, ctrl.getSessions);
+systemRouter.patch('/sessions/:sessionId/revoke', authenticate, ctrl.patchRevoke);
+systemRouter.get('/auth-log', authenticate, ctrl.getAuthLog);
+systemRouter.get('/password-policy', authenticate, ctrl.getPwdPolicy);
+systemRouter.put('/password-policy', authenticate, ctrl.putPwdPolicy);
+systemRouter.get('/security-policies', authenticate, ctrl.getSecPolicies);
+systemRouter.put('/security-policies', authenticate, ctrl.putSecPolicy);
+systemRouter.get('/api-keys', authenticate, ctrl.getApiKeys);
+systemRouter.post('/api-keys', authenticate, ctrl.postApiKey);
+systemRouter.patch('/api-keys/:id/revoke', authenticate, ctrl.patchRevokeApiKey);
+systemRouter.get('/webhooks', authenticate, ctrl.getWebhooks);
+systemRouter.post('/webhooks', authenticate, ctrl.postWebhook);
+systemRouter.patch('/webhooks/:id', authenticate, ctrl.patchWebhook);
