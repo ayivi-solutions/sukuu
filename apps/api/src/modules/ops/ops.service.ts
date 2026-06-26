@@ -28,11 +28,11 @@ export async function toggleIntegration(id: string, isActive: boolean) {
 }
 
 // Backup
-export async function listBackups() { return prisma.systemBackup.findMany({ orderBy: { created_at: 'desc' }, take: 50 }); }
+export async function listBackups() { return prisma.systemBackup.findMany({ orderBy: { started_at: 'desc' }, take: 50 }); }
 export async function listBackupLogs() { return prisma.systemBackupLog.findMany({ orderBy: { created_at: 'desc' }, take: 50 }); }
 
 // Job queue
-export async function listJobs() { return prisma.systemJobQueue.findMany({ orderBy: { scheduled_at: 'desc' }, take: 50 }); }
+export async function listJobs() { return prisma.systemJobQueue.findMany({ orderBy: { queued_at: 'desc' }, take: 50 }); }
 export async function listJobExecutions() { return prisma.systemJobExecution.findMany({ orderBy: { started_at: 'desc' }, take: 50 }); }
 
 // Health check
