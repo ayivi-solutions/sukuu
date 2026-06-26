@@ -11,6 +11,7 @@ import { systemRouter } from './modules/system/system.router';
 import { schoolRouter } from './modules/school/school.router';
 import { dashboardRouter } from './modules/dashboard/dashboard.router';
 import { opsRouter } from './modules/ops/ops.router';
+import { academicRouter } from './modules/academic/academic.router';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -46,6 +47,7 @@ app.use('/api/v1/system', systemRouter);
 app.use('/api/v1/school', schoolRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/ops', opsRouter);
+app.use('/api/v1/academic', academicRouter);
 app.use(notFound);
 app.use(errorHandler);
 
