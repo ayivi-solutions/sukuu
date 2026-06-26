@@ -1,0 +1,26 @@
+import { Router } from 'express';
+import { authenticate } from '../../middleware/authenticate';
+import * as ctrl from './ops.controller';
+
+export const opsRouter = Router();
+opsRouter.get('/config', authenticate, ctrl.getConfig);
+opsRouter.put('/config', authenticate, ctrl.putConfig);
+opsRouter.get('/environments', authenticate, ctrl.getEnvironments);
+opsRouter.get('/departments', authenticate, ctrl.getDepartments);
+opsRouter.post('/departments', authenticate, ctrl.postDepartment);
+opsRouter.get('/integrations', authenticate, ctrl.getIntegrations);
+opsRouter.post('/integrations', authenticate, ctrl.postIntegration);
+opsRouter.patch('/integrations/:id', authenticate, ctrl.patchIntegration);
+opsRouter.get('/backups', authenticate, ctrl.getBackups);
+opsRouter.get('/backup-logs', authenticate, ctrl.getBackupLogs);
+opsRouter.get('/jobs', authenticate, ctrl.getJobs);
+opsRouter.get('/job-executions', authenticate, ctrl.getJobExecutions);
+opsRouter.post('/health-check', authenticate, ctrl.postHealthCheck);
+opsRouter.get('/health-checks', authenticate, ctrl.getHealthChecks);
+opsRouter.get('/rate-limits', authenticate, ctrl.getRateLimits);
+opsRouter.post('/rate-limits', authenticate, ctrl.postRateLimit);
+opsRouter.get('/retention', authenticate, ctrl.getRetention);
+opsRouter.post('/retention', authenticate, ctrl.postRetention);
+opsRouter.get('/errors', authenticate, ctrl.getErrors);
+opsRouter.get('/services', authenticate, ctrl.getServices);
+opsRouter.get('/service-statuses', authenticate, ctrl.getServiceStatuses);
