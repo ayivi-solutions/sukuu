@@ -2296,6 +2296,7 @@ model StaffRole {
   name                           String
   category                       RoleCategory
   description                    String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("staff_role")
@@ -2340,6 +2341,7 @@ model StaffBankDetails {
   account_type                   BankDetailsAccountType
   mobile_money_number            String?
   is_primary                     Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("staff_bank_details")
@@ -2353,6 +2355,7 @@ model StaffEmergencyContact {
   relationship                   String
   phone                          String
   address                        String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("staff_emergency_contact")
@@ -2367,6 +2370,7 @@ model StaffQualification {
   institution                    String
   year_obtained                  Int
   is_verified                    Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("staff_qualification")
@@ -2381,6 +2385,7 @@ model StaffCompliance {
   issue_date                     String?
   expiry_date                    String?
   document_url                   String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("staff_compliance")
@@ -2394,6 +2399,7 @@ model StaffSubjectAssignment {
   school_id                      String
   academic_year_id               String
   assigned_at                    DateTime
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("staff_subject_assignment")
@@ -5111,4 +5117,17 @@ model SchoolAuditLog {
 
   @@schema("sukuux")
   @@map("school_audit_log")
+}
+
+/// HR document storage — appointment letters, certificates, licenses, contracts
+model StaffDocument {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  document_type                  String
+  file_url                       String
+  uploaded_at                    DateTime  @default(now())
+  uploaded_by                    String?
+
+  @@schema("sukuux")
+  @@map("staff_documents")
 }
