@@ -11,6 +11,7 @@ const TABS = [
   { key: 'audit', label: 'Audit Log' },
   { key: 'sessions', label: 'Sessions' },
   { key: 'security', label: 'Security' },
+  { key: 'ops', label: 'Platform Ops' },
 ];
 
 function authedFetch(path: string, token: string, opts: RequestInit = {}) {
@@ -31,6 +32,7 @@ export default function SystemXPage() {
   const [audit, setAudit] = useState<any[]>([]);
   const [sessions, setSessions] = useState<any[]>([]);
   const [authLog, setAuthLog] = useState<any[]>([]);
+  const [ops, setOps] = useState<any>({ config: [], departments: [], integrations: [], backups: [], jobs: [], health: [], rateLimits: [], retention: [], errors: [], services: [] });
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', roleId: '' });
@@ -56,6 +58,24 @@ export default function SystemXPage() {
     authedFetch('/api/v1/system/audit-log', t).then(d => Array.isArray(d) && setAudit(d));
     authedFetch('/api/v1/system/sessions', t).then(d => Array.isArray(d) && setSessions(d));
     authedFetch('/api/v1/system/auth-log', t).then(d => Array.isArray(d) && setAuthLog(d));
+    loadOps(t);
+  }
+
+  function loadOps(t: string) {
+    Promise.all([
+      authedFetch('/api/v1/ops/config', t),
+      authedFetch('/api/v1/ops/departments', t),
+      authedFetch('/api/v1/ops/integrations', t),
+      authedFetch('/api/v1/ops/backups', t),
+      authedFetch('/api/v1/ops/jobs', t),
+      authedFetch('/api/v1/ops/health-checks', t),
+      authedFetch('/api/v1/ops/rate-limits', t),
+      authedFetch('/api/v1/ops/retention', t),
+      authedFetch('/api/v1/ops/errors', t),
+      authedFetch('/api/v1/ops/services', t),
+    ]).then(([config, departments, integrations, backups, jobs, health, rateLimits, retention, errors, services]) => {
+      setOps({ config, departments, integrations, backups, jobs, health, rateLimits, retention, errors, services });
+    });
   }
 
   async function handleSuspend(id: string) {
@@ -108,6 +128,10 @@ export default function SystemXPage() {
   async function handleRevokeSession(id: string) {
     await authedFetch(`/api/v1/system/sessions/${id}/revoke`, token, { method: 'PATCH' });
     loadAll(token);
+  }
+  async function handleRunHealthCheck() {
+    await authedFetch('/api/v1/ops/health-check', token, { method: 'POST' });
+    loadOps(token);
   }
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
@@ -279,6 +303,88 @@ export default function SystemXPage() {
               {authLog.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>No login attempts recorded yet.</td></tr>}
             </tbody>
           </table>
+        </div>
+      )}
+      {tab === 'ops' && (
+        <div style={{ padding: 'var(--pad)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button onClick={handleRunHealthCheck} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Run Health Check</button>
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">HEALTH CHECKS</span></div>
+            {ops.health.slice(0, 5).map((h: any) => (
+              <div key={h.id} className="ri na">
+                <div className="ri-b"><div className="ri-t">{h.metric_name}: {h.metric_value}</div><div className="ri-s">{new Date(h.checked_at).toLocaleString()}</div></div>
+                <span className={`bdg ${h.status === 'ok' ? 'bok' : 'ber'}`}>{h.status}</span>
+              </div>
+            ))}
+            {ops.health.length === 0 && <div className="ri na"><div className="ri-s">No health checks recorded yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">SERVICES</span></div>
+            {ops.services.map((s: any) => (
+              <div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.service_name}</div><div className="ri-s">{s.service_description}</div></div></div>
+            ))}
+            {ops.services.length === 0 && <div className="ri na"><div className="ri-s">No services registered yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">DEPARTMENTS</span></div>
+            {ops.departments.map((d: any) => (
+              <div key={d.id} className="ri na"><div className="ri-b"><div className="ri-t">{d.name}</div><div className="ri-s">{d.description}</div></div></div>
+            ))}
+            {ops.departments.length === 0 && <div className="ri na"><div className="ri-s">No platform departments configured yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">INTEGRATIONS</span></div>
+            {ops.integrations.map((i: any) => (
+              <div key={i.id} className="ri na"><div className="ri-b"><div className="ri-t">{i.name}</div><div className="ri-s">{i.type}</div></div><span className={`bdg ${i.is_active ? 'bok' : 'ber'}`}>{i.is_active ? 'Active' : 'Inactive'}</span></div>
+            ))}
+            {ops.integrations.length === 0 && <div className="ri na"><div className="ri-s">No integrations configured yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">ERROR LOG</span></div>
+            {ops.errors.slice(0, 10).map((e: any) => (
+              <div key={e.id} className="ri na"><div className="ri-b"><div className="ri-t">{e.error_type}</div><div className="ri-s">{e.message}</div></div></div>
+            ))}
+            {ops.errors.length === 0 && <div className="ri na"><div className="ri-s">No errors logged yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">BACKUPS</span></div>
+            {ops.backups.map((b: any) => (
+              <div key={b.id} className="ri na"><div className="ri-b"><div className="ri-t">{b.backup_type}</div><div className="ri-s">{b.status}</div></div></div>
+            ))}
+            {ops.backups.length === 0 && <div className="ri na"><div className="ri-s">No backups recorded yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">BACKGROUND JOBS</span></div>
+            {ops.jobs.map((j: any) => (
+              <div key={j.id} className="ri na"><div className="ri-b"><div className="ri-t">{j.job_type}</div><div className="ri-s">{j.status}</div></div></div>
+            ))}
+            {ops.jobs.length === 0 && <div className="ri na"><div className="ri-s">No background jobs queued yet.</div></div>}
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">DATA RETENTION POLICIES</span></div>
+            {ops.retention.map((r: any) => (
+              <div key={r.id} className="ri na"><div className="ri-b"><div className="ri-t">{r.policy_name}</div><div className="ri-s">{r.retention_years} years — {r.description}</div></div></div>
+            ))}
+            {ops.retention.length === 0 && <div className="ri na"><div className="ri-s">No retention policies configured yet.</div></div>}
+          </div>
+
+          <div className="card">
+            <div className="ch"><span className="ch-t">RATE LIMITS</span></div>
+            {ops.rateLimits.map((r: any) => (
+              <div key={r.id} className="ri na"><div className="ri-b"><div className="ri-t">{r.endpoint}</div><div className="ri-s">{r.max_requests} requests / {r.time_window_seconds}s</div></div></div>
+            ))}
+            {ops.rateLimits.length === 0 && <div className="ri na"><div className="ri-s">No rate limits configured yet.</div></div>}
+          </div>
         </div>
       )}
 
