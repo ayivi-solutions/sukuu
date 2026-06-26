@@ -1961,6 +1961,7 @@ model StudentsGuardian {
   has_portal_access              Boolean
   custody_notes                  String?
   user_id                        String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_guardian")
@@ -2068,6 +2069,7 @@ model StudentsAddress {
   region                         String
   digital_address                String?
   is_primary                     Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_address")
@@ -2080,6 +2082,7 @@ model StudentsContact {
   contact_type                   ContactContactType
   value                          String
   label                          String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_contact")
@@ -2094,6 +2097,7 @@ model StudentsIdentityDocument {
   issue_date                     String?
   expiry_date                    String?
   verified                       Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_identity_document")
@@ -2153,6 +2157,7 @@ model StudentsFeeProfile {
   discount_id                    String?
   notes                          String?
   assigned_at                    DateTime
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_fee_profile")
@@ -2192,6 +2197,7 @@ model StudentsTag {
   tag                            String
   tagged_by                      String
   tagged_at                      DateTime
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_tag")
@@ -2207,6 +2213,7 @@ model StudentsScholarship {
   coverage_pct                   Decimal?
   start_date                     String
   end_date                       String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("students_scholarship")
