@@ -248,3 +248,37 @@ export async function createTransportAssignment(studentId: string, data: any) {
 export async function toggleTransportAssignment(id: string, isActive: boolean) {
   return prisma.studentsTransportAssignment.update({ where: { id }, data: { is_active: isActive } });
 }
+
+// ── Multi-tenancy guard ──────────────────────────────────
+export async function verifyStudentInSchool(studentId: string, schoolId: string): Promise<boolean> {
+  const student = await prisma.studentsStudent.findUnique({ where: { id: studentId } });
+  return !!student && student.school_id === schoolId;
+}
+
+// ── Missing Update endpoints ──────────────────────────────
+export async function updateAddress(id: string, data: any) {
+  return prisma.studentsAddress.update({ where: { id }, data: { ...(data.street !== undefined && { street: data.street }), ...(data.city && { city: data.city }), ...(data.region && { region: data.region }), ...(data.digitalAddress !== undefined && { digital_address: data.digitalAddress }), ...(data.isPrimary !== undefined && { is_primary: data.isPrimary }) } });
+}
+export async function updateContact(id: string, data: any) {
+  return prisma.studentsContact.update({ where: { id }, data: { ...(data.value && { value: data.value }), ...(data.label !== undefined && { label: data.label }) } });
+}
+export async function updateIdentityDocument(id: string, data: any) {
+  return prisma.studentsIdentityDocument.update({ where: { id }, data: { ...(data.documentNumber && { document_number: data.documentNumber }), ...(data.issueDate !== undefined && { issue_date: data.issueDate }), ...(data.expiryDate !== undefined && { expiry_date: data.expiryDate }), ...(data.verified !== undefined && { verified: data.verified }) } });
+}
+export async function updateFeeProfile(id: string, data: any) {
+  return prisma.studentsFeeProfile.update({ where: { id }, data: { ...(data.scholarshipId !== undefined && { scholarship_id: data.scholarshipId }), ...(data.discountId !== undefined && { discount_id: data.discountId }), ...(data.notes !== undefined && { notes: data.notes }) } });
+}
+export async function updateScholarship(id: string, data: any) {
+  return prisma.studentsScholarship.update({ where: { id }, data: { ...(data.coveragePct !== undefined && { coverage_pct: data.coveragePct }), ...(data.endDate !== undefined && { end_date: data.endDate }), ...(data.sponsor !== undefined && { sponsor: data.sponsor }) } });
+}
+
+// ── Lookups needed for cross-tenant verification on sub-resources by their own id ──
+export async function getGuardianStudentId(id: string) { return (await prisma.studentsGuardian.findUnique({ where: { id } }))?.student_id; }
+export async function getAddressStudentId(id: string) { return (await prisma.studentsAddress.findUnique({ where: { id } }))?.student_id; }
+export async function getContactStudentId(id: string) { return (await prisma.studentsContact.findUnique({ where: { id } }))?.student_id; }
+export async function getIdentityDocumentStudentId(id: string) { return (await prisma.studentsIdentityDocument.findUnique({ where: { id } }))?.student_id; }
+export async function getFeeProfileStudentId(id: string) { return (await prisma.studentsFeeProfile.findUnique({ where: { id } }))?.student_id; }
+export async function getTagStudentId(id: string) { return (await prisma.studentsTag.findUnique({ where: { id } }))?.student_id; }
+export async function getScholarshipStudentId(id: string) { return (await prisma.studentsScholarship.findUnique({ where: { id } }))?.student_id; }
+export async function getTransportAssignmentStudentId(id: string) { return (await prisma.studentsTransportAssignment.findUnique({ where: { id } }))?.student_id; }
+export async function getEnrollmentStudentId(id: string) { return (await prisma.studentsEnrollment.findUnique({ where: { id } }))?.student_id; }

@@ -12,12 +12,12 @@ studentRouter.patch('/:studentId/archive', authenticate, ctrl.patchArchiveStuden
 
 studentRouter.get('/:studentId/guardians', authenticate, ctrl.getGuardians);
 studentRouter.post('/:studentId/guardians', authenticate, ctrl.postGuardian);
-studentRouter.patch('/guardians/:id', authenticate, ctrl.patchGuardian);
-studentRouter.patch('/guardians/:id/archive', authenticate, ctrl.patchArchiveGuardian);
+studentRouter.patch('/:studentId/guardians/:id', authenticate, ctrl.patchGuardian);
+studentRouter.patch('/:studentId/guardians/:id/archive', authenticate, ctrl.patchArchiveGuardian);
 
 studentRouter.get('/:studentId/enrollments', authenticate, ctrl.getEnrollments);
 studentRouter.post('/:studentId/enrollments', authenticate, ctrl.postEnrollment);
-studentRouter.patch('/enrollments/:id', authenticate, ctrl.patchEnrollment);
+studentRouter.patch('/:studentId/enrollments/:id', authenticate, ctrl.patchEnrollment);
 
 studentRouter.get('/:studentId/medical', authenticate, ctrl.getMedical);
 studentRouter.put('/:studentId/medical', authenticate, ctrl.putMedical);
@@ -35,15 +35,18 @@ studentRouter.post('/:studentId/graduations', authenticate, ctrl.postGraduation)
 
 studentRouter.get('/:studentId/addresses', authenticate, ctrl.getAddresses);
 studentRouter.post('/:studentId/addresses', authenticate, ctrl.postAddress);
-studentRouter.patch('/addresses/:id/archive', authenticate, ctrl.patchArchiveAddress);
+studentRouter.patch('/:studentId/addresses/:id', authenticate, ctrl.patchAddress);
+studentRouter.patch('/:studentId/addresses/:id/archive', authenticate, ctrl.patchArchiveAddress);
 
 studentRouter.get('/:studentId/contacts', authenticate, ctrl.getContacts);
 studentRouter.post('/:studentId/contacts', authenticate, ctrl.postContact);
-studentRouter.patch('/contacts/:id/archive', authenticate, ctrl.patchArchiveContact);
+studentRouter.patch('/:studentId/contacts/:id', authenticate, ctrl.patchContact);
+studentRouter.patch('/:studentId/contacts/:id/archive', authenticate, ctrl.patchArchiveContact);
 
 studentRouter.get('/:studentId/identity-documents', authenticate, ctrl.getIdentityDocuments);
 studentRouter.post('/:studentId/identity-documents', authenticate, ctrl.postIdentityDocument);
-studentRouter.patch('/identity-documents/:id/archive', authenticate, ctrl.patchArchiveIdentityDocument);
+studentRouter.patch('/:studentId/identity-documents/:id', authenticate, ctrl.patchIdentityDocument);
+studentRouter.patch('/:studentId/identity-documents/:id/archive', authenticate, ctrl.patchArchiveIdentityDocument);
 
 studentRouter.get('/:studentId/health-incidents', authenticate, ctrl.getHealthIncidents);
 studentRouter.post('/:studentId/health-incidents', authenticate, ctrl.postHealthIncident);
@@ -56,7 +59,8 @@ studentRouter.put('/:studentId/attendance-summaries', authenticate, ctrl.putAtte
 
 studentRouter.get('/:studentId/fee-profiles', authenticate, ctrl.getFeeProfiles);
 studentRouter.post('/:studentId/fee-profiles', authenticate, ctrl.postFeeProfile);
-studentRouter.patch('/fee-profiles/:id/archive', authenticate, ctrl.patchArchiveFeeProfile);
+studentRouter.patch('/:studentId/fee-profiles/:id', authenticate, ctrl.patchFeeProfile);
+studentRouter.patch('/:studentId/fee-profiles/:id/archive', authenticate, ctrl.patchArchiveFeeProfile);
 
 studentRouter.get('/:studentId/portal-access', authenticate, ctrl.getPortalAccess);
 studentRouter.put('/:studentId/portal-access', authenticate, ctrl.putPortalAccess);
@@ -66,15 +70,16 @@ studentRouter.post('/:studentId/notes', authenticate, ctrl.postNote);
 
 studentRouter.get('/:studentId/tags', authenticate, ctrl.getTags);
 studentRouter.post('/:studentId/tags', authenticate, ctrl.postTag);
-studentRouter.patch('/tags/:id/archive', authenticate, ctrl.patchArchiveTag);
+studentRouter.patch('/:studentId/tags/:id/archive', authenticate, ctrl.patchArchiveTag);
 
 studentRouter.get('/:studentId/scholarships', authenticate, ctrl.getScholarships);
 studentRouter.post('/:studentId/scholarships', authenticate, ctrl.postScholarship);
-studentRouter.patch('/scholarships/:id/archive', authenticate, ctrl.patchArchiveScholarship);
+studentRouter.patch('/:studentId/scholarships/:id', authenticate, ctrl.patchScholarship);
+studentRouter.patch('/:studentId/scholarships/:id/archive', authenticate, ctrl.patchArchiveScholarship);
 
 studentRouter.get('/:studentId/houses', authenticate, ctrl.getHouses);
 studentRouter.post('/:studentId/houses', authenticate, ctrl.postHouse);
 
 studentRouter.get('/:studentId/transport-assignments', authenticate, ctrl.getTransportAssignments);
 studentRouter.post('/:studentId/transport-assignments', authenticate, ctrl.postTransportAssignment);
-studentRouter.patch('/transport-assignments/:id', authenticate, ctrl.patchToggleTransportAssignment);
+studentRouter.patch('/:studentId/transport-assignments/:id', authenticate, ctrl.patchToggleTransportAssignment);
