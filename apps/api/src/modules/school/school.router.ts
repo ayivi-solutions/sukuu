@@ -1,14 +1,26 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import {
-  getProfile, patchProfile, getSettings,
-  getAccreditations, postAccreditation, patchArchiveAccreditation, getSchoolAuditLog,
-} from './school.controller';
+import * as ctrl from './school.controller';
 export const schoolRouter = Router();
-schoolRouter.get('/profile', authenticate, getProfile);
-schoolRouter.patch('/profile', authenticate, patchProfile);
-schoolRouter.get('/settings', authenticate, getSettings);
-schoolRouter.get('/accreditations', authenticate, getAccreditations);
-schoolRouter.post('/accreditations', authenticate, postAccreditation);
-schoolRouter.patch('/accreditations/:accreditationId/archive', authenticate, patchArchiveAccreditation);
-schoolRouter.get('/audit-log', authenticate, getSchoolAuditLog);
+schoolRouter.get('/profile', authenticate, ctrl.getProfile);
+schoolRouter.patch('/profile', authenticate, ctrl.patchProfile);
+schoolRouter.get('/settings', authenticate, ctrl.getSettings);
+schoolRouter.put('/settings', authenticate, ctrl.putSetting);
+schoolRouter.get('/accreditations', authenticate, ctrl.getAccreditations);
+schoolRouter.post('/accreditations', authenticate, ctrl.postAccreditation);
+schoolRouter.patch('/accreditations/:accreditationId/archive', authenticate, ctrl.patchArchiveAccreditation);
+schoolRouter.get('/audit-log', authenticate, ctrl.getSchoolAuditLog);
+schoolRouter.get('/contacts', authenticate, ctrl.getContacts);
+schoolRouter.post('/contacts', authenticate, ctrl.postContact);
+schoolRouter.patch('/contacts/:id', authenticate, ctrl.patchContact);
+schoolRouter.get('/branding', authenticate, ctrl.getBrandingHandler);
+schoolRouter.put('/branding', authenticate, ctrl.putBranding);
+schoolRouter.get('/campuses', authenticate, ctrl.getCampuses);
+schoolRouter.post('/campuses', authenticate, ctrl.postCampus);
+schoolRouter.patch('/campuses/:id', authenticate, ctrl.patchCampus);
+schoolRouter.get('/term-policy', authenticate, ctrl.getTermPolicyHandler);
+schoolRouter.put('/term-policy', authenticate, ctrl.putTermPolicy);
+schoolRouter.get('/documents', authenticate, ctrl.getDocuments);
+schoolRouter.post('/documents', authenticate, ctrl.postDocument);
+schoolRouter.get('/subscription', authenticate, ctrl.getSubscriptionHandler);
+schoolRouter.patch('/subscription', authenticate, ctrl.patchSubscription);

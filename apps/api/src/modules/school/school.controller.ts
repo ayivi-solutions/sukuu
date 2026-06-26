@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting } from './school.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -70,4 +70,92 @@ export async function getSchoolAuditLog(req: AuthRequest, res: Response) {
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to fetch audit log' });
   }
+}
+
+export async function getContacts(req: AuthRequest, res: Response) {
+  try { res.json(await listContacts(req.schoolId || '')); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function postContact(req: AuthRequest, res: Response) {
+  try {
+    const r = await createContact(req.schoolId || '', req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `CREATE contact: ${req.body.contactType}`, req.userId || '');
+    res.status(201).json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function patchContact(req: AuthRequest, res: Response) {
+  try {
+    const r = await updateContact(req.params.id, req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE contact: ${req.params.id}`, req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function getBrandingHandler(req: AuthRequest, res: Response) {
+  try { res.json(await getBranding(req.schoolId || '')); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function putBranding(req: AuthRequest, res: Response) {
+  try {
+    const r = await upsertBranding(req.schoolId || '', req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, 'UPDATE branding', req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function getCampuses(req: AuthRequest, res: Response) {
+  try { res.json(await listCampuses(req.schoolId || '')); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function postCampus(req: AuthRequest, res: Response) {
+  try {
+    const r = await createCampus(req.schoolId || '', req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `CREATE campus: ${req.body.name}`, req.userId || '');
+    res.status(201).json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function patchCampus(req: AuthRequest, res: Response) {
+  try {
+    const r = await toggleCampus(req.params.id, !!req.body.isActive);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `TOGGLE campus: ${req.params.id}`, req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function getTermPolicyHandler(req: AuthRequest, res: Response) {
+  try { res.json(await getTermPolicy(req.schoolId || '')); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function putTermPolicy(req: AuthRequest, res: Response) {
+  try {
+    const r = await upsertTermPolicy(req.schoolId || '', req.body);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, 'UPDATE term policy', req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function getDocuments(req: AuthRequest, res: Response) {
+  try { res.json(await listDocuments(req.schoolId || '')); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function postDocument(req: AuthRequest, res: Response) {
+  try {
+    const r = await createDocument(req.schoolId || '', { ...req.body, uploadedBy: req.userId || '' });
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `UPLOAD document: ${req.body.documentType}`, req.userId || '');
+    res.status(201).json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function getSubscriptionHandler(req: AuthRequest, res: Response) {
+  try { res.json(await getSubscription(req.schoolId || '')); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function patchSubscription(req: AuthRequest, res: Response) {
+  try {
+    const r = await updateSubscriptionStatus(req.schoolId || '', req.body.status);
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE subscription status: ${req.body.status}`, req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+export async function putSetting(req: AuthRequest, res: Response) {
+  try {
+    const r = await upsertSetting(req.schoolId || '', req.body.key, req.body.value, req.userId || '');
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `SET setting: ${req.body.key}`, req.userId || '');
+    res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
 }
