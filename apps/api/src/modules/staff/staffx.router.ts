@@ -8,9 +8,13 @@ staffRouter.get('/', authenticate, ctrl.getStaffList);
 staffRouter.post('/', authenticate, ctrl.postStaffMember);
 staffRouter.get('/roles', authenticate, ctrl.getRoles);
 staffRouter.post('/roles', authenticate, ctrl.postRole);
+staffRouter.patch('/roles/:id', authenticate, ctrl.patchRole);
+staffRouter.patch('/roles/:id', authenticate, ctrl.patchRole);
 staffRouter.patch('/roles/:id/archive', authenticate, ctrl.patchArchiveRole);
 staffRouter.get('/leave', authenticate, ctrl.getAllLeave);
 staffRouter.patch('/leave/:id/decide', authenticate, ctrl.patchDecideLeave);
+staffRouter.get('/leave/:id/approvals', authenticate, ctrl.getLeaveApprovals);
+staffRouter.get('/leave/:id/approvals', authenticate, ctrl.getLeaveApprovals);
 
 staffRouter.get('/:staffId', authenticate, ctrl.getStaffMember);
 staffRouter.patch('/:staffId', authenticate, ctrl.patchStaffMember);
@@ -22,6 +26,8 @@ staffRouter.patch('/:staffId/employments/:id', authenticate, ctrl.patchEmploymen
 
 staffRouter.get('/:staffId/department-assignments', authenticate, ctrl.getDepartmentAssignments);
 staffRouter.post('/:staffId/department-assignments', authenticate, ctrl.postDepartmentAssignment);
+staffRouter.patch('/:staffId/department-assignments/:id', authenticate, ctrl.patchDepartmentAssignment);
+staffRouter.patch('/:staffId/department-assignments/:id', authenticate, ctrl.patchDepartmentAssignment);
 
 staffRouter.get('/:staffId/subject-assignments', authenticate, ctrl.getSubjectAssignments);
 staffRouter.post('/:staffId/subject-assignments', authenticate, ctrl.postSubjectAssignment);
@@ -32,6 +38,8 @@ staffRouter.post('/:staffId/documents', authenticate, ctrl.postDocument);
 
 staffRouter.get('/:staffId/qualifications', authenticate, ctrl.getQualifications);
 staffRouter.post('/:staffId/qualifications', authenticate, ctrl.postQualification);
+staffRouter.patch('/:staffId/qualifications/:id', authenticate, ctrl.patchQualificationDetails);
+staffRouter.patch('/:staffId/qualifications/:id', authenticate, ctrl.patchQualificationDetails);
 staffRouter.patch('/:staffId/qualifications/:id/verify', authenticate, ctrl.patchVerifyQualification);
 staffRouter.patch('/:staffId/qualifications/:id/archive', authenticate, ctrl.patchArchiveQualification);
 

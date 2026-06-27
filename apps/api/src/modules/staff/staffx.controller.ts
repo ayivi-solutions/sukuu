@@ -69,8 +69,19 @@ export const getRoles = wrapNoCheck(req => svc.listRoles(req.schoolId || ''));
 export const postRole = wrapCreateNoCheck('CREATE_STAFF_ROLE', req => svc.createRole(req.schoolId || '', req.body));
 export const patchArchiveRole = async (req: AuthRequest, res: Response) => {
   try {
+    const roleSchoolId = await svc.getRoleSchoolId(req.params.id);
+    if (!roleSchoolId || roleSchoolId !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this role' });
     const result = await svc.archiveRole(req.params.id);
     if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'ARCHIVE_STAFF_ROLE', 'staff', req.params.id);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+};
+export const patchRole = async (req: AuthRequest, res: Response) => {
+  try {
+    const roleSchoolId = await svc.getRoleSchoolId(req.params.id);
+    if (!roleSchoolId || roleSchoolId !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this role' });
+    const result = await svc.updateRole(req.params.id, req.body);
+    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_STAFF_ROLE', 'staff', req.params.id);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 };
@@ -100,11 +111,14 @@ export const getAllLeave = wrapNoCheck(req => svc.listAllLeave(req.schoolId || '
 export const postLeaveRequest = wrapCreate('CREATE_LEAVE_REQUEST', fromParamsSid, req => svc.createLeaveRequest(req.params.staffId, req.body));
 export const patchDecideLeave = async (req: AuthRequest, res: Response) => {
   try {
+    const leaveStaffId = await svc.getLeaveStaffId(req.params.id);
+    if (!leaveStaffId || !req.schoolId || !(await svc.verifyStaffInSchool(leaveStaffId, req.schoolId))) return res.status(403).json({ error: 'Not authorized for this leave request' });
     const result = await svc.decideLeave(req.params.id, req.body.decision, req.userId || '', req.body.comments);
     if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', `LEAVE_${req.body.decision}`, 'staff', req.params.id);
     res.json(result);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 };
+export const getLeaveApprovals = wrap(async (req) => svc.getLeaveStaffId(req.params.id) as any, req => svc.listLeaveApprovals(req.params.id));
 
 export const getAttendance = wrap(fromParamsSid, req => svc.listAttendance(req.params.staffId));
 export const postCheckIn = wrapCreate('STAFF_CHECK_IN', fromParamsSid, req => svc.checkIn(req.params.staffId, req.body.date));
@@ -138,3 +152,6 @@ export const putLeaveBalance = wrapMutate('UPDATE_LEAVE_BALANCE', fromParamsSid,
 
 export const getExitRecords = wrap(fromParamsSid, req => svc.listExitRecords(req.params.staffId));
 export const postExitRecord = wrapCreate('CREATE_EXIT_RECORD', fromParamsSid, req => svc.createExitRecord(req.params.staffId, req.body));
+
+export const patchDepartmentAssignment = wrapMutate('UPDATE_DEPT_ASSIGNMENT', fromParamsSid, req => svc.updateDepartmentAssignment(req.params.id, req.body));
+export const patchQualificationDetails = wrapMutate('UPDATE_QUALIFICATION', fromParamsSid, req => svc.updateQualificationDetails(req.params.id, req.body));
