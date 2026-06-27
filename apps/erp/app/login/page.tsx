@@ -54,13 +54,11 @@ export default function LoginPage() {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(14px,3vw,20px)',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <div style={{
+          <img src="/sukuu-icon.png" alt="Sukuu" style={{
             width: 'clamp(52px,13vw,64px)', height: 'clamp(52px,13vw,64px)',
-            borderRadius: 'clamp(12px,3vw,16px)', background: 'var(--gold)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,6vw,34px)', fontWeight: 700,
-            color: 'var(--navy)', boxShadow: '0 4px 24px rgba(198,167,78,.35)',
-          }}>S</div>
+            borderRadius: 'clamp(12px,3vw,16px)', objectFit: 'cover',
+            boxShadow: '0 4px 24px rgba(198,167,78,.35)',
+          }} />
           <div style={{
             fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,7vw,34px)', fontWeight: 700,
             color: 'var(--ivory)', letterSpacing: '-.02em', lineHeight: 1,

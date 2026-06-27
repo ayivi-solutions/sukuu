@@ -50,7 +50,7 @@ export default function AppShell({ children, user, schoolName }: {
     <div id="app">
       <nav id="sidebar">
         <div className="sd-brand">
-          <div className="sd-mark">S</div>
+          <div className="sd-mark"><img src="/sukuu-icon.png" alt="Sukuu" /></div>
           <div className="sd-product">
             <div className="sd-pname">Sukuu ERP</div>
             <div className="sd-pver">V1.0 · AYIVI SOLUTIONS</div>
@@ -75,7 +75,7 @@ export default function AppShell({ children, user, schoolName }: {
         <header id="topbar">
           <button className="tb-hbg" onClick={() => setDrawerOpen(true)}>☰</button>
           <div className="tb-brand">
-            <div className="tb-mark">S</div>
+            <div className="tb-mark"><img src="/sukuu-icon.png" alt="Sukuu" /></div>
             <span className="tb-name">Sukuu <em>ERP</em></span>
           </div>
           <div className="tb-right">
@@ -101,7 +101,7 @@ export default function AppShell({ children, user, schoolName }: {
       <div id="dov" className={drawerOpen ? 'open' : ''} onClick={() => setDrawerOpen(false)} />
       <div id="drawer" style={{ transform: drawerOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform .24s' }}>
         <div className="sd-brand">
-          <div className="sd-mark">S</div>
+          <div className="sd-mark"><img src="/sukuu-icon.png" alt="Sukuu" /></div>
           <div className="sd-product">
             <div className="sd-pname">Sukuu ERP</div>
             <div className="sd-pver">V1.0 · AYIVI SOLUTIONS</div>
