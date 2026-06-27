@@ -96,15 +96,47 @@ export const postDecision = wrapCreate('CREATE_DECISION', fromParamsAid, req => 
 
 export const getBatches = wrapNoCheck(req => svc.listBatches(req.schoolId || ''));
 export const postBatch = wrapCreateNoCheck('CREATE_BATCH', req => svc.createBatch(req.schoolId || '', req.body));
-export const patchBatch = wrapMutateNoCheck('UPDATE_BATCH', req => svc.updateBatch(req.params.id, req.body));
+export const patchBatch = async (req: AuthRequest, res: Response) => {
+  try {
+    const sid = await svc.getBatchSchoolId(req.params.id);
+    if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this batch' });
+    const result = await svc.updateBatch(req.params.id, req.body);
+    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_BATCH', 'admission', req.params.id);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+};
 
 export const getWaitlist = wrapNoCheck(req => svc.listWaitlist(req.schoolId || ''));
 export const postWaitlistEntry = wrapCreate('CREATE_WAITLIST_ENTRY', fromParamsAid, req => svc.createWaitlistEntry(req.params.applicantId, req.schoolId || '', req.body));
-export const patchWaitlistStatus = wrapMutateNoCheck('UPDATE_WAITLIST_STATUS', req => svc.updateWaitlistStatus(req.params.id, req.body.status));
+export const patchWaitlistStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const sid = await svc.getWaitlistSchoolId(req.params.id);
+    if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this waitlist entry' });
+    const result = await svc.updateWaitlistStatus(req.params.id, req.body.status);
+    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_WAITLIST_STATUS', 'admission', req.params.id);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+};
 
 export const getRequirements = wrapNoCheck(req => svc.listRequirements(req.schoolId || ''));
 export const postRequirement = wrapCreateNoCheck('CREATE_REQUIREMENT', req => svc.createRequirement(req.schoolId || '', req.body));
-export const patchRequirement = wrapMutateNoCheck('UPDATE_REQUIREMENT', req => svc.updateRequirement(req.params.id, req.body));
-export const patchArchiveRequirement = wrapMutateNoCheck('ARCHIVE_REQUIREMENT', req => svc.archiveRequirement(req.params.id));
+export const patchRequirement = async (req: AuthRequest, res: Response) => {
+  try {
+    const sid = await svc.getRequirementSchoolId(req.params.id);
+    if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this requirement' });
+    const result = await svc.updateRequirement(req.params.id, req.body);
+    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_REQUIREMENT', 'admission', req.params.id);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+};
+export const patchArchiveRequirement = async (req: AuthRequest, res: Response) => {
+  try {
+    const sid = await svc.getRequirementSchoolId(req.params.id);
+    if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this requirement' });
+    const result = await svc.archiveRequirement(req.params.id);
+    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'ARCHIVE_REQUIREMENT', 'admission', req.params.id);
+    res.json(result);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+};
 
 export const postConvert = wrapCreate('CONVERT_TO_STUDENT', fromParamsAid, req => svc.convertApplicantToStudent(req.params.applicantId, req.body.offerId, req.userId || ''));

@@ -175,3 +175,8 @@ export async function convertApplicantToStudent(applicantId: string, offerId: st
   await prisma.admissionStatusHistory.create({ data: { applicant_id: applicantId, from_status: applicant.status, to_status: 'ENROLLED', changed_by: convertedBy, change_reason: 'Converted to StudentX', changed_at: new Date() } });
   return { student, enrollment };
 }
+
+// ── School-ownership lookups for school-scoped-by-id mutations ──
+export async function getBatchSchoolId(id: string) { return (await prisma.admissionBatch.findUnique({ where: { id } }))?.school_id; }
+export async function getWaitlistSchoolId(id: string) { return (await prisma.admissionWaitlist.findUnique({ where: { id } }))?.school_id; }
+export async function getRequirementSchoolId(id: string) { return (await prisma.admissionRequirement.findUnique({ where: { id } }))?.school_id; }
