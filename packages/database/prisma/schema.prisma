@@ -1917,6 +1917,7 @@ model AdmissionRequirement {
   requirement_type               RequirementRequirementType
   description                    String
   is_mandatory                   Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("admission_requirement")

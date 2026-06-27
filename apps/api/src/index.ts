@@ -14,6 +14,7 @@ import { opsRouter } from './modules/ops/ops.router';
 import { academicRouter } from './modules/academic/academic.router';
 import { studentRouter } from './modules/student/student.router';
 import { staffRouter } from './modules/staff/staffx.router';
+import { admissionRouter } from './modules/admission/admission.router';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -52,6 +53,7 @@ app.use('/api/v1/ops', opsRouter);
 app.use('/api/v1/academic', academicRouter);
 app.use('/api/v1/students', studentRouter);
 app.use('/api/v1/staff', staffRouter);
+app.use('/api/v1/admissions', admissionRouter);
 app.use(notFound);
 app.use(errorHandler);
 
