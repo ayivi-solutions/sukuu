@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { icon: '🎓', label: 'AcademicX', href: '/academicx' },
   { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
   { icon: '👩‍🏫', label: 'StaffX', href: '/staff' },
+  { icon: '🗓️', label: 'Staff Leave', href: '/staff/leave' },
+  { icon: '🕘', label: 'Staff Attendance', href: '/staff/attendance' },
 ];
 
 function NavList({ pathname, onNavigate }: { pathname: string; onNavigate: (href: string) => void }) {

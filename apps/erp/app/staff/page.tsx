@@ -64,7 +64,7 @@ export default function StaffRegisterPage() {
                 <td><strong>{s.first_name} {s.last_name}</strong></td>
                 <td style={{ fontSize: 11 }}>{s.phone}</td>
                 <td><span className={`bdg ${s.employment_status === 'ACTIVE' ? 'bok' : 'ber'}`}>{s.employment_status}</span></td>
-                <td><button style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>View</button></td>
+                <td><button onClick={() => router.push(`/staff/${s.id}`)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>View</button></td>
               </tr>
             ))}
             {shown.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>No staff match</td></tr>}
