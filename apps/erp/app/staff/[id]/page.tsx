@@ -52,6 +52,9 @@ export default function StaffDetailPage() {
   const [reviewForm, setReviewForm] = useState({ reviewPeriod: '', overallRating: '', comments: '', reviewDate: '' });
   const [trainingForm, setTrainingForm] = useState({ trainingName: '', provider: '', trainingType: '', startDate: '' });
   const [balanceForm, setBalanceForm] = useState({ leaveType: 'ANNUAL', year: new Date().getFullYear(), entitlementDays: 21, usedDays: 0 });
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -79,6 +82,9 @@ export default function StaffDetailPage() {
     authedFetch(`/api/v1/staff/${staffId}/performance-reviews`, t).then(d => Array.isArray(d) && setPerformanceReviews(d));
     authedFetch(`/api/v1/staff/${staffId}/training`, t).then(d => Array.isArray(d) && setTraining(d));
     authedFetch(`/api/v1/staff/${staffId}/leave-balances`, t).then(d => Array.isArray(d) && setLeaveBalances(d));
+    authedFetch('/api/v1/academic/years', t).then(d => Array.isArray(d) && setAcademicYears(d));
+    authedFetch('/api/v1/academic/departments', t).then(d => Array.isArray(d) && setDepartments(d));
+    authedFetch('/api/v1/academic/subjects', t).then(d => Array.isArray(d) && setSubjects(d));
   }
 
   async function handleSaveProfile(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/staff/${staffId}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: editForm.first_name, lastName: editForm.last_name, phone: editForm.phone, email: editForm.email, address: editForm.address, employmentStatus: editForm.employment_status }) }); loadAll(token); }
@@ -189,7 +195,10 @@ export default function StaffDetailPage() {
             {deptAssignments.map(d => (<div key={d.id} className="ri na"><div className="ri-b"><div className="ri-t">Dept {d.department_id?.slice(0, 8)}</div><div className="ri-s">{d.role_in_department || '—'}</div></div>{d.is_current && <span className="bdg bok">Current</span>}</div>))}
             {deptAssignments.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddDept} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
-              <input className="fi" placeholder="Department ID" value={deptForm.departmentId} onChange={e => setDeptForm({ ...deptForm, departmentId: e.target.value })} required style={{ flex: 1 }} />
+              <select className="fi" value={deptForm.departmentId} onChange={e => setDeptForm({ ...deptForm, departmentId: e.target.value })} required style={{ flex: 1 }}>
+                <option value="">Department...</option>
+                {departments.map((d: any) => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
               <input className="fi" placeholder="Role (e.g. HOD)" value={deptForm.roleInDepartment} onChange={e => setDeptForm({ ...deptForm, roleInDepartment: e.target.value })} />
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Assign</button>
             </form>
@@ -199,8 +208,14 @@ export default function StaffDetailPage() {
             {subjectAssignments.map(s => (<div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">Subject {s.subject_id?.slice(0, 8)}</div></div><button onClick={() => handleArchiveSubject(s.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
             {subjectAssignments.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddSubject} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
-              <input className="fi" placeholder="Subject ID" value={subjectForm.subjectId} onChange={e => setSubjectForm({ ...subjectForm, subjectId: e.target.value })} required style={{ flex: 1 }} />
-              <input className="fi" placeholder="Academic Year ID" value={subjectForm.academicYearId} onChange={e => setSubjectForm({ ...subjectForm, academicYearId: e.target.value })} required />
+              <select className="fi" value={subjectForm.subjectId} onChange={e => setSubjectForm({ ...subjectForm, subjectId: e.target.value })} required style={{ flex: 1 }}>
+                <option value="">Subject...</option>
+                {subjects.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select className="fi" value={subjectForm.academicYearId} onChange={e => setSubjectForm({ ...subjectForm, academicYearId: e.target.value })} required>
+                <option value="">Academic Year...</option>
+                {academicYears.map((y: any) => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </select>
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Assign</button>
             </form>
           </div>

@@ -30,6 +30,7 @@ export default function AdmissionsPage() {
   const [form, setForm] = useState({ firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', nationality: 'Ghanaian', applyingForClassId: '', guardianName: '', guardianPhone: '' });
   const [batchForm, setBatchForm] = useState({ academicYearId: '', name: '', openDate: '', closeDate: '', targetEnrolment: '' });
   const [reqForm, setReqForm] = useState({ requirementType: 'DOCUMENT', description: '', isMandatory: true });
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -46,6 +47,7 @@ export default function AdmissionsPage() {
     authedFetch('/api/v1/admissions/batches', t).then(d => Array.isArray(d) && setBatches(d));
     authedFetch('/api/v1/admissions/waitlist', t).then(d => Array.isArray(d) && setWaitlist(d));
     authedFetch('/api/v1/admissions/requirements', t).then(d => Array.isArray(d) && setRequirements(d));
+    authedFetch('/api/v1/academic/years', t).then(d => Array.isArray(d) && setAcademicYears(d));
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -147,7 +149,10 @@ export default function AdmissionsPage() {
           <form className="card" onSubmit={handleAddBatch}>
             <div className="ch"><span className="ch-t">CREATE BATCH</span></div>
             <div className="cb" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 12 }}>
-              <div className="fg"><label className="fl">ACADEMIC YEAR ID</label><input className="fi" value={batchForm.academicYearId} onChange={e => setBatchForm({ ...batchForm, academicYearId: e.target.value })} required /></div>
+              <div className="fg"><label className="fl">ACADEMIC YEAR ID</label><select className="fi" value={batchForm.academicYearId} onChange={e => setBatchForm({ ...batchForm, academicYearId: e.target.value })} required>
+                <option value="">Select...</option>
+                {academicYears.map((y: any) => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </select></div>
               <div className="fg"><label className="fl">NAME</label><input className="fi" placeholder="2027 Intake" value={batchForm.name} onChange={e => setBatchForm({ ...batchForm, name: e.target.value })} required /></div>
               <div className="fg"><label className="fl">OPEN DATE</label><input className="fi" type="date" value={batchForm.openDate} onChange={e => setBatchForm({ ...batchForm, openDate: e.target.value })} required /></div>
               <div className="fg"><label className="fl">CLOSE DATE</label><input className="fi" type="date" value={batchForm.closeDate} onChange={e => setBatchForm({ ...batchForm, closeDate: e.target.value })} required /></div>

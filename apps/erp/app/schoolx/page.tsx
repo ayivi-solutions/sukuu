@@ -197,12 +197,21 @@ export default function SchoolXPage() {
               <button type="submit" disabled={saving} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>{saving ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </form>
-          <div className="card">
+          <form className="card" onSubmit={handleSaveProfile}>
             <div className="ch"><span className="ch-t">REGISTRATION DETAILS</span></div>
-            {[['Registration No.', school.registration_number], ['School Type', school.school_type], ['Status', school.is_active ? 'Active' : 'Inactive']].map(([k, v]) => (
-              <div key={k} className="ri na"><div className="ri-b"><div className="ri-t">{k as string}</div><div className="ri-s">{v as string}</div></div></div>
-            ))}
-          </div>
+            <div className="cb">
+              <div className="fg"><label className="fl">REGISTRATION NO.</label><input className="fi" value={school.registration_number || ''} onChange={e => setSchool({ ...school, registration_number: e.target.value })} /></div>
+              <div className="fg"><label className="fl">SCHOOL TYPE</label>
+                <select className="fi" value={school.school_type || ''} onChange={e => setSchool({ ...school, school_type: e.target.value })}>
+                  <option value="BASIC">Basic</option><option value="JHS">JHS</option><option value="SHS">SHS</option><option value="COMBINED">Combined</option><option value="TERTIARY">Tertiary</option>
+                </select>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 8 }}>
+                <input type="checkbox" checked={!!school.is_active} onChange={e => setSchool({ ...school, is_active: e.target.checked })} /> Active
+              </label>
+              <button type="submit" disabled={saving} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginTop: 12 }}>{saving ? 'Saving...' : 'Save'}</button>
+            </div>
+          </form>
           <div className="card">
             <div className="ch"><span className="ch-t">CONTACTS</span></div>
             {contacts.map(c => (

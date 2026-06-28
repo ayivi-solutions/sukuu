@@ -37,6 +37,9 @@ export default function ApplicantDetailPage() {
   const [docForm, setDocForm] = useState({ documentType: '', fileUrl: '' });
   const [offerForm, setOfferForm] = useState({ classId: '', academicYearId: '', expiryDate: '' });
   const [convertResult, setConvertResult] = useState('');
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [academicClasses, setAcademicClasses] = useState<any[]>([]);
+  const [staffUsers, setStaffUsers] = useState<any[]>([]);
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -57,6 +60,9 @@ export default function ApplicantDetailPage() {
     authedFetch(`/api/v1/admissions/${applicantId}/interviews`, t).then(d => Array.isArray(d) && setInterviews(d));
     authedFetch(`/api/v1/admissions/${applicantId}/documents`, t).then(d => Array.isArray(d) && setDocuments(d));
     authedFetch(`/api/v1/admissions/${applicantId}/offers`, t).then(d => Array.isArray(d) && setOffers(d));
+    authedFetch('/api/v1/academic/years', t).then(d => Array.isArray(d) && setAcademicYears(d));
+    authedFetch('/api/v1/academic/classes', t).then(d => Array.isArray(d) && setAcademicClasses(d));
+    authedFetch('/api/v1/system/users', t).then(d => Array.isArray(d) && setStaffUsers(d));
   }
 
   async function handleSaveProfile(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/admissions/${applicantId}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: editForm.first_name, lastName: editForm.last_name, guardianPhone: editForm.guardian_phone, status: editForm.status, statusReason: 'Manual update' }) }); loadAll(token); }
@@ -175,7 +181,10 @@ export default function ApplicantDetailPage() {
             ))}
             {interviews.length === 0 && <div className="ri na"><div className="ri-s">No interviews scheduled yet.</div></div>}
             <form onSubmit={handleAddInterview} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
-              <input className="fi" placeholder="Interviewer (Staff ID)" value={interviewForm.interviewerId} onChange={e => setInterviewForm({ ...interviewForm, interviewerId: e.target.value })} required />
+              <select className="fi" value={interviewForm.interviewerId} onChange={e => setInterviewForm({ ...interviewForm, interviewerId: e.target.value })} required>
+                <option value="">Interviewer...</option>
+                {staffUsers.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
               <input className="fi" type="datetime-local" value={interviewForm.scheduledDate} onChange={e => setInterviewForm({ ...interviewForm, scheduledDate: e.target.value })} required />
               <input className="fi" type="number" placeholder="Max score" value={interviewForm.maxScore} onChange={e => setInterviewForm({ ...interviewForm, maxScore: +e.target.value })} style={{ width: 100 }} />
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Schedule</button>
@@ -215,8 +224,14 @@ export default function ApplicantDetailPage() {
             ))}
             {offers.length === 0 && <div className="ri na"><div className="ri-s">No offers issued yet.</div></div>}
             <form onSubmit={handleAddOffer} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
-              <input className="fi" placeholder="Class ID" value={offerForm.classId} onChange={e => setOfferForm({ ...offerForm, classId: e.target.value })} required />
-              <input className="fi" placeholder="Academic Year ID" value={offerForm.academicYearId} onChange={e => setOfferForm({ ...offerForm, academicYearId: e.target.value })} required />
+              <select className="fi" value={offerForm.classId} onChange={e => setOfferForm({ ...offerForm, classId: e.target.value })} required>
+                <option value="">Class...</option>
+                {academicClasses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select className="fi" value={offerForm.academicYearId} onChange={e => setOfferForm({ ...offerForm, academicYearId: e.target.value })} required>
+                <option value="">Academic Year...</option>
+                {academicYears.map((y: any) => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </select>
               <input className="fi" type="date" placeholder="Expiry" value={offerForm.expiryDate} onChange={e => setOfferForm({ ...offerForm, expiryDate: e.target.value })} />
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Issue Offer</button>
             </form>
