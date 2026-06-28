@@ -59,6 +59,19 @@ export default function AcademicXPage() {
   const [objectives, setObjectives] = useState<any[]>([]);
   const [objectiveForm, setObjectiveForm] = useState({ objective: '', objectiveOrder: 1 });
 
+  const [editingYear, setEditingYear] = useState<any>(null);
+  const [yearEditForm, setYearEditForm] = useState({ name: '', startDate: '', endDate: '' });
+  const [editingTerm, setEditingTerm] = useState<any>(null);
+  const [termEditForm, setTermEditForm] = useState({ name: '', termOrder: 1, startDate: '', endDate: '' });
+  const [editingClass, setEditingClass] = useState<any>(null);
+  const [classEditForm, setClassEditForm] = useState({ name: '', code: '', levelOrder: 1 });
+  const [editingStream, setEditingStream] = useState<any>(null);
+  const [streamEditForm, setStreamEditForm] = useState({ name: '', code: '', capacity: 35 });
+  const [editingDept, setEditingDept] = useState<any>(null);
+  const [deptEditForm, setDeptEditForm] = useState({ name: '', code: '' });
+  const [editingSubject, setEditingSubject] = useState<any>(null);
+  const [subjectEditForm, setSubjectEditForm] = useState({ name: '', code: '', subjectType: 'CORE', creditHours: 4 });
+
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
     const userStr = localStorage.getItem('sukuu_user');
@@ -87,21 +100,41 @@ export default function AcademicXPage() {
     authedFetch('/api/v1/system/users', t).then(d => Array.isArray(d) && setStaffUsers(d));
   }
 
+  // Years
   async function handleAddYear(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/years', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(yearForm) }); setYearForm({ name: '', startDate: '', endDate: '' }); loadAll(token); }
   async function handleActivateYear(id: string) { await authedFetch(`/api/v1/academic/years/${id}/activate`, token, { method: 'PATCH' }); loadAll(token); }
   async function handleArchiveYear(id: string) { await authedFetch(`/api/v1/academic/years/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditYear(y: any) { setEditingYear(y); setYearEditForm({ name: y.name, startDate: y.start_date, endDate: y.end_date }); }
+  async function handleSaveYear(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/years/${editingYear.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(yearEditForm) }); setEditingYear(null); loadAll(token); }
+  // Terms
   async function handleAddTerm(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/terms', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(termForm) }); setTermForm({ academicYearId: '', name: '', termOrder: 1, startDate: '', endDate: '' }); loadAll(token); }
   async function handleArchiveTerm(id: string) { await authedFetch(`/api/v1/academic/terms/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditTerm(t: any) { setEditingTerm(t); setTermEditForm({ name: t.name, termOrder: t.term_order, startDate: t.start_date, endDate: t.end_date }); }
+  async function handleSaveTerm(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/terms/${editingTerm.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(termEditForm) }); setEditingTerm(null); loadAll(token); }
+  // Classes
   async function handleAddClass(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/classes', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(classForm) }); setClassForm({ name: '', code: '', levelOrder: 1 }); loadAll(token); }
   async function handleArchiveClass(id: string) { await authedFetch(`/api/v1/academic/classes/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditClass(c: any) { setEditingClass(c); setClassEditForm({ name: c.name, code: c.code, levelOrder: c.level_order }); }
+  async function handleSaveClass(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/classes/${editingClass.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(classEditForm) }); setEditingClass(null); loadAll(token); }
+  // Streams
   async function handleAddStream(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/streams', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(streamForm) }); setStreamForm({ classId: '', name: '', code: '', capacity: 35 }); loadAll(token); }
   async function handleArchiveStream(id: string) { await authedFetch(`/api/v1/academic/streams/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditStream(s: any) { setEditingStream(s); setStreamEditForm({ name: s.name, code: s.code, capacity: s.capacity }); }
+  async function handleSaveStream(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/streams/${editingStream.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(streamEditForm) }); setEditingStream(null); loadAll(token); }
+  // Class Teachers
   async function handleAddClassTeacher(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/class-teachers', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(classTeacherForm) }); setClassTeacherForm({ classId: '', streamId: '', staffId: '', academicYearId: '' }); loadAll(token); }
   async function handleArchiveClassTeacher(id: string) { await authedFetch(`/api/v1/academic/class-teachers/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  // Departments
   async function handleAddDept(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/departments', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(deptForm) }); setDeptForm({ name: '', code: '' }); loadAll(token); }
   async function handleArchiveDept(id: string) { await authedFetch(`/api/v1/academic/departments/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditDept(d: any) { setEditingDept(d); setDeptEditForm({ name: d.name, code: d.code }); }
+  async function handleSaveDept(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/departments/${editingDept.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(deptEditForm) }); setEditingDept(null); loadAll(token); }
+  // Subjects
   async function handleAddSubject(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/subjects', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(subjectForm) }); setSubjectForm({ departmentId: '', name: '', code: '', subjectType: 'CORE', creditHours: 4 }); loadAll(token); }
   async function handleArchiveSubject(id: string) { await authedFetch(`/api/v1/academic/subjects/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditSubject(s: any) { setEditingSubject(s); setSubjectEditForm({ name: s.name, code: s.code, subjectType: s.subject_type, creditHours: s.credit_hours }); }
+  async function handleSaveSubject(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/subjects/${editingSubject.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(subjectEditForm) }); setEditingSubject(null); loadAll(token); }
+  // Linkages
   async function handleAddAssignment(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/subject-assignments', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(assignForm) }); setAssignForm({ staffId: '', subjectId: '', academicYearId: '' }); loadAll(token); }
   async function handleArchiveAssignment(id: string) { await authedFetch(`/api/v1/academic/subject-assignments/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
   async function handleAddClassSub(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/class-subjects', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(classSubForm) }); setClassSubForm({ classId: '', subjectId: '', isCompulsory: true }); loadAll(token); }
@@ -110,6 +143,7 @@ export default function AcademicXPage() {
   async function handleArchiveStreamSub(id: string) { await authedFetch(`/api/v1/academic/stream-subjects/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
   async function handleAddGroup(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/subject-groups', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(groupForm) }); setGroupForm({ name: '', groupType: 'ELECTIVE', maxSelections: 2, minSelections: 1 }); loadAll(token); }
   async function handleArchiveGroup(id: string) { await authedFetch(`/api/v1/academic/subject-groups/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  // Curriculum
   async function handleAddCurriculum(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/curricula', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(curriculumForm) }); setCurriculumForm({ subjectId: '', classId: '', termId: '', title: '', description: '' }); loadAll(token); }
   async function handleArchiveCurriculum(id: string) { await authedFetch(`/api/v1/academic/curricula/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
   async function openManageCurriculum(c: any) {
@@ -146,8 +180,10 @@ export default function AcademicXPage() {
     const o = await authedFetch(`/api/v1/academic/topics/${managingTopic.id}/objectives`, token);
     setObjectives(Array.isArray(o) ? o : []);
   }
+  // Outcomes
   async function handleAddOutcome(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/outcomes', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(outcomeForm) }); setOutcomeForm({ subjectId: '', classId: '', outcome: '', strand: '' }); loadAll(token); }
   async function handleArchiveOutcome(id: string) { await authedFetch(`/api/v1/academic/outcomes/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  // Promotion
   async function handleAddRule(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/academic/promotion-rules', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ruleForm) }); setRuleForm({ fromClassId: '', toClassId: '', minGpa: '', minAttendancePct: '', maxFailedSubjects: '', requiresManualApproval: false }); loadAll(token); }
   async function handleArchiveRule(id: string) { await authedFetch(`/api/v1/academic/promotion-rules/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
 
@@ -179,6 +215,7 @@ export default function AcademicXPage() {
             {years.map(y => (
               <div key={y.id} className="ri na"><div className="ri-b"><div className="ri-t">{y.name}</div><div className="ri-s">{y.start_date} → {y.end_date}</div></div>
                 <span className={`bdg ${y.is_active ? 'bok' : 'ber'}`} style={{ marginRight: 8 }}>{y.is_active ? 'Active' : 'Inactive'}</span>
+                <button onClick={() => openEditYear(y)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 {!y.is_active && <button onClick={() => handleActivateYear(y.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600, marginRight: 6 }}>Activate</button>}
                 <button onClick={() => handleArchiveYear(y.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
@@ -195,6 +232,7 @@ export default function AcademicXPage() {
             <div className="ch"><span className="ch-t">TERMS</span></div>
             {terms.map(t => (
               <div key={t.id} className="ri na"><div className="ri-b"><div className="ri-t">{t.name} (#{t.term_order})</div><div className="ri-s">{nameOf(years, t.academic_year_id)} · {t.start_date} → {t.end_date}</div></div>
+                <button onClick={() => openEditTerm(t)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => handleArchiveTerm(t.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
             ))}
@@ -221,6 +259,7 @@ export default function AcademicXPage() {
             {classes.map(c => (
               <div key={c.id} className="ri na"><div className="ri-b"><div className="ri-t">{c.name}</div><div className="ri-s">{c.code} · Level {c.level_order}</div></div>
                 <span className={`bdg ${c.is_active ? 'bok' : 'ber'}`} style={{ marginRight: 8 }}>{c.is_active ? 'Active' : 'Inactive'}</span>
+                <button onClick={() => openEditClass(c)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => handleArchiveClass(c.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
             ))}
@@ -236,6 +275,7 @@ export default function AcademicXPage() {
             <div className="ch"><span className="ch-t">STREAMS</span></div>
             {streams.map(s => (
               <div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.name}</div><div className="ri-s">{nameOf(classes, s.class_id)} · Cap. {s.capacity}</div></div>
+                <button onClick={() => openEditStream(s)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => handleArchiveStream(s.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
             ))}
@@ -284,6 +324,7 @@ export default function AcademicXPage() {
             <div className="ch"><span className="ch-t">DEPARTMENTS</span></div>
             {departments.map(d => (
               <div key={d.id} className="ri na"><div className="ri-b"><div className="ri-t">{d.name}</div><div className="ri-s">{d.code}</div></div>
+                <button onClick={() => openEditDept(d)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => handleArchiveDept(d.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
             ))}
@@ -298,6 +339,7 @@ export default function AcademicXPage() {
             <div className="ch"><span className="ch-t">SUBJECTS</span></div>
             {subjects.map(s => (
               <div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.name}</div><div className="ri-s">{s.code} · {nameOf(departments, s.department_id)} · {s.subject_type}</div></div>
+                <button onClick={() => openEditSubject(s)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => handleArchiveSubject(s.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
             ))}
@@ -479,6 +521,101 @@ export default function AcademicXPage() {
             </form>
             <button onClick={() => setManagingTopic(null)} style={{ marginTop: 12, width: '100%', background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
           </div>
+        </div>
+      )}
+
+      {editingYear && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingYear(null)}>
+          <form onSubmit={handleSaveYear} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Academic Year</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={yearEditForm.name} onChange={e => setYearEditForm({ ...yearEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">START DATE</label><input className="fi" type="date" value={yearEditForm.startDate} onChange={e => setYearEditForm({ ...yearEditForm, startDate: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">END DATE</label><input className="fi" type="date" value={yearEditForm.endDate} onChange={e => setYearEditForm({ ...yearEditForm, endDate: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingYear(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingTerm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingTerm(null)}>
+          <form onSubmit={handleSaveTerm} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Term</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={termEditForm.name} onChange={e => setTermEditForm({ ...termEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">ORDER</label><input className="fi" type="number" value={termEditForm.termOrder} onChange={e => setTermEditForm({ ...termEditForm, termOrder: +e.target.value })} /></div>
+            <div className="fg"><label className="fl">START DATE</label><input className="fi" type="date" value={termEditForm.startDate} onChange={e => setTermEditForm({ ...termEditForm, startDate: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">END DATE</label><input className="fi" type="date" value={termEditForm.endDate} onChange={e => setTermEditForm({ ...termEditForm, endDate: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingTerm(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingClass && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingClass(null)}>
+          <form onSubmit={handleSaveClass} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Class</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={classEditForm.name} onChange={e => setClassEditForm({ ...classEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CODE</label><input className="fi" value={classEditForm.code} onChange={e => setClassEditForm({ ...classEditForm, code: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">LEVEL ORDER</label><input className="fi" type="number" value={classEditForm.levelOrder} onChange={e => setClassEditForm({ ...classEditForm, levelOrder: +e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingClass(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingStream && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingStream(null)}>
+          <form onSubmit={handleSaveStream} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Stream</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={streamEditForm.name} onChange={e => setStreamEditForm({ ...streamEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CODE</label><input className="fi" value={streamEditForm.code} onChange={e => setStreamEditForm({ ...streamEditForm, code: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CAPACITY</label><input className="fi" type="number" value={streamEditForm.capacity} onChange={e => setStreamEditForm({ ...streamEditForm, capacity: +e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingStream(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingDept && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingDept(null)}>
+          <form onSubmit={handleSaveDept} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Department</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={deptEditForm.name} onChange={e => setDeptEditForm({ ...deptEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CODE</label><input className="fi" value={deptEditForm.code} onChange={e => setDeptEditForm({ ...deptEditForm, code: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingDept(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingSubject && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingSubject(null)}>
+          <form onSubmit={handleSaveSubject} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Subject</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={subjectEditForm.name} onChange={e => setSubjectEditForm({ ...subjectEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CODE</label><input className="fi" value={subjectEditForm.code} onChange={e => setSubjectEditForm({ ...subjectEditForm, code: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">TYPE</label>
+              <select className="fi" value={subjectEditForm.subjectType} onChange={e => setSubjectEditForm({ ...subjectEditForm, subjectType: e.target.value })}>
+                <option value="CORE">Core</option><option value="ELECTIVE">Elective</option><option value="EXTRA_CURRICULAR">Extra-curricular</option>
+              </select>
+            </div>
+            <div className="fg"><label className="fl">CREDIT HOURS</label><input className="fi" type="number" value={subjectEditForm.creditHours} onChange={e => setSubjectEditForm({ ...subjectEditForm, creditHours: +e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingSubject(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
         </div>
       )}
     </AppShell>

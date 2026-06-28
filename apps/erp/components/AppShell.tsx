@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
@@ -34,6 +34,15 @@ export default function AppShell({ children, user, schoolName }: {
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  useEffect(() => {
+    const el = document.querySelector('#stack .ph') as HTMLElement | null;
+    if (!el) return;
+    const setHeight = () => document.documentElement.style.setProperty('--ph-height', `${el.offsetHeight}px`);
+    setHeight();
+    const ro = new ResizeObserver(setHeight);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pathname]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   function logout() {
