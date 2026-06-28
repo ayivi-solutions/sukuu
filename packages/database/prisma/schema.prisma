@@ -3451,6 +3451,7 @@ model PayrollSalary {
   id                             String  @id @default(uuid())
   staff_id                       String
   school_id                      String
+  structure_id                   String?
   base_salary                    Decimal
   effective_from                 String
   effective_to                   String?
@@ -3548,7 +3549,6 @@ model PayrollHistory {
 /// Ghana PAYE income tax band definitions
 model PayrollTaxRule {
   id                             String  @id @default(uuid())
-  school_id                      String
   effective_year                 Int
   band_label                     String
   income_from                    Decimal
@@ -5147,4 +5147,147 @@ enum SchoolOwnershipType {
   INTERNATIONAL
   OTHER
   @@schema("sukuux")
+}
+
+enum SalaryComponentType {
+  EARNING
+  DEDUCTION
+  @@schema("sukuux")
+}
+
+enum LoanStatus {
+  ACTIVE
+  CLOSED
+  DEFAULTED
+  @@schema("sukuux")
+}
+
+/// Reusable salary templates by role/grade
+model PayrollSalaryStructure {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  structure_name                 String
+  description                    String?
+  created_at                     DateTime  @default(now())
+  archived_at                    DateTime?
+
+  @@schema("sukuux")
+  @@map("payroll_salary_structure")
+}
+
+/// Line items within a salary structure template
+model PayrollSalaryComponent {
+  id                             String  @id @default(uuid())
+  structure_id                   String
+  component_name                 String
+  component_type                 SalaryComponentType
+  amount                         Decimal
+  archived_at                    DateTime?
+
+  @@schema("sukuux")
+  @@map("payroll_salary_component")
+}
+
+/// Other statutory deductions (NHIL, Tier2 Pension, etc.) beyond PAYE/SSNIT - global, GRA-mandated
+model PayrollStatutoryDeduction {
+  id                             String  @id @default(uuid())
+  deduction_name                 String
+  percentage                     Decimal
+  is_active                      Boolean
+
+  @@schema("sukuux")
+  @@map("payroll_statutory_deduction")
+}
+
+/// Itemized breakdown of a payslip's components
+model PayrollPayslipItem {
+  id                             String  @id @default(uuid())
+  payslip_id                     String
+  component_name                 String
+  amount                         Decimal
+
+  @@schema("sukuux")
+  @@map("payroll_payslip_item")
+}
+
+/// Salary payment record - how and when a payslip was actually paid
+model PayrollPayment {
+  id                             String  @id @default(uuid())
+  payslip_id                     String
+  payment_date                   DateTime
+  payment_method                 PaymentPaymentMethod
+  amount                         Decimal
+  reference_number               String?
+
+  @@schema("sukuux")
+  @@map("payroll_payment")
+}
+
+/// Batch grouping of salary payments for a pay run
+model PayrollPaymentBatch {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  batch_name                     String
+  payment_date                   String
+  created_by                     String
+
+  @@schema("sukuux")
+  @@map("payroll_payment_batch")
+}
+
+/// Staff loans issued by the institution
+model PayrollLoan {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  school_id                      String
+  loan_amount                    Decimal
+  interest_rate                  Decimal
+  loan_date                      String
+  outstanding_balance            Decimal
+  status                         LoanStatus
+
+  @@schema("sukuux")
+  @@map("payroll_loan")
+}
+
+/// Loan repayment tracking - deducted via payroll
+model PayrollLoanRepayment {
+  id                             String  @id @default(uuid())
+  loan_id                        String
+  repayment_amount               Decimal
+  repayment_date                 String
+  payslip_id                     String?
+
+  @@schema("sukuux")
+  @@map("payroll_loan_repayment")
+}
+
+/// Staff expense reimbursements
+model PayrollReimbursement {
+  id                             String  @id @default(uuid())
+  staff_id                       String
+  school_id                      String
+  expense_type                   String
+  amount                         Decimal
+  approved_by                    String?
+  approved_at                    DateTime?
+  status                         ApprovalStatus
+
+  @@schema("sukuux")
+  @@map("payroll_reimbursement")
+}
+
+/// Payroll-specific audit trail
+model PayrollAuditLog {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  action                         String
+  performed_by                   String
+  entity_type                    String
+  entity_id                      String
+  timestamp                      DateTime  @default(now())
+  notes                          String?
+
+  @@schema("sukuux")
+  @@map("payroll_audit_log")
 }
