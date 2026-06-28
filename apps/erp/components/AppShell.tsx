@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
   { icon: '👩‍🏫', label: 'StaffX', href: '/staff' },
   { icon: '📋', label: 'AdmissionX', href: '/admissions' },
+  { icon: '💰', label: 'FinanceX', href: '/financex' },
   { icon: '🗓️', label: 'Staff Leave', href: '/staff/leave' },
   { icon: '🕘', label: 'Staff Attendance', href: '/staff/attendance' },
 ];
