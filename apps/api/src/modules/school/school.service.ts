@@ -6,7 +6,7 @@ export async function getSchoolProfile(schoolId: string) {
 }
 
 export async function updateSchoolProfile(schoolId: string, data: Record<string, any>) {
-  const allowed = ['name', 'address', 'city', 'region', 'country', 'phone', 'email', 'website', 'logo_url'];
+  const allowed = ['name', 'short_name', 'address', 'city', 'region', 'country', 'phone', 'email', 'website', 'logo_url', 'ownership_type', 'founding_date', 'founder_name'];
   const update: Record<string, any> = {};
   for (const key of allowed) if (data[key] !== undefined) update[key] = data[key];
   return prisma.schoolSchool.update({ where: { id: schoolId }, data: update });

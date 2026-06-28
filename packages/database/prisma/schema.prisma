@@ -1280,6 +1280,7 @@ model SystemTenantPlan {
 model SchoolSchool {
   id                             String  @id @default(uuid())
   name                           String
+  short_name                     String?
   code                           String
   school_type                    SchoolSchoolType
   registration_number            String?
@@ -1291,6 +1292,9 @@ model SchoolSchool {
   email                          String?
   website                        String?
   logo_url                       String?
+  ownership_type                 SchoolOwnershipType?
+  founding_date                 String?
+  founder_name                   String?
   is_active                      Boolean
   created_at                     DateTime  @default(now())
   updated_at                     DateTime  @updatedAt
@@ -5131,4 +5135,13 @@ model StaffDocument {
 
   @@schema("sukuux")
   @@map("staff_documents")
+}
+
+enum SchoolOwnershipType {
+  PUBLIC
+  PRIVATE
+  MISSION
+  INTERNATIONAL
+  OTHER
+  @@schema("sukuux")
 }

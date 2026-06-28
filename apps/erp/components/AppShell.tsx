@@ -55,6 +55,7 @@ export default function AppShell({ children, user, schoolName }: {
     return () => { if (ro) ro.disconnect(); if (mo) mo.disconnect(); };
   }, [pathname]);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   function logout() {
     if (!confirm('Are you sure you want to sign out?')) return;
@@ -90,7 +91,7 @@ export default function AppShell({ children, user, schoolName }: {
         <NavList pathname={pathname} onNavigate={navigate} />
         <div className="sd-foot">
           <button className="sd-ftn" onClick={() => navigate('/systemx')}><span>⚙️</span>Settings</button>
-          <button className="sd-ftn" onClick={logout}><span>🚪</span>Sign Out</button>
+          <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
         </div>
       </nav>
 
@@ -114,7 +115,7 @@ export default function AppShell({ children, user, schoolName }: {
               <span>{item.label}</span>
             </button>
           ))}
-          <button className="bn" onClick={logout}>
+          <button className="bn" onClick={() => setShowLogoutConfirm(true)}>
             <span className="bn-i">🚪</span>
             <span>Sign Out</span>
           </button>
@@ -132,9 +133,22 @@ export default function AppShell({ children, user, schoolName }: {
         </div>
         <NavList pathname={pathname} onNavigate={navigate} />
         <div className="sd-foot">
-          <button className="sd-ftn" onClick={logout}><span>🚪</span>Sign Out</button>
+          <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
         </div>
       </div>
+      {showLogoutConfirm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }} onClick={() => setShowLogoutConfirm(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 28, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)', textAlign: 'center' }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🚪</div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 8 }}>Sign out of Sukuu ERP?</h3>
+            <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>You'll need to sign in again to access your workspace.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+              <button onClick={logout} style={{ flex: 1, background: 'var(--erB)', color: 'var(--er)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
