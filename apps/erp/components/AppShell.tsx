@@ -35,13 +35,24 @@ export default function AppShell({ children, user, schoolName }: {
   const router = useRouter();
   const pathname = usePathname();
   useEffect(() => {
-    const el = document.querySelector('#stack .ph') as HTMLElement | null;
-    if (!el) return;
-    const setHeight = () => document.documentElement.style.setProperty('--ph-height', `${el.offsetHeight}px`);
-    setHeight();
-    const ro = new ResizeObserver(setHeight);
-    ro.observe(el);
-    return () => ro.disconnect();
+    let ro: ResizeObserver | null = null;
+    let currentEl: HTMLElement | null = null;
+    const setHeight = (el: HTMLElement) => document.documentElement.style.setProperty('--ph-height', `${el.offsetHeight}px`);
+    const tryAttach = () => {
+      const el = document.querySelector('#stack .ph') as HTMLElement | null;
+      if (el && el !== currentEl) {
+        if (ro) ro.disconnect();
+        currentEl = el;
+        setHeight(el);
+        ro = new ResizeObserver(() => setHeight(el));
+        ro.observe(el);
+      }
+    };
+    tryAttach();
+    const stackEl = document.getElementById('stack');
+    const mo = stackEl ? new MutationObserver(tryAttach) : null;
+    if (stackEl && mo) mo.observe(stackEl, { childList: true, subtree: true });
+    return () => { if (ro) ro.disconnect(); if (mo) mo.disconnect(); };
   }, [pathname]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
