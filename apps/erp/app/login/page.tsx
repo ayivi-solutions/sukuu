@@ -54,19 +54,9 @@ export default function LoginPage() {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'clamp(14px,3vw,20px)',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <img src="/sukuu-icon.png" alt="Sukuu" style={{
-            width: 'clamp(52px,13vw,64px)', height: 'clamp(52px,13vw,64px)',
-            borderRadius: 'clamp(12px,3vw,16px)', objectFit: 'cover',
-            boxShadow: '0 4px 24px rgba(198,167,78,.35)',
+          <img src="/sukuu-logo-vertical-2.png" alt="Sukuu ERP - Schools Operating System" style={{
+            width: 'clamp(140px,38vw,180px)', height: 'auto',
           }} />
-          <div style={{
-            fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(26px,7vw,34px)', fontWeight: 700,
-            color: 'var(--ivory)', letterSpacing: '-.02em', lineHeight: 1,
-          }}>Sukuu <span style={{ color: 'var(--gold)' }}>ERP</span></div>
-          <div style={{
-            fontSize: 'clamp(11px,2.5vw,13px)', color: 'rgba(242,230,201,.45)',
-            letterSpacing: '.06em', textTransform: 'uppercase', textAlign: 'center', lineHeight: 1.5,
-          }}>Institutional operating system<br />for African schools</div>
         </div>
 
         <form onSubmit={handleSubmit} style={{
@@ -123,6 +113,10 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, opacity: 0.6 }}>
+          <img src="/ges-logo.png" alt="Ghana Education Service" style={{ height: 22, width: 'auto' }} />
+          <span style={{ fontSize: 10, color: 'rgba(242,230,201,.55)', letterSpacing: '.04em', textTransform: 'uppercase' }}>Built for GES-regulated schools</span>
+        </div>
       </div>
     </div>
   );

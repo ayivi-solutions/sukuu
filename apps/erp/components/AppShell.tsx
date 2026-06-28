@@ -103,6 +103,7 @@ export default function AppShell({ children, user, schoolName }: {
             <span className="tb-name">Sukuu <em>ERP</em></span>
           </div>
           <div className="tb-right">
+            <img src="/ges-logo.png" alt="GES" title="Regulated by Ghana Education Service" style={{ height: 24, width: 'auto', opacity: 0.85, marginRight: 4 }} />
             <button className="tb-btn" title="Notifications">🔔</button>
             <div className="tb-av">{initials || 'U'}</div>
           </div>
