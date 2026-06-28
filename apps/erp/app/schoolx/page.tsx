@@ -303,7 +303,10 @@ export default function SchoolXPage() {
             <div className="fg"><label className="fl">PRIMARY COLOR</label><input className="fi" value={branding.primary_color || ''} onChange={e => setBranding({ ...branding, primary_color: e.target.value })} placeholder="#040D34" /></div>
             <div className="fg"><label className="fl">SECONDARY COLOR</label><input className="fi" value={branding.secondary_color || ''} onChange={e => setBranding({ ...branding, secondary_color: e.target.value })} placeholder="#C6A74E" /></div>
             <div className="fg"><label className="fl">MOTTO</label><input className="fi" value={branding.motto || ''} onChange={e => setBranding({ ...branding, motto: e.target.value })} /></div>
-            <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>Save Branding</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>Save Branding</button>
+              <button type="button" onClick={async () => { const reset = { ...branding, primary_color: '', secondary_color: '' }; const r = await authedFetch('/api/v1/school/branding', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reset) }); setBranding(r); }} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>Reset Colors to Sukuu Default</button>
+            </div>
           </div>
         </form>
       )}
