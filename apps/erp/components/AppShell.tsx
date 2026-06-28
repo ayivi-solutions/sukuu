@@ -54,8 +54,22 @@ export default function AppShell({ children, user, schoolName }: {
     if (stackEl && mo) mo.observe(stackEl, { childList: true, subtree: true });
     return () => { if (ro) ro.disconnect(); if (mo) mo.disconnect(); };
   }, [pathname]);
+
+  useEffect(() => {
+    const t = localStorage.getItem('sukuu_token');
+    if (!t) return;
+    fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/v1/school/branding', { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(b => {
+        if (b?.primary_color) document.documentElement.style.setProperty('--navy', b.primary_color);
+        if (b?.secondary_color) document.documentElement.style.setProperty('--gold', b.secondary_color);
+        if (b?.crest_url) setCrestUrl(b.crest_url);
+      })
+      .catch(() => {});
+  }, []);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [crestUrl, setCrestUrl] = useState('');
 
   function logout() {
     localStorage.removeItem('sukuu_token');
@@ -80,7 +94,7 @@ export default function AppShell({ children, user, schoolName }: {
           </div>
         </div>
         <div className="sd-school" onClick={() => navigate('/schoolx')}>
-          <div className="sd-sav">{schoolName?.[0] || 'S'}</div>
+          <div className="sd-sav">{crestUrl ? <img src={crestUrl} alt="Crest" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : (schoolName?.[0] || 'S')}</div>
           <div className="sd-sinf">
             <div className="sd-sname">{schoolName || 'School'}</div>
             <div className="sd-srole">{user?.roleLabel}</div>

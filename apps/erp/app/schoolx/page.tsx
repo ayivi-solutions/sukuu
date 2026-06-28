@@ -97,6 +97,55 @@ export default function SchoolXPage() {
     const r = await authedFetch('/api/v1/school/branding', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branding) });
     setBranding(r);
   }
+
+  function extractColorsFromImage(imgUrl: string) {
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = 60;
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      const counts: Record<string, number> = {};
+      for (let i = 0; i < data.length; i += 4) {
+        const a = data[i + 3];
+        if (a < 200) continue;
+        const r = Math.round(data[i] / 24) * 24, g = Math.round(data[i + 1] / 24) * 24, b = Math.round(data[i + 2] / 24) * 24;
+        const brightness = (r + g + b) / 3;
+        if (brightness < 25 || brightness > 235) continue;
+        const key = `${r},${g},${b}`;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k]) => k);
+      const toHex = (rgb: string) => '#' + rgb.split(',').map(n => Math.min(255, +n).toString(16).padStart(2, '0')).join('');
+      if (sorted[0]) setBranding((b: any) => ({ ...b, primary_color: toHex(sorted[0]) }));
+      const secondPick = sorted.find(k => {
+        const [r, g, b] = k.split(',').map(Number);
+        const [r0, g0, b0] = sorted[0].split(',').map(Number);
+        return Math.abs(r - r0) + Math.abs(g - g0) + Math.abs(b - b0) > 90;
+      });
+      if (secondPick) setBranding((b: any) => ({ ...b, secondary_color: toHex(secondPick) }));
+    };
+    img.src = imgUrl;
+  }
+
+  async function handleCrestUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/v1/upload', {
+      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData,
+    });
+    const data = await res.json();
+    if (data.url) {
+      setBranding((b: any) => ({ ...b, crest_url: data.url }));
+      extractColorsFromImage(data.url);
+    }
+  }
   async function handleAddCampus(e: React.FormEvent) {
     e.preventDefault();
     await authedFetch('/api/v1/school/campuses', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(campusForm) });
@@ -245,6 +294,12 @@ export default function SchoolXPage() {
         <form className="card" onSubmit={handleSaveBranding} style={{ margin: 'var(--pad)' }}>
           <div className="ch"><span className="ch-t">INSTITUTIONAL BRANDING</span></div>
           <div className="cb">
+            <div className="fg">
+              <label className="fl">SCHOOL CREST</label>
+              {branding.crest_url && <img src={branding.crest_url} alt="Crest" style={{ height: 64, width: 64, objectFit: 'contain', marginBottom: 8, display: 'block' }} />}
+              <input type="file" accept="image/*" onChange={handleCrestUpload} className="fi" />
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Uploading a crest auto-fills the colors below from its dominant tones.</div>
+            </div>
             <div className="fg"><label className="fl">PRIMARY COLOR</label><input className="fi" value={branding.primary_color || ''} onChange={e => setBranding({ ...branding, primary_color: e.target.value })} placeholder="#040D34" /></div>
             <div className="fg"><label className="fl">SECONDARY COLOR</label><input className="fi" value={branding.secondary_color || ''} onChange={e => setBranding({ ...branding, secondary_color: e.target.value })} placeholder="#C6A74E" /></div>
             <div className="fg"><label className="fl">MOTTO</label><input className="fi" value={branding.motto || ''} onChange={e => setBranding({ ...branding, motto: e.target.value })} /></div>
