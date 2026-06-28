@@ -114,7 +114,7 @@ export default function LoginPage() {
           </button>
         </form>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, opacity: 0.6 }}>
-          <img src="/ges-logo.png" alt="Ghana Education Service" style={{ height: 22, width: 'auto' }} />
+          <img src="/ges-coa.png" alt="Ghana Education Service" style={{ height: 28, width: 'auto' }} />
           <span style={{ fontSize: 10, color: 'rgba(242,230,201,.55)', letterSpacing: '.04em', textTransform: 'uppercase' }}>Built for GES-regulated schools</span>
         </div>
       </div>
