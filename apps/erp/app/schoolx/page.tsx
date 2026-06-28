@@ -94,8 +94,8 @@ export default function SchoolXPage() {
   }
   async function handleSaveBranding(e: React.FormEvent) {
     e.preventDefault();
-    const r = await authedFetch('/api/v1/school/branding', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branding) });
-    setBranding(r);
+    await authedFetch('/api/v1/school/branding', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(branding) });
+    window.location.reload();
   }
 
   function extractColorsFromImage(imgUrl: string) {
@@ -305,7 +305,7 @@ export default function SchoolXPage() {
             <div className="fg"><label className="fl">MOTTO</label><input className="fi" value={branding.motto || ''} onChange={e => setBranding({ ...branding, motto: e.target.value })} /></div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>Save Branding</button>
-              <button type="button" onClick={async () => { const reset = { ...branding, primary_color: '', secondary_color: '' }; const r = await authedFetch('/api/v1/school/branding', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reset) }); setBranding(r); }} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>Reset Colors to Sukuu Default</button>
+              <button type="button" onClick={async () => { const reset = { ...branding, primary_color: '', secondary_color: '' }; await authedFetch('/api/v1/school/branding', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reset) }); window.location.reload(); }} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>Reset Colors to Sukuu Default</button>
             </div>
           </div>
         </form>
