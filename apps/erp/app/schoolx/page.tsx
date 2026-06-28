@@ -185,6 +185,15 @@ export default function SchoolXPage() {
               <div className="fg"><label className="fl">EMAIL</label><input className="fi" value={school.email || ''} onChange={e => setSchool({ ...school, email: e.target.value })} /></div>
               <div className="fg"><label className="fl">WEBSITE</label><input className="fi" value={school.website || ''} onChange={e => setSchool({ ...school, website: e.target.value })} /></div>
               <div className="fg"><label className="fl">LOGO URL</label><input className="fi" value={school.logo_url || ''} onChange={e => setSchool({ ...school, logo_url: e.target.value })} /></div>
+              <div className="fg"><label className="fl">SHORT NAME</label><input className="fi" value={school.short_name || ''} onChange={e => setSchool({ ...school, short_name: e.target.value })} /></div>
+              <div className="fg"><label className="fl">OWNERSHIP TYPE</label>
+                <select className="fi" value={school.ownership_type || ''} onChange={e => setSchool({ ...school, ownership_type: e.target.value })}>
+                  <option value="">Select...</option>
+                  <option value="PUBLIC">Public</option><option value="PRIVATE">Private</option><option value="MISSION">Mission</option><option value="INTERNATIONAL">International</option><option value="OTHER">Other</option>
+                </select>
+              </div>
+              <div className="fg"><label className="fl">FOUNDING DATE</label><input className="fi" type="date" value={school.founding_date || ''} onChange={e => setSchool({ ...school, founding_date: e.target.value })} /></div>
+              <div className="fg"><label className="fl">FOUNDER NAME</label><input className="fi" value={school.founder_name || ''} onChange={e => setSchool({ ...school, founder_name: e.target.value })} /></div>
               <button type="submit" disabled={saving} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '11px 20px', borderRadius: 'var(--rS)', fontSize: 13, fontWeight: 600 }}>{saving ? 'Saving…' : 'Save Changes'}</button>
             </div>
           </form>

@@ -27,6 +27,8 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState<any>(null);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [statusHistory, setStatusHistory] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [academicClasses, setAcademicClasses] = useState<any[]>([]);
   const [guardians, setGuardians] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -79,6 +81,8 @@ export default function StudentDetailPage() {
     authedFetch(`/api/v1/students/${studentId}`, t).then(d => { if (d?.error) setError(d.error); else { setStudent(d); setEditForm(d); } });
     authedFetch(`/api/v1/students/${studentId}/enrollments`, t).then(d => Array.isArray(d) && setEnrollments(d));
     authedFetch(`/api/v1/students/${studentId}/status-history`, t).then(d => Array.isArray(d) && setStatusHistory(d));
+    authedFetch('/api/v1/academic/years', t).then(d => Array.isArray(d) && setAcademicYears(d));
+    authedFetch('/api/v1/academic/classes', t).then(d => Array.isArray(d) && setAcademicClasses(d));
     authedFetch(`/api/v1/students/${studentId}/guardians`, t).then(d => Array.isArray(d) && setGuardians(d));
     authedFetch(`/api/v1/students/${studentId}/addresses`, t).then(d => Array.isArray(d) && setAddresses(d));
     authedFetch(`/api/v1/students/${studentId}/contacts`, t).then(d => Array.isArray(d) && setContacts(d));
@@ -175,8 +179,14 @@ export default function StudentDetailPage() {
             {enrollments.map(en => (<div key={en.id} className="ri na"><div className="ri-b"><div className="ri-t">{en.enrollment_status}</div><div className="ri-s">Roll #{en.roll_number || '—'} · Admitted {en.admission_date}</div></div></div>))}
             {enrollments.length === 0 && <div className="ri na"><div className="ri-s">No enrolment records yet.</div></div>}
             <form onSubmit={handleAddEnrollment} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
-              <input className="fi" placeholder="Academic Year ID" value={enrollForm.academicYearId} onChange={e => setEnrollForm({ ...enrollForm, academicYearId: e.target.value })} required />
-              <input className="fi" placeholder="Class ID" value={enrollForm.classId} onChange={e => setEnrollForm({ ...enrollForm, classId: e.target.value })} required />
+              <select className="fi" value={enrollForm.academicYearId} onChange={e => setEnrollForm({ ...enrollForm, academicYearId: e.target.value })} required>
+                <option value="">Academic Year...</option>
+                {academicYears.map((y: any) => <option key={y.id} value={y.id}>{y.name}</option>)}
+              </select>
+              <select className="fi" value={enrollForm.classId} onChange={e => setEnrollForm({ ...enrollForm, classId: e.target.value })} required>
+                <option value="">Class...</option>
+                {academicClasses.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
               <input className="fi" type="date" value={enrollForm.admissionDate} onChange={e => setEnrollForm({ ...enrollForm, admissionDate: e.target.value })} required />
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Add</button>
             </form>
