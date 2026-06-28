@@ -3261,6 +3261,7 @@ model FinanceFeeComponent {
   amount                         Decimal
   is_compulsory                  Boolean
   account_id                     String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("finance_fee_component")
@@ -3274,6 +3275,7 @@ model FinanceFeeAssignment {
   override_amount                Decimal?
   assignment_reason              String?
   assigned_at                    DateTime
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("finance_fee_assignment")
@@ -3389,6 +3391,7 @@ model FinanceExpense {
   expense_date                   String
   receipt_url                    String?
   approved_by                    String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("finance_expense")

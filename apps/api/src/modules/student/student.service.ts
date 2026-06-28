@@ -13,7 +13,7 @@ export async function createStudent(schoolId: string, data: any) {
     data: {
       school_id: schoolId, student_id: data.studentId, first_name: data.firstName, middle_name: data.middleName,
       last_name: data.lastName, gender: data.gender, date_of_birth: data.dateOfBirth, nationality: data.nationality,
-      photo_url: data.photoUrl, status: 'ACTIVE', admission_date: data.admissionDate,
+      photo_url: data.photoUrl, status: 'ACTIVE', admission_date: data.admissionDate || new Date().toISOString().slice(0, 10),
     },
   });
 }
@@ -66,7 +66,7 @@ export async function listEnrollments(studentId: string) {
 }
 export async function createEnrollment(studentId: string, schoolId: string, data: any) {
   return prisma.studentsEnrollment.create({
-    data: { student_id: studentId, school_id: schoolId, academic_year_id: data.academicYearId, class_id: data.classId, stream_id: data.streamId, admission_date: data.admissionDate, enrollment_status: data.enrollmentStatus || 'ACTIVE', roll_number: data.rollNumber },
+    data: { student_id: studentId, school_id: schoolId, academic_year_id: data.academicYearId, class_id: data.classId, stream_id: data.streamId, admission_date: data.admissionDate || new Date().toISOString().slice(0, 10), enrollment_status: data.enrollmentStatus || 'ACTIVE', roll_number: data.rollNumber },
   });
 }
 export async function updateEnrollment(id: string, data: any) {

@@ -14,6 +14,7 @@ import { opsRouter } from './modules/ops/ops.router';
 import { academicRouter } from './modules/academic/academic.router';
 import { studentRouter } from './modules/student/student.router';
 import { staffRouter } from './modules/staff/staffx.router';
+import { financeRouter } from './modules/finance/finance.router';
 import { uploadRouter } from './modules/upload/upload.router';
 import { admissionRouter } from './modules/admission/admission.router';
 
@@ -56,6 +57,7 @@ app.use('/api/v1/students', studentRouter);
 app.use('/api/v1/staff', staffRouter);
 app.use('/api/v1/admissions', admissionRouter);
 app.use('/api/v1/upload', uploadRouter);
+app.use('/api/v1/finance', financeRouter);
 app.use(notFound);
 app.use(errorHandler);
 
