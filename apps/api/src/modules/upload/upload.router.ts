@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import { authenticate, AuthRequest } from '../../middleware/authenticate';
 import { Response } from 'express';
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 let supabase: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient {
-  if (!supabase) supabase = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_SERVICE_KEY || '');
+  if (!supabase) supabase = createClient(process.env.SUPABASE_URL || '', process.env.SUPABASE_SERVICE_KEY || '', { realtime: { transport: ws as any } });
   return supabase;
 }
 
