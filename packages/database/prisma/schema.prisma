@@ -1370,6 +1370,7 @@ model SchoolSettings {
   value                          String
   updated_at                     DateTime  @updatedAt
   updated_by                     String?
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("school_settings")

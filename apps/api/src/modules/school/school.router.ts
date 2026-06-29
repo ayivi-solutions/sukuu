@@ -6,6 +6,7 @@ schoolRouter.get('/profile', authenticate, ctrl.getProfile);
 schoolRouter.patch('/profile', authenticate, ctrl.patchProfile);
 schoolRouter.get('/settings', authenticate, ctrl.getSettings);
 schoolRouter.put('/settings', authenticate, ctrl.putSetting);
+schoolRouter.patch('/settings/:id/archive', authenticate, ctrl.patchArchiveSetting);
 schoolRouter.get('/accreditations', authenticate, ctrl.getAccreditations);
 schoolRouter.post('/accreditations', authenticate, ctrl.postAccreditation);
 schoolRouter.patch('/accreditations/:accreditationId/archive', authenticate, ctrl.patchArchiveAccreditation);

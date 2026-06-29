@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, getSettingSchoolId, archiveSetting } from './school.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -172,5 +172,13 @@ export async function patchAccreditation(req: AuthRequest, res: Response) {
     const r = await updateAccreditation(req.params.accreditationId, req.body);
     if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE accreditation: ${req.params.accreditationId}`, req.userId || '');
     res.json(r);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+
+export async function patchArchiveSetting(req: AuthRequest, res: Response) {
+  try {
+    const sid = await getSettingSchoolId(req.params.id);
+    if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this setting' });
+    res.json(await archiveSetting(req.params.id));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 }

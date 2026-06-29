@@ -13,7 +13,7 @@ export async function updateSchoolProfile(schoolId: string, data: Record<string,
 }
 
 export async function getSchoolSettings(schoolId: string) {
-  return prisma.schoolSettings.findMany({ where: { school_id: schoolId } });
+  return prisma.schoolSettings.findMany({ where: { school_id: schoolId, archived_at: null } });
 }
 
 export async function listAccreditations(schoolId: string) {
@@ -127,3 +127,6 @@ export async function updateAccreditation(id: string, data: { authority?: string
     },
   });
 }
+
+export async function archiveSetting(id: string) { return prisma.schoolSettings.update({ where: { id }, data: { archived_at: new Date() } }); }
+export async function getSettingSchoolId(id: string) { return (await prisma.schoolSettings.findUnique({ where: { id } }))?.school_id; }

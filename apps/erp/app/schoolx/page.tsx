@@ -419,9 +419,10 @@ export default function SchoolXPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">SETTINGS ({settings.length})</span></div>
-            {settings.map(s => (
-              <div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.key}</div><div className="ri-s">{s.value}</div></div></div>
-            ))}
+            {settings.map(s => (<div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.key}</div><div className="ri-s">{s.value}</div></div>
+              <button onClick={() => setSettingForm({ key: s.key, value: s.value })} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
+              <button onClick={async () => { await authedFetch(`/api/v1/school/settings/${s.id}/archive`, token, { method: 'PATCH' }); loadAll(token); }} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+            </div>))}
             {settings.length === 0 && <div className="ri na"><div className="ri-s">No custom settings configured yet.</div></div>}
           </div>
           <form className="card" onSubmit={handleAddSetting}>
