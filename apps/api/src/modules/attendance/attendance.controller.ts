@@ -66,3 +66,5 @@ export const patchArchivePolicy = wrapMutateById(svc.getPolicySchoolId, req => s
 
 export const getStudentSummaries = wrap(req => svc.getStudentSummary(req.params.studentId));
 export const getClassSummaries = wrap(req => svc.listClassSummaries(req.schoolId || '', req.query.classId as string));
+
+export const getRoster = wrap(req => svc.getClassRoster(req.schoolId || '', req.query.classId as string, req.query.streamId as string | undefined));

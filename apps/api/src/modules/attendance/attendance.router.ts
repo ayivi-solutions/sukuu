@@ -9,6 +9,7 @@ const F = requireModuleAccess('attendance', 'full');
 
 attendanceRouter.get('/sessions', authenticate, R, ctrl.getSessions);
 attendanceRouter.post('/sessions', authenticate, F, ctrl.postSession);
+attendanceRouter.get('/roster', authenticate, R, ctrl.getRoster);
 attendanceRouter.patch('/sessions/:id', authenticate, F, ctrl.patchSession);
 attendanceRouter.patch('/sessions/:id/archive', authenticate, F, ctrl.patchArchiveSession);
 

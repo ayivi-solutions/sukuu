@@ -117,3 +117,11 @@ export async function recalculateSummary(schoolId: string, studentId: string, ac
 }
 export async function getStudentSummary(studentId: string) { return prisma.attendanceSummary.findMany({ where: { student_id: studentId }, orderBy: { updated_at: 'desc' } }); }
 export async function listClassSummaries(schoolId: string, classId?: string) { return prisma.attendanceSummary.findMany({ where: { school_id: schoolId } }); }
+
+// ── Class roster (for Take Attendance) — joins active enrollment → student ──
+export async function getClassRoster(schoolId: string, classId: string, streamId?: string) {
+  const enrollments = await prisma.studentsEnrollment.findMany({ where: { school_id: schoolId, class_id: classId, ...(streamId && { stream_id: streamId }), enrollment_status: 'ACTIVE' } });
+  const studentIds = enrollments.map(e => e.student_id);
+  if (studentIds.length === 0) return [];
+  return prisma.studentsStudent.findMany({ where: { id: { in: studentIds }, school_id: schoolId } });
+}
