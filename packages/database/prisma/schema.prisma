@@ -779,6 +779,8 @@ enum RoomRoomType {
   HALL
   LABORATORY
   LIBRARY
+  COMPUTER_LAB
+  STAFF_ROOM
   @@schema("sukuux")
 }
 
@@ -2532,6 +2534,7 @@ model ScheduleRoom {
   id                             String  @id @default(uuid())
   school_id                      String
   campus_id                      String?
+  building                       String?
   room_code                      String
   name                           String
   room_type                      RoomRoomType
@@ -2585,6 +2588,7 @@ model ScheduleTimetable {
   period_id                      String
   is_active                      Boolean
 
+  @@unique([class_id, stream_id, day_id, period_id])
   @@schema("sukuux")
   @@map("schedule_timetable")
 }
@@ -2599,6 +2603,7 @@ model ScheduleTeacherSchedule {
   class_id                       String
   subject_id                     String
 
+  @@unique([teacher_id, day_id, period_id])
   @@schema("sukuux")
   @@map("schedule_teacher_schedule")
 }
@@ -2612,6 +2617,7 @@ model ScheduleRoomSchedule {
   period_id                      String
   class_id                       String
 
+  @@unique([room_id, day_id, period_id])
   @@schema("sukuux")
   @@map("schedule_room_schedule")
 }
@@ -2622,6 +2628,7 @@ model ScheduleCalendarEvent {
   school_id                      String
   event_type                     CalendarEventEventType
   name                           String
+  description                    String?
   start_date                     String
   end_date                       String
   is_blackout                    Boolean

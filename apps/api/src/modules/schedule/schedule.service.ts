@@ -19,7 +19,7 @@ export async function getSubstitutionSchoolId(id: string) {
 
 // ── Rooms, Periods, Days (foundational setup) ──
 export async function listRooms(schoolId: string) { return prisma.scheduleRoom.findMany({ where: { school_id: schoolId } }); }
-export async function createRoom(schoolId: string, data: any) { return prisma.scheduleRoom.create({ data: { school_id: schoolId, campus_id: data.campusId, room_code: data.roomCode, name: data.name, room_type: data.roomType, capacity: data.capacity, is_active: true } }); }
+export async function createRoom(schoolId: string, data: any) { return prisma.scheduleRoom.create({ data: { school_id: schoolId, campus_id: data.campusId, building: data.building, room_code: data.roomCode, name: data.name, room_type: data.roomType, capacity: data.capacity, is_active: true } }); }
 export async function updateRoom(id: string, data: any) { return prisma.scheduleRoom.update({ where: { id }, data: { ...(data.name && { name: data.name }), ...(data.capacity !== undefined && { capacity: data.capacity }), ...(data.isActive !== undefined && { is_active: data.isActive }) } }); }
 
 export async function listPeriods(schoolId: string) { return prisma.schedulePeriod.findMany({ where: { school_id: schoolId, archived_at: null }, orderBy: { period_order: 'asc' } }); }
@@ -102,7 +102,7 @@ export async function cancelSubstitution(id: string) { return prisma.scheduleSub
 
 // ── Calendar Events ──
 export async function listEvents(schoolId: string) { return prisma.scheduleCalendarEvent.findMany({ where: { school_id: schoolId, archived_at: null } }); }
-export async function createEvent(schoolId: string, data: any) { return prisma.scheduleCalendarEvent.create({ data: { school_id: schoolId, event_type: data.eventType, name: data.name, start_date: data.startDate, end_date: data.endDate, is_blackout: !!data.isBlackout, visible_to_parents: data.visibleToParents !== false } }); }
+export async function createEvent(schoolId: string, data: any) { return prisma.scheduleCalendarEvent.create({ data: { school_id: schoolId, event_type: data.eventType, name: data.name, description: data.description, start_date: data.startDate, end_date: data.endDate, is_blackout: !!data.isBlackout, visible_to_parents: data.visibleToParents !== false } }); }
 export async function archiveEvent(id: string) { return prisma.scheduleCalendarEvent.update({ where: { id }, data: { archived_at: new Date() } }); }
 
 // ── Lock / Unlock ──

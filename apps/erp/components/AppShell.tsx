@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { icon: '📋', label: 'AdmissionX', href: '/admissions' },
   { icon: '💰', label: 'FinanceX', href: '/financex' },
   { icon: '🧾', label: 'PayrollX', href: '/payrollx' },
+  { icon: '🗓️', label: 'ScheduleX', href: '/schedulex' },
   { icon: '🗓️', label: 'Staff Leave', href: '/staff/leave' },
   { icon: '🕘', label: 'Staff Attendance', href: '/staff/attendance' },
 ];
