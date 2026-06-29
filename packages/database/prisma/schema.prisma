@@ -2551,6 +2551,7 @@ model SchedulePeriod {
   period_type                    PeriodPeriodType
   start_time                     String
   end_time                       String
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("schedule_period")
@@ -2563,6 +2564,7 @@ model ScheduleDay {
   day_order                      Int
   name                           String
   is_school_day                  Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("schedule_day")
@@ -2624,6 +2626,7 @@ model ScheduleCalendarEvent {
   end_date                       String
   is_blackout                    Boolean
   visible_to_parents             Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("schedule_calendar_event")
@@ -2680,6 +2683,7 @@ model ScheduleTemplate {
   created_from_term_id           String?
   created_by                     String
   created_at                     DateTime  @default(now())
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("schedule_template")
@@ -2712,6 +2716,7 @@ model ScheduleExamSlot {
   exam_date                      String
   start_time                     String
   duration_minutes               Int
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("schedule_exam_slot")

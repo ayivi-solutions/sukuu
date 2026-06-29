@@ -15,6 +15,7 @@ import { academicRouter } from './modules/academic/academic.router';
 import { studentRouter } from './modules/student/student.router';
 import { staffRouter } from './modules/staff/staffx.router';
 import { payrollRouter } from './modules/payroll/payroll.router';
+import { scheduleRouter } from './modules/schedule/schedule.router';
 import { financeRouter } from './modules/finance/finance.router';
 import { uploadRouter } from './modules/upload/upload.router';
 import { admissionRouter } from './modules/admission/admission.router';
@@ -60,6 +61,7 @@ app.use('/api/v1/admissions', admissionRouter);
 app.use('/api/v1/upload', uploadRouter);
 app.use('/api/v1/finance', financeRouter);
 app.use('/api/v1/payroll', payrollRouter);
+app.use('/api/v1/schedule', scheduleRouter);
 app.use(notFound);
 app.use(errorHandler);
 
