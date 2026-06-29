@@ -66,6 +66,8 @@ export default function ScheduleXPage() {
   const [editingExamSlot, setEditingExamSlot] = useState<any>(null);
   const [examEditForm, setExamEditForm] = useState({ roomId: '', examDate: '', startTime: '', durationMinutes: '', invigilatorId: '' });
   const [editError, setEditError] = useState('');
+  const [editingRoom, setEditingRoom] = useState<any>(null);
+  const [roomEditForm, setRoomEditForm] = useState({ name: '', capacity: '', isActive: true });
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -106,6 +108,8 @@ export default function ScheduleXPage() {
   function termLabel(id: string) { return terms.find(t => t.id === id)?.name || id?.slice(0, 8) || '—'; }
 
   async function handleAddRoom(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/rooms', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roomForm) }); setRoomForm({ roomCode: '', name: '', building: '', roomType: 'CLASSROOM', capacity: '' }); loadAll(token); }
+  function openEditRoom(r: any) { setEditingRoom(r); setRoomEditForm({ name: r.name, capacity: r.capacity, isActive: r.is_active }); }
+  async function handleSaveRoom(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/schedule/rooms/${editingRoom.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roomEditForm) }); setEditingRoom(null); loadAll(token); }
   async function handleAddPeriod(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/periods', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(periodForm) }); setPeriodForm({ periodOrder: '', name: '', periodType: 'LESSON', startTime: '', endTime: '' }); loadAll(token); }
   async function handleArchivePeriod(id: string) { await authedFetch(`/api/v1/schedule/periods/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
   function openEditPeriod(p: any) { setEditingPeriod(p); setPeriodEditForm({ name: p.name, periodOrder: p.period_order, periodType: p.period_type, startTime: p.start_time, endTime: p.end_time }); }
@@ -228,7 +232,10 @@ export default function ScheduleXPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">ROOMS</span></div>
-            {rooms.map(r => (<div key={r.id} className="ri na"><div className="ri-b"><div className="ri-t">{r.name} ({r.room_code})</div><div className="ri-s">{r.room_type} · Cap. {r.capacity} {r.building ? `· ${r.building}` : ''}</div></div><span className={`bdg ${r.is_active ? 'bok' : 'ber'}`}>{r.is_active ? 'Active' : 'Inactive'}</span></div>))}
+            {rooms.map(r => (<div key={r.id} className="ri na"><div className="ri-b"><div className="ri-t">{r.name} ({r.room_code})</div><div className="ri-s">{r.room_type} · Cap. {r.capacity} {r.building ? `· ${r.building}` : ''}</div></div>
+              <span className={`bdg ${r.is_active ? 'bok' : 'ber'}`} style={{ marginRight: 8 }}>{r.is_active ? 'Active' : 'Inactive'}</span>
+              <button onClick={() => openEditRoom(r)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>
+            </div>))}
             {rooms.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddRoom} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="Code" value={roomForm.roomCode} onChange={e => setRoomForm({ ...roomForm, roomCode: e.target.value })} required style={{ width: 90 }} />
@@ -392,6 +399,21 @@ export default function ScheduleXPage() {
               <button onClick={() => setViewingEntry(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {editingRoom && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingRoom(null)}>
+          <form onSubmit={handleSaveRoom} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Room</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={roomEditForm.name} onChange={e => setRoomEditForm({ ...roomEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CAPACITY</label><input className="fi" type="number" value={roomEditForm.capacity} onChange={e => setRoomEditForm({ ...roomEditForm, capacity: e.target.value })} required /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={roomEditForm.isActive} onChange={e => setRoomEditForm({ ...roomEditForm, isActive: e.target.checked })} /> Active</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingRoom(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
         </div>
       )}
 
