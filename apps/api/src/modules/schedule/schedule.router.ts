@@ -13,10 +13,12 @@ scheduleRouter.patch('/rooms/:id', authenticate, F, ctrl.patchRoom);
 
 scheduleRouter.get('/periods', authenticate, R, ctrl.getPeriods);
 scheduleRouter.post('/periods', authenticate, F, ctrl.postPeriod);
+scheduleRouter.patch('/periods/:id', authenticate, F, ctrl.patchPeriod);
 scheduleRouter.patch('/periods/:id/archive', authenticate, F, ctrl.patchArchivePeriod);
 
 scheduleRouter.get('/days', authenticate, R, ctrl.getDays);
 scheduleRouter.post('/days', authenticate, F, ctrl.postDay);
+scheduleRouter.patch('/days/:id', authenticate, F, ctrl.patchDay);
 scheduleRouter.patch('/days/:id/archive', authenticate, F, ctrl.patchArchiveDay);
 
 scheduleRouter.get('/timetable', authenticate, R, ctrl.getTimetable);
@@ -36,6 +38,7 @@ scheduleRouter.patch('/substitutions/:id/cancel', authenticate, F, ctrl.patchCan
 
 scheduleRouter.get('/events', authenticate, R, ctrl.getEvents);
 scheduleRouter.post('/events', authenticate, F, ctrl.postEvent);
+scheduleRouter.patch('/events/:id', authenticate, F, ctrl.patchEvent);
 scheduleRouter.patch('/events/:id/archive', authenticate, F, ctrl.patchArchiveEvent);
 
 scheduleRouter.get('/locks', authenticate, R, ctrl.getLocks);
@@ -44,8 +47,10 @@ scheduleRouter.patch('/locks/:id/unlock', authenticate, F, ctrl.patchUnlock);
 
 scheduleRouter.get('/templates', authenticate, R, ctrl.getTemplates);
 scheduleRouter.post('/templates', authenticate, F, ctrl.postTemplate);
+scheduleRouter.patch('/templates/:id', authenticate, F, ctrl.patchTemplate);
 scheduleRouter.patch('/templates/:id/archive', authenticate, F, ctrl.patchArchiveTemplate);
 
 scheduleRouter.get('/exam-slots', authenticate, R, ctrl.getExamSlots);
 scheduleRouter.post('/exam-slots', authenticate, F, ctrl.postExamSlot);
+scheduleRouter.patch('/exam-slots/:id', authenticate, F, ctrl.patchExamSlot);
 scheduleRouter.patch('/exam-slots/:id/archive', authenticate, F, ctrl.patchArchiveExamSlot);

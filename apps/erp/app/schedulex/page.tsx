@@ -33,6 +33,7 @@ export default function ScheduleXPage() {
   const [days, setDays] = useState<any[]>([]);
   const [timetable, setTimetable] = useState<any[]>([]);
   const [conflicts, setConflicts] = useState<any[]>([]);
+  const [showResolved, setShowResolved] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [locks, setLocks] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
@@ -54,6 +55,18 @@ export default function ScheduleXPage() {
   const [subForm, setSubForm] = useState({ substituteTeacherId: '', date: '', reason: '' });
   const [unlockReason, setUnlockReason] = useState<{ [key: string]: string }>({});
 
+  const [editingPeriod, setEditingPeriod] = useState<any>(null);
+  const [periodEditForm, setPeriodEditForm] = useState({ name: '', periodOrder: '', periodType: 'LESSON', startTime: '', endTime: '' });
+  const [editingDay, setEditingDay] = useState<any>(null);
+  const [dayEditForm, setDayEditForm] = useState({ name: '', dayOrder: '', isSchoolDay: true });
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [eventEditForm, setEventEditForm] = useState({ name: '', description: '', startDate: '', endDate: '', isBlackout: false });
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [templateEditForm, setTemplateEditForm] = useState({ name: '' });
+  const [editingExamSlot, setEditingExamSlot] = useState<any>(null);
+  const [examEditForm, setExamEditForm] = useState({ roomId: '', examDate: '', startTime: '', durationMinutes: '', invigilatorId: '' });
+  const [editError, setEditError] = useState('');
+
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
     const userStr = localStorage.getItem('sukuu_user');
@@ -62,6 +75,8 @@ export default function ScheduleXPage() {
     setUser(userStr ? JSON.parse(userStr) : null);
     loadAll(t);
   }, [router]);
+
+  useEffect(() => { if (token) loadConflicts(token); }, [showResolved]);
 
   function loadAll(t: string) {
     authedFetch('/api/v1/school/profile', t).then(d => d && !d.error && setSchool(d));
@@ -75,11 +90,14 @@ export default function ScheduleXPage() {
     authedFetch('/api/v1/schedule/periods', t).then(d => Array.isArray(d) && setPeriods(d));
     authedFetch('/api/v1/schedule/days', t).then(d => Array.isArray(d) && setDays(d));
     authedFetch('/api/v1/schedule/timetable', t).then(d => Array.isArray(d) && setTimetable(d));
-    authedFetch('/api/v1/schedule/conflicts', t).then(d => Array.isArray(d) && setConflicts(d));
+    loadConflicts(t);
     authedFetch('/api/v1/schedule/events', t).then(d => Array.isArray(d) && setEvents(d));
     authedFetch('/api/v1/schedule/locks', t).then(d => Array.isArray(d) && setLocks(d));
     authedFetch('/api/v1/schedule/templates', t).then(d => Array.isArray(d) && setTemplates(d));
     authedFetch('/api/v1/schedule/exam-slots', t).then(d => Array.isArray(d) && setExamSlots(d));
+  }
+  function loadConflicts(t: string) {
+    authedFetch(`/api/v1/schedule/conflicts?includeResolved=${showResolved}`, t).then(d => Array.isArray(d) && setConflicts(d));
   }
 
   function nameOf(list: any[], id: string, field = 'name') { return list.find(x => x.id === id)?.[field] || id?.slice(0, 8) || '—'; }
@@ -90,8 +108,13 @@ export default function ScheduleXPage() {
   async function handleAddRoom(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/rooms', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roomForm) }); setRoomForm({ roomCode: '', name: '', building: '', roomType: 'CLASSROOM', capacity: '' }); loadAll(token); }
   async function handleAddPeriod(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/periods', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(periodForm) }); setPeriodForm({ periodOrder: '', name: '', periodType: 'LESSON', startTime: '', endTime: '' }); loadAll(token); }
   async function handleArchivePeriod(id: string) { await authedFetch(`/api/v1/schedule/periods/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditPeriod(p: any) { setEditingPeriod(p); setPeriodEditForm({ name: p.name, periodOrder: p.period_order, periodType: p.period_type, startTime: p.start_time, endTime: p.end_time }); }
+  async function handleSavePeriod(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/schedule/periods/${editingPeriod.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(periodEditForm) }); setEditingPeriod(null); loadAll(token); }
+
   async function handleAddDay(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/days', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dayForm) }); setDayForm({ dayOrder: '', name: '', isSchoolDay: true }); loadAll(token); }
   async function handleArchiveDay(id: string) { await authedFetch(`/api/v1/schedule/days/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditDay(d: any) { setEditingDay(d); setDayEditForm({ name: d.name, dayOrder: d.day_order, isSchoolDay: d.is_school_day }); }
+  async function handleSaveDay(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/schedule/days/${editingDay.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dayEditForm) }); setEditingDay(null); loadAll(token); }
 
   async function handleAddEntry(e: React.FormEvent) {
     e.preventDefault();
@@ -116,15 +139,19 @@ export default function ScheduleXPage() {
     setSubstitutions(Array.isArray(subs) ? subs : []);
   }
   async function handleCancelSubstitution(id: string) { await authedFetch(`/api/v1/schedule/substitutions/${id}/cancel`, token, { method: 'PATCH' }); const subs = await authedFetch(`/api/v1/schedule/timetable/${viewingEntry.id}/substitutions`, token); setSubstitutions(Array.isArray(subs) ? subs : []); }
-  async function handleResolveConflict(id: string) { await authedFetch(`/api/v1/schedule/conflicts/${id}/resolve`, token, { method: 'PATCH' }); loadAll(token); }
+  async function handleResolveConflict(id: string) { await authedFetch(`/api/v1/schedule/conflicts/${id}/resolve`, token, { method: 'PATCH' }); loadConflicts(token); }
 
   async function handleAddEvent(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/events', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(eventForm) }); setEventForm({ eventType: 'ACTIVITY', name: '', description: '', startDate: '', endDate: '', isBlackout: false }); loadAll(token); }
   async function handleArchiveEvent(id: string) { await authedFetch(`/api/v1/schedule/events/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditEvent(e: any) { setEditingEvent(e); setEventEditForm({ name: e.name, description: e.description || '', startDate: e.start_date, endDate: e.end_date, isBlackout: e.is_blackout }); }
+  async function handleSaveEvent(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/schedule/events/${editingEvent.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(eventEditForm) }); setEditingEvent(null); loadAll(token); }
 
   async function handleLockSchedule(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/locks', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lockForm) }); setLockForm({ academicYearId: '', termId: '' }); loadAll(token); }
   async function handleUnlock(id: string) { await authedFetch(`/api/v1/schedule/locks/${id}/unlock`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: unlockReason[id] || 'Unlocked by admin' }) }); loadAll(token); }
   async function handleAddTemplate(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/schedule/templates', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(templateForm) }); setTemplateForm({ name: '' }); loadAll(token); }
   async function handleArchiveTemplate(id: string) { await authedFetch(`/api/v1/schedule/templates/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditTemplate(t: any) { setEditingTemplate(t); setTemplateEditForm({ name: t.name }); }
+  async function handleSaveTemplate(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/schedule/templates/${editingTemplate.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(templateEditForm) }); setEditingTemplate(null); loadAll(token); }
 
   async function handleAddExamSlot(e: React.FormEvent) {
     e.preventDefault();
@@ -133,6 +160,14 @@ export default function ScheduleXPage() {
     else { setExamForm({ termId: '', classId: '', subjectId: '', roomId: '', invigilatorId: '', examDate: '', startTime: '', durationMinutes: '' }); loadAll(token); }
   }
   async function handleArchiveExamSlot(id: string) { await authedFetch(`/api/v1/schedule/exam-slots/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
+  function openEditExamSlot(e: any) { setEditingExamSlot(e); setExamEditForm({ roomId: e.room_id, examDate: e.exam_date, startTime: e.start_time, durationMinutes: e.duration_minutes, invigilatorId: e.invigilator_id || '' }); setEditError(''); }
+  async function handleSaveExamSlot(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError('');
+    const res = await authedFetch(`/api/v1/schedule/exam-slots/${editingExamSlot.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(examEditForm) });
+    if (res?.error) setEditError(res.error);
+    else { setEditingExamSlot(null); loadAll(token); }
+  }
 
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
@@ -206,7 +241,10 @@ export default function ScheduleXPage() {
           </div>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">PERIODS</span></div>
-            {periods.map(p => (<div key={p.id} className="ri na"><div className="ri-b"><div className="ri-t">#{p.period_order} {p.name}</div><div className="ri-s">{p.start_time} - {p.end_time} · {p.period_type}</div></div><button onClick={() => handleArchivePeriod(p.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {periods.map(p => (<div key={p.id} className="ri na"><div className="ri-b"><div className="ri-t">#{p.period_order} {p.name}</div><div className="ri-s">{p.start_time} - {p.end_time} · {p.period_type}</div></div>
+              <button onClick={() => openEditPeriod(p)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
+              <button onClick={() => handleArchivePeriod(p.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+            </div>))}
             {periods.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddPeriod} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" type="number" placeholder="Order" value={periodForm.periodOrder} onChange={e => setPeriodForm({ ...periodForm, periodOrder: e.target.value })} required style={{ width: 80 }} />
@@ -219,7 +257,10 @@ export default function ScheduleXPage() {
           </div>
           <div className="card">
             <div className="ch"><span className="ch-t">DAYS</span></div>
-            {days.map(d => (<div key={d.id} className="ri na"><div className="ri-b"><div className="ri-t">#{d.day_order} {d.name}</div><div className="ri-s">{d.is_school_day ? 'School day' : 'Non-school day'}</div></div><button onClick={() => handleArchiveDay(d.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {days.map(d => (<div key={d.id} className="ri na"><div className="ri-b"><div className="ri-t">#{d.day_order} {d.name}</div><div className="ri-s">{d.is_school_day ? 'School day' : 'Non-school day'}</div></div>
+              <button onClick={() => openEditDay(d)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
+              <button onClick={() => handleArchiveDay(d.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+            </div>))}
             {days.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddDay} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" type="number" placeholder="Order" value={dayForm.dayOrder} onChange={e => setDayForm({ ...dayForm, dayOrder: e.target.value })} required style={{ width: 80 }} />
@@ -234,8 +275,13 @@ export default function ScheduleXPage() {
       {tab === 'conflicts' && (
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card">
-            <div className="ch"><span className="ch-t">UNRESOLVED CONFLICTS</span></div>
-            {conflicts.map(c => (<div key={c.id} className="ri na"><div className="ri-b"><div className="ri-t">{c.conflict_type}</div><div className="ri-s">Detected {new Date(c.detected_at).toLocaleString()}</div></div><button onClick={() => handleResolveConflict(c.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Mark Resolved</button></div>))}
+            <div className="ch" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="ch-t">{showResolved ? 'ALL CONFLICTS' : 'UNRESOLVED CONFLICTS'}</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 400 }}><input type="checkbox" checked={showResolved} onChange={e => setShowResolved(e.target.checked)} /> Show resolved</label>
+            </div>
+            {conflicts.map(c => (<div key={c.id} className="ri na"><div className="ri-b"><div className="ri-t">{c.conflict_type}</div><div className="ri-s">Detected {new Date(c.detected_at).toLocaleString()}</div></div>
+              {c.resolved ? <span className="bdg bok">Resolved</span> : <button onClick={() => handleResolveConflict(c.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Mark Resolved</button>}
+            </div>))}
             {conflicts.length === 0 && <div className="ri na"><div className="ri-s">No conflicts — schedule is clean. ✓</div></div>}
           </div>
           <div className="alert al-in" style={{ marginTop: 16 }}><span className="al-ic">ℹ️</span><div>Substitutions are managed per timetable entry — click any lesson in the Timetable tab to add a substitute teacher.</div></div>
@@ -246,7 +292,10 @@ export default function ScheduleXPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card">
             <div className="ch"><span className="ch-t">CALENDAR EVENTS</span></div>
-            {events.map(e => (<div key={e.id} className="ri na"><div className="ri-b"><div className="ri-t">{e.name}</div><div className="ri-s">{e.event_type} · {e.start_date} → {e.end_date} {e.is_blackout && '· Blackout'}</div></div><button onClick={() => handleArchiveEvent(e.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {events.map(e => (<div key={e.id} className="ri na"><div className="ri-b"><div className="ri-t">{e.name}</div><div className="ri-s">{e.event_type} · {e.start_date} → {e.end_date} {e.is_blackout && '· Blackout'} {e.description && `· ${e.description}`}</div></div>
+              <button onClick={() => openEditEvent(e)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
+              <button onClick={() => handleArchiveEvent(e.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+            </div>))}
             {events.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddEvent} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <select className="fi" value={eventForm.eventType} onChange={e => setEventForm({ ...eventForm, eventType: e.target.value })}><option value="ACTIVITY">Activity</option><option value="EXAM">Exam</option><option value="HOLIDAY">Holiday</option><option value="TERM_START">Term Start</option><option value="TERM_END">Term End</option></select>
@@ -278,7 +327,10 @@ export default function ScheduleXPage() {
           </div>
           <div className="card">
             <div className="ch"><span className="ch-t">TIMETABLE TEMPLATES</span></div>
-            {templates.map(t => (<div key={t.id} className="ri na"><div className="ri-b"><div className="ri-t">{t.name}</div><div className="ri-s">Created {new Date(t.created_at).toLocaleDateString()}</div></div><button onClick={() => handleArchiveTemplate(t.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {templates.map(t => (<div key={t.id} className="ri na"><div className="ri-b"><div className="ri-t">{t.name}</div><div className="ri-s">Created {new Date(t.created_at).toLocaleDateString()}</div></div>
+              <button onClick={() => openEditTemplate(t)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Rename</button>
+              <button onClick={() => handleArchiveTemplate(t.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+            </div>))}
             {templates.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddTemplate} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="2026 Term 2 Standard Template" value={templateForm.name} onChange={e => setTemplateForm({ name: e.target.value })} required style={{ flex: 1 }} />
@@ -292,7 +344,10 @@ export default function ScheduleXPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card">
             <div className="ch"><span className="ch-t">EXAM SLOTS</span></div>
-            {examSlots.map(e => (<div key={e.id} className="ri na"><div className="ri-b"><div className="ri-t">{nameOf(classes, e.class_id)} · {nameOf(subjects, e.subject_id)}</div><div className="ri-s">{nameOf(rooms, e.room_id)} · {e.exam_date} {e.start_time} · {e.duration_minutes}min</div></div><button onClick={() => handleArchiveExamSlot(e.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {examSlots.map(e => (<div key={e.id} className="ri na"><div className="ri-b"><div className="ri-t">{nameOf(classes, e.class_id)} · {nameOf(subjects, e.subject_id)}</div><div className="ri-s">{nameOf(rooms, e.room_id)} · {e.exam_date} {e.start_time} · {e.duration_minutes}min</div></div>
+              <button onClick={() => openEditExamSlot(e)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
+              <button onClick={() => handleArchiveExamSlot(e.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+            </div>))}
             {examSlots.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddExamSlot} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <select className="fi" value={examForm.termId} onChange={e => setExamForm({ ...examForm, termId: e.target.value })} required><option value="">Term...</option>{terms.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
@@ -337,6 +392,86 @@ export default function ScheduleXPage() {
               <button onClick={() => setViewingEntry(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {editingPeriod && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingPeriod(null)}>
+          <form onSubmit={handleSavePeriod} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Period</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={periodEditForm.name} onChange={e => setPeriodEditForm({ ...periodEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">ORDER</label><input className="fi" type="number" value={periodEditForm.periodOrder} onChange={e => setPeriodEditForm({ ...periodEditForm, periodOrder: e.target.value })} /></div>
+            <div className="fg"><label className="fl">TYPE</label><select className="fi" value={periodEditForm.periodType} onChange={e => setPeriodEditForm({ ...periodEditForm, periodType: e.target.value })}><option value="LESSON">Lesson</option><option value="BREAK">Break</option><option value="ASSEMBLY">Assembly</option><option value="FREE">Free</option></select></div>
+            <div className="fg"><label className="fl">START</label><input className="fi" type="time" value={periodEditForm.startTime} onChange={e => setPeriodEditForm({ ...periodEditForm, startTime: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">END</label><input className="fi" type="time" value={periodEditForm.endTime} onChange={e => setPeriodEditForm({ ...periodEditForm, endTime: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingPeriod(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingDay && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingDay(null)}>
+          <form onSubmit={handleSaveDay} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Day</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={dayEditForm.name} onChange={e => setDayEditForm({ ...dayEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">ORDER</label><input className="fi" type="number" value={dayEditForm.dayOrder} onChange={e => setDayEditForm({ ...dayEditForm, dayOrder: e.target.value })} /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={dayEditForm.isSchoolDay} onChange={e => setDayEditForm({ ...dayEditForm, isSchoolDay: e.target.checked })} /> School day</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingDay(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingEvent && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingEvent(null)}>
+          <form onSubmit={handleSaveEvent} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Event</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={eventEditForm.name} onChange={e => setEventEditForm({ ...eventEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">DESCRIPTION</label><input className="fi" value={eventEditForm.description} onChange={e => setEventEditForm({ ...eventEditForm, description: e.target.value })} /></div>
+            <div className="fg"><label className="fl">START DATE</label><input className="fi" type="date" value={eventEditForm.startDate} onChange={e => setEventEditForm({ ...eventEditForm, startDate: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">END DATE</label><input className="fi" type="date" value={eventEditForm.endDate} onChange={e => setEventEditForm({ ...eventEditForm, endDate: e.target.value })} required /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={eventEditForm.isBlackout} onChange={e => setEventEditForm({ ...eventEditForm, isBlackout: e.target.checked })} /> Blackout</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingEvent(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingTemplate && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingTemplate(null)}>
+          <form onSubmit={handleSaveTemplate} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Rename Template</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={templateEditForm.name} onChange={e => setTemplateEditForm({ name: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingTemplate(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingExamSlot && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingExamSlot(null)}>
+          <form onSubmit={handleSaveExamSlot} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Exam Slot</h3>
+            {editError && <div className="alert al-er" style={{ marginBottom: 12 }}><span className="al-ic">⚠️</span><div>{editError}</div></div>}
+            <div className="fg"><label className="fl">ROOM</label><select className="fi" value={examEditForm.roomId} onChange={e => setExamEditForm({ ...examEditForm, roomId: e.target.value })}>{rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></div>
+            <div className="fg"><label className="fl">DATE</label><input className="fi" type="date" value={examEditForm.examDate} onChange={e => setExamEditForm({ ...examEditForm, examDate: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">START TIME</label><input className="fi" type="time" value={examEditForm.startTime} onChange={e => setExamEditForm({ ...examEditForm, startTime: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">DURATION (MIN)</label><input className="fi" type="number" value={examEditForm.durationMinutes} onChange={e => setExamEditForm({ ...examEditForm, durationMinutes: e.target.value })} /></div>
+            <div className="fg"><label className="fl">INVIGILATOR</label><select className="fi" value={examEditForm.invigilatorId} onChange={e => setExamEditForm({ ...examEditForm, invigilatorId: e.target.value })}><option value="">None...</option>{staffList.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>)}</select></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingExamSlot(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
         </div>
       )}
     </AppShell>

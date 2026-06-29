@@ -25,10 +25,12 @@ export async function updateRoom(id: string, data: any) { return prisma.schedule
 export async function listPeriods(schoolId: string) { return prisma.schedulePeriod.findMany({ where: { school_id: schoolId, archived_at: null }, orderBy: { period_order: 'asc' } }); }
 export async function createPeriod(schoolId: string, data: any) { return prisma.schedulePeriod.create({ data: { school_id: schoolId, period_order: data.periodOrder, name: data.name, period_type: data.periodType, start_time: data.startTime, end_time: data.endTime } }); }
 export async function archivePeriod(id: string) { return prisma.schedulePeriod.update({ where: { id }, data: { archived_at: new Date() } }); }
+export async function updatePeriod(id: string, data: any) { return prisma.schedulePeriod.update({ where: { id }, data: { ...(data.name && { name: data.name }), ...(data.periodOrder !== undefined && { period_order: data.periodOrder }), ...(data.periodType && { period_type: data.periodType }), ...(data.startTime && { start_time: data.startTime }), ...(data.endTime && { end_time: data.endTime }) } }); }
 
 export async function listDays(schoolId: string) { return prisma.scheduleDay.findMany({ where: { school_id: schoolId, archived_at: null }, orderBy: { day_order: 'asc' } }); }
 export async function createDay(schoolId: string, data: any) { return prisma.scheduleDay.create({ data: { school_id: schoolId, day_order: data.dayOrder, name: data.name, is_school_day: data.isSchoolDay !== false } }); }
 export async function archiveDay(id: string) { return prisma.scheduleDay.update({ where: { id }, data: { archived_at: new Date() } }); }
+export async function updateDay(id: string, data: any) { return prisma.scheduleDay.update({ where: { id }, data: { ...(data.name && { name: data.name }), ...(data.dayOrder !== undefined && { day_order: data.dayOrder }), ...(data.isSchoolDay !== undefined && { is_school_day: data.isSchoolDay }) } }); }
 
 // ── Lock check helper ──
 async function assertNotLocked(schoolId: string, academicYearId: string, termId: string) {
@@ -88,7 +90,7 @@ export async function getRoomSchedule(roomId: string) { return prisma.scheduleRo
 export async function listRevisions(timetableId: string) { return prisma.scheduleRevision.findMany({ where: { timetable_id: timetableId }, orderBy: { changed_at: 'desc' } }); }
 
 // ── Conflicts (read + resolve) ──
-export async function listConflicts(schoolId: string) { return prisma.scheduleConflict.findMany({ where: { school_id: schoolId, resolved: false } }); }
+export async function listConflicts(schoolId: string, includeResolved?: boolean) { return prisma.scheduleConflict.findMany({ where: { school_id: schoolId, ...(includeResolved ? {} : { resolved: false }) }, orderBy: { detected_at: 'desc' } }); }
 export async function resolveConflict(id: string) { return prisma.scheduleConflict.update({ where: { id }, data: { resolved: true } }); }
 
 // ── Substitutions ──
@@ -104,6 +106,7 @@ export async function cancelSubstitution(id: string) { return prisma.scheduleSub
 export async function listEvents(schoolId: string) { return prisma.scheduleCalendarEvent.findMany({ where: { school_id: schoolId, archived_at: null } }); }
 export async function createEvent(schoolId: string, data: any) { return prisma.scheduleCalendarEvent.create({ data: { school_id: schoolId, event_type: data.eventType, name: data.name, description: data.description, start_date: data.startDate, end_date: data.endDate, is_blackout: !!data.isBlackout, visible_to_parents: data.visibleToParents !== false } }); }
 export async function archiveEvent(id: string) { return prisma.scheduleCalendarEvent.update({ where: { id }, data: { archived_at: new Date() } }); }
+export async function updateEvent(id: string, data: any) { return prisma.scheduleCalendarEvent.update({ where: { id }, data: { ...(data.name && { name: data.name }), ...(data.description !== undefined && { description: data.description }), ...(data.startDate && { start_date: data.startDate }), ...(data.endDate && { end_date: data.endDate }), ...(data.isBlackout !== undefined && { is_blackout: data.isBlackout }) } }); }
 
 // ── Lock / Unlock ──
 export async function listLocks(schoolId: string) { return prisma.scheduleLock.findMany({ where: { school_id: schoolId } }); }
@@ -114,6 +117,7 @@ export async function unlockSchedule(id: string, unlockedBy: string, reason: str
 export async function listTemplates(schoolId: string) { return prisma.scheduleTemplate.findMany({ where: { school_id: schoolId, archived_at: null } }); }
 export async function createTemplate(schoolId: string, createdBy: string, data: any) { return prisma.scheduleTemplate.create({ data: { school_id: schoolId, name: data.name, created_from_term_id: data.createdFromTermId, created_by: createdBy } }); }
 export async function archiveTemplate(id: string) { return prisma.scheduleTemplate.update({ where: { id }, data: { archived_at: new Date() } }); }
+export async function updateTemplate(id: string, data: any) { return prisma.scheduleTemplate.update({ where: { id }, data: { name: data.name } }); }
 
 // ── Exam Slots ──
 export async function listExamSlots(schoolId: string) { return prisma.scheduleExamSlot.findMany({ where: { school_id: schoolId, archived_at: null } }); }
@@ -121,5 +125,17 @@ export async function createExamSlot(schoolId: string, data: any) {
   const roomConflict = await prisma.scheduleExamSlot.findFirst({ where: { school_id: schoolId, room_id: data.roomId, exam_date: data.examDate, start_time: data.startTime, archived_at: null } });
   if (roomConflict) throw new Error('Room already booked for an exam at this time');
   return prisma.scheduleExamSlot.create({ data: { school_id: schoolId, term_id: data.termId, class_id: data.classId, subject_id: data.subjectId, room_id: data.roomId, invigilator_id: data.invigilatorId, exam_date: data.examDate, start_time: data.startTime, duration_minutes: data.durationMinutes } });
+}
+export async function updateExamSlot(id: string, data: any) {
+  const current = await prisma.scheduleExamSlot.findUnique({ where: { id } });
+  if (!current) throw new Error('Exam slot not found');
+  const roomId = data.roomId || current.room_id;
+  const examDate = data.examDate || current.exam_date;
+  const startTime = data.startTime || current.start_time;
+  if (data.roomId || data.examDate || data.startTime) {
+    const conflict = await prisma.scheduleExamSlot.findFirst({ where: { school_id: current.school_id, room_id: roomId, exam_date: examDate, start_time: startTime, archived_at: null, id: { not: id } } });
+    if (conflict) throw new Error('Room already booked for an exam at this time');
+  }
+  return prisma.scheduleExamSlot.update({ where: { id }, data: { ...(data.roomId && { room_id: data.roomId }), ...(data.examDate && { exam_date: data.examDate }), ...(data.startTime && { start_time: data.startTime }), ...(data.durationMinutes !== undefined && { duration_minutes: data.durationMinutes }), ...(data.invigilatorId !== undefined && { invigilator_id: data.invigilatorId }) } });
 }
 export async function archiveExamSlot(id: string) { return prisma.scheduleExamSlot.update({ where: { id }, data: { archived_at: new Date() } }); }
