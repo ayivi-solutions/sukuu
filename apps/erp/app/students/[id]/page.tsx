@@ -66,6 +66,20 @@ export default function StudentDetailPage() {
   const [scholarshipForm, setScholarshipForm] = useState({ scholarshipName: '', sponsor: '', coverageType: 'FULL', coveragePct: 100, startDate: '' });
   const [transferForm, setTransferForm] = useState({ transferType: 'OUT', toSchool: '', fromSchool: '', transferDate: '', reason: '' });
   const [graduationForm, setGraduationForm] = useState({ graduationDate: '', finalClassId: '', honours: '' });
+  const [editingEnrollment, setEditingEnrollment] = useState<any>(null);
+  const [enrollEditForm, setEnrollEditForm] = useState({ rollNumber: '', enrollmentStatus: 'ACTIVE' });
+  const [editingGuardian, setEditingGuardian] = useState<any>(null);
+  const [guardianEditForm, setGuardianEditForm] = useState({ fullName: '', relationship: 'FATHER', phone: '', email: '', isPrimary: false });
+  const [editingAddress, setEditingAddress] = useState<any>(null);
+  const [addressEditForm, setAddressEditForm] = useState({ addressType: 'RESIDENTIAL', street: '', city: '', region: '', isPrimary: false });
+  const [editingContact, setEditingContact] = useState<any>(null);
+  const [contactEditForm, setContactEditForm] = useState({ contactType: 'PHONE', value: '', label: '' });
+  const [editingIdDoc, setEditingIdDoc] = useState<any>(null);
+  const [idDocEditForm, setIdDocEditForm] = useState({ documentType: 'BIRTH_CERTIFICATE', documentNumber: '' });
+  const [editingFee, setEditingFee] = useState<any>(null);
+  const [feeEditForm, setFeeEditForm] = useState({ notes: '' });
+  const [editingScholarship, setEditingScholarship] = useState<any>(null);
+  const [scholarshipEditForm, setScholarshipEditForm] = useState({ scholarshipName: '', sponsor: '', coverageType: 'FULL', coveragePct: 100, endDate: '' });
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -133,6 +147,20 @@ export default function StudentDetailPage() {
   async function handleAddTransfer(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/transfers`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transferForm) }); setTransferForm({ transferType: 'OUT', toSchool: '', fromSchool: '', transferDate: '', reason: '' }); loadAll(token); }
   async function handleAddGraduation(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/graduations`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(graduationForm) }); setGraduationForm({ graduationDate: '', finalClassId: '', honours: '' }); loadAll(token); }
   async function handleTogglePortal() { await authedFetch(`/api/v1/students/${studentId}/portal-access`, token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: portalAccess?.user_id || '', isEnabled: !portalAccess?.is_enabled }) }); loadAll(token); }
+  function openEditEnrollment(en: any) { setEditingEnrollment(en); setEnrollEditForm({ rollNumber: en.roll_number || '', enrollmentStatus: en.enrollment_status }); }
+  async function handleSaveEnrollment(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/enrollments/${editingEnrollment.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(enrollEditForm) }); setEditingEnrollment(null); loadAll(token); }
+  function openEditGuardian(g: any) { setEditingGuardian(g); setGuardianEditForm({ fullName: g.full_name, relationship: g.relationship, phone: g.phone, email: g.email || '', isPrimary: g.is_primary }); }
+  async function handleSaveGuardian(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/guardians/${editingGuardian.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(guardianEditForm) }); setEditingGuardian(null); loadAll(token); }
+  function openEditAddress(a: any) { setEditingAddress(a); setAddressEditForm({ addressType: a.address_type, street: a.street || '', city: a.city, region: a.region, isPrimary: a.is_primary }); }
+  async function handleSaveAddress(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/addresses/${editingAddress.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(addressEditForm) }); setEditingAddress(null); loadAll(token); }
+  function openEditContact(c: any) { setEditingContact(c); setContactEditForm({ contactType: c.contact_type, value: c.value, label: c.label || '' }); }
+  async function handleSaveContact(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/contacts/${editingContact.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(contactEditForm) }); setEditingContact(null); loadAll(token); }
+  function openEditIdDoc(d: any) { setEditingIdDoc(d); setIdDocEditForm({ documentType: d.document_type, documentNumber: d.document_number }); }
+  async function handleSaveIdDoc(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/identity-documents/${editingIdDoc.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(idDocEditForm) }); setEditingIdDoc(null); loadAll(token); }
+  function openEditFee(f: any) { setEditingFee(f); setFeeEditForm({ notes: f.notes || '' }); }
+  async function handleSaveFee(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/fee-profiles/${editingFee.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(feeEditForm) }); setEditingFee(null); loadAll(token); }
+  function openEditScholarship(s: any) { setEditingScholarship(s); setScholarshipEditForm({ scholarshipName: s.scholarship_name, sponsor: s.sponsor || '', coverageType: s.coverage_type, coveragePct: s.coverage_pct || 100, endDate: s.end_date || '' }); }
+  async function handleSaveScholarship(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/scholarships/${editingScholarship.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(scholarshipEditForm) }); setEditingScholarship(null); loadAll(token); }
 
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
   if (!student) return <AppShell user={user}><div style={{ padding: 40 }}>Loading…</div></AppShell>;
@@ -176,7 +204,7 @@ export default function StudentDetailPage() {
           </form>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">ENROLMENT HISTORY</span></div>
-            {enrollments.map(en => (<div key={en.id} className="ri na"><div className="ri-b"><div className="ri-t">{en.enrollment_status}</div><div className="ri-s">Roll #{en.roll_number || '—'} · Admitted {en.admission_date}</div></div></div>))}
+            {enrollments.map(en => (<div key={en.id} className="ri na"><div className="ri-b"><div className="ri-t">{en.enrollment_status}</div><div className="ri-s">Roll #{en.roll_number || '—'} · Admitted {en.admission_date}</div></div><button onClick={() => openEditEnrollment(en)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button></div>))}
             {enrollments.length === 0 && <div className="ri na"><div className="ri-s">No enrolment records yet.</div></div>}
             <form onSubmit={handleAddEnrollment} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <select className="fi" value={enrollForm.academicYearId} onChange={e => setEnrollForm({ ...enrollForm, academicYearId: e.target.value })} required>
@@ -203,7 +231,7 @@ export default function StudentDetailPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">GUARDIANS</span></div>
-            {guardians.map(g => (<div key={g.id} className="ri na"><div className="ri-b"><div className="ri-t">{g.full_name} {g.is_primary && <span className="bdg bgo">Primary</span>}</div><div className="ri-s">{g.relationship} · {g.phone}</div></div><button onClick={() => handleArchiveGuardian(g.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {guardians.map(g => (<div key={g.id} className="ri na"><div className="ri-b"><div className="ri-t">{g.full_name} {g.is_primary && <span className="bdg bgo">Primary</span>}</div><div className="ri-s">{g.relationship} · {g.phone}</div></div><button onClick={() => openEditGuardian(g)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button><button onClick={() => handleArchiveGuardian(g.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
             {guardians.length === 0 && <div className="ri na"><div className="ri-s">No guardians yet.</div></div>}
             <form onSubmit={handleAddGuardian} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="Full name" value={guardianForm.fullName} onChange={e => setGuardianForm({ ...guardianForm, fullName: e.target.value })} required />
@@ -214,7 +242,7 @@ export default function StudentDetailPage() {
           </div>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">ADDRESSES</span></div>
-            {addresses.map(a => (<div key={a.id} className="ri na"><div className="ri-b"><div className="ri-t">{a.city}, {a.region}</div><div className="ri-s">{a.address_type} {a.is_primary && '· Primary'}</div></div><button onClick={() => handleArchiveAddress(a.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {addresses.map(a => (<div key={a.id} className="ri na"><div className="ri-b"><div className="ri-t">{a.city}, {a.region}</div><div className="ri-s">{a.address_type} {a.is_primary && '· Primary'}</div></div><button onClick={() => openEditAddress(a)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button><button onClick={() => handleArchiveAddress(a.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
             {addresses.length === 0 && <div className="ri na"><div className="ri-s">No addresses yet.</div></div>}
             <form onSubmit={handleAddAddress} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="City" value={addressForm.city} onChange={e => setAddressForm({ ...addressForm, city: e.target.value })} required />
@@ -224,7 +252,7 @@ export default function StudentDetailPage() {
           </div>
           <div className="card">
             <div className="ch"><span className="ch-t">ADDITIONAL CONTACTS</span></div>
-            {contacts.map(c => (<div key={c.id} className="ri na"><div className="ri-b"><div className="ri-t">{c.label || c.contact_type}</div><div className="ri-s">{c.value}</div></div><button onClick={() => handleArchiveContact(c.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {contacts.map(c => (<div key={c.id} className="ri na"><div className="ri-b"><div className="ri-t">{c.label || c.contact_type}</div><div className="ri-s">{c.value}</div></div><button onClick={() => openEditContact(c)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button><button onClick={() => handleArchiveContact(c.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
             {contacts.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
             <form onSubmit={handleAddContact} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <select className="fi" value={contactForm.contactType} onChange={e => setContactForm({ ...contactForm, contactType: e.target.value })}><option value="PHONE">Phone</option><option value="EMAIL">Email</option><option value="WHATSAPP">WhatsApp</option></select>
@@ -286,6 +314,7 @@ export default function StudentDetailPage() {
             <div className="ch"><span className="ch-t">IDENTITY DOCUMENTS</span></div>
             {identityDocuments.map(d => (<div key={d.id} className="ri na"><div className="ri-b"><div className="ri-t">{d.document_type}</div><div className="ri-s">{d.document_number}</div></div>
               <span className={`bdg ${d.verified ? 'bok' : 'bwn'}`} onClick={() => handleVerifyIdDoc(d.id, d.verified)} style={{ cursor: 'pointer', marginRight: 8 }}>{d.verified ? 'Verified' : 'Unverified'}</span>
+              <button onClick={() => openEditIdDoc(d)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
               <button onClick={() => handleArchiveIdDoc(d.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
             </div>))}
             {identityDocuments.length === 0 && <div className="ri na"><div className="ri-s">None yet.</div></div>}
@@ -358,7 +387,7 @@ export default function StudentDetailPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">FEE PROFILES</span></div>
-            {feeProfiles.map(f => (<div key={f.id} className="ri na"><div className="ri-b"><div className="ri-t">Fee structure {f.fee_structure_id?.slice(0, 8)}</div><div className="ri-s">{f.notes || '—'}</div></div><button onClick={() => handleArchiveFee(f.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {feeProfiles.map(f => (<div key={f.id} className="ri na"><div className="ri-b"><div className="ri-t">Fee structure {f.fee_structure_id?.slice(0, 8)}</div><div className="ri-s">{f.notes || '—'}</div></div><button onClick={() => openEditFee(f)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button><button onClick={() => handleArchiveFee(f.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
             {feeProfiles.length === 0 && <div className="ri na"><div className="ri-s">No fee profile assigned yet.</div></div>}
             <form onSubmit={handleAddFee} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="Fee Structure ID" value={feeForm.feeStructureId} onChange={e => setFeeForm({ ...feeForm, feeStructureId: e.target.value })} required style={{ flex: 1 }} />
@@ -367,7 +396,7 @@ export default function StudentDetailPage() {
           </div>
           <div className="card">
             <div className="ch"><span className="ch-t">SCHOLARSHIPS</span></div>
-            {scholarships.map(s => (<div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.scholarship_name}</div><div className="ri-s">{s.sponsor || '—'} · {s.coverage_type} {s.coverage_pct}%</div></div><button onClick={() => handleArchiveScholarship(s.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
+            {scholarships.map(s => (<div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.scholarship_name}</div><div className="ri-s">{s.sponsor || '—'} · {s.coverage_type} {s.coverage_pct}%</div></div><button onClick={() => openEditScholarship(s)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button><button onClick={() => handleArchiveScholarship(s.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button></div>))}
             {scholarships.length === 0 && <div className="ri na"><div className="ri-s">No scholarships yet.</div></div>}
             <form onSubmit={handleAddScholarship} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="Scholarship name" value={scholarshipForm.scholarshipName} onChange={e => setScholarshipForm({ ...scholarshipForm, scholarshipName: e.target.value })} required style={{ flex: 1 }} />
@@ -406,6 +435,113 @@ export default function StudentDetailPage() {
             <div className="ch"><span className="ch-t">PORTAL ACCESS</span></div>
             <div className="ri na"><div className="ri-b"><div className="ri-t">Student portal login</div><div className="ri-s">{portalAccess?.is_enabled ? 'Enabled' : 'Disabled'}</div></div><div className={`tog ${portalAccess?.is_enabled ? 'on' : 'off'}`} onClick={handleTogglePortal} /></div>
           </div>
+        </div>
+      )}
+
+      {editingEnrollment && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingEnrollment(null)}>
+          <form onSubmit={handleSaveEnrollment} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Enrolment</h3>
+            <div className="fg"><label className="fl">ROLL NUMBER</label><input className="fi" value={enrollEditForm.rollNumber} onChange={e => setEnrollEditForm({ ...enrollEditForm, rollNumber: e.target.value })} /></div>
+            <div className="fg"><label className="fl">STATUS</label><select className="fi" value={enrollEditForm.enrollmentStatus} onChange={e => setEnrollEditForm({ ...enrollEditForm, enrollmentStatus: e.target.value })}><option value="ACTIVE">Active</option><option value="COMPLETED">Completed</option><option value="TRANSFERRED">Transferred</option><option value="WITHDRAWN">Withdrawn</option></select></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingEnrollment(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingGuardian && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingGuardian(null)}>
+          <form onSubmit={handleSaveGuardian} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Guardian</h3>
+            <div className="fg"><label className="fl">FULL NAME</label><input className="fi" value={guardianEditForm.fullName} onChange={e => setGuardianEditForm({ ...guardianEditForm, fullName: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">RELATIONSHIP</label><select className="fi" value={guardianEditForm.relationship} onChange={e => setGuardianEditForm({ ...guardianEditForm, relationship: e.target.value })}><option value="FATHER">Father</option><option value="MOTHER">Mother</option><option value="GUARDIAN">Guardian</option><option value="SIBLING">Sibling</option><option value="GRANDPARENT">Grandparent</option><option value="OTHER">Other</option></select></div>
+            <div className="fg"><label className="fl">PHONE</label><input className="fi" value={guardianEditForm.phone} onChange={e => setGuardianEditForm({ ...guardianEditForm, phone: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">EMAIL</label><input className="fi" value={guardianEditForm.email} onChange={e => setGuardianEditForm({ ...guardianEditForm, email: e.target.value })} /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={guardianEditForm.isPrimary} onChange={e => setGuardianEditForm({ ...guardianEditForm, isPrimary: e.target.checked })} /> Primary guardian</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingGuardian(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingAddress && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingAddress(null)}>
+          <form onSubmit={handleSaveAddress} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Address</h3>
+            <div className="fg"><label className="fl">TYPE</label><select className="fi" value={addressEditForm.addressType} onChange={e => setAddressEditForm({ ...addressEditForm, addressType: e.target.value })}><option value="RESIDENTIAL">Residential</option><option value="POSTAL">Postal</option><option value="HOSTEL">Hostel</option></select></div>
+            <div className="fg"><label className="fl">STREET</label><input className="fi" value={addressEditForm.street} onChange={e => setAddressEditForm({ ...addressEditForm, street: e.target.value })} /></div>
+            <div className="fg"><label className="fl">CITY</label><input className="fi" value={addressEditForm.city} onChange={e => setAddressEditForm({ ...addressEditForm, city: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">REGION</label><input className="fi" value={addressEditForm.region} onChange={e => setAddressEditForm({ ...addressEditForm, region: e.target.value })} required /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={addressEditForm.isPrimary} onChange={e => setAddressEditForm({ ...addressEditForm, isPrimary: e.target.checked })} /> Primary address</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingAddress(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingContact && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingContact(null)}>
+          <form onSubmit={handleSaveContact} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Contact</h3>
+            <div className="fg"><label className="fl">TYPE</label><select className="fi" value={contactEditForm.contactType} onChange={e => setContactEditForm({ ...contactEditForm, contactType: e.target.value })}><option value="PHONE">Phone</option><option value="EMAIL">Email</option><option value="WHATSAPP">WhatsApp</option></select></div>
+            <div className="fg"><label className="fl">VALUE</label><input className="fi" value={contactEditForm.value} onChange={e => setContactEditForm({ ...contactEditForm, value: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">LABEL</label><input className="fi" value={contactEditForm.label} onChange={e => setContactEditForm({ ...contactEditForm, label: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingContact(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingIdDoc && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingIdDoc(null)}>
+          <form onSubmit={handleSaveIdDoc} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Identity Document</h3>
+            <div className="fg"><label className="fl">TYPE</label><select className="fi" value={idDocEditForm.documentType} onChange={e => setIdDocEditForm({ ...idDocEditForm, documentType: e.target.value })}><option value="BIRTH_CERTIFICATE">Birth Certificate</option><option value="PASSPORT">Passport</option><option value="NATIONAL_ID">National ID</option></select></div>
+            <div className="fg"><label className="fl">DOCUMENT NUMBER</label><input className="fi" value={idDocEditForm.documentNumber} onChange={e => setIdDocEditForm({ ...idDocEditForm, documentNumber: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingIdDoc(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingFee && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingFee(null)}>
+          <form onSubmit={handleSaveFee} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Fee Profile Notes</h3>
+            <div className="fg"><label className="fl">NOTES</label><input className="fi" value={feeEditForm.notes} onChange={e => setFeeEditForm({ notes: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingFee(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingScholarship && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingScholarship(null)}>
+          <form onSubmit={handleSaveScholarship} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Scholarship</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={scholarshipEditForm.scholarshipName} onChange={e => setScholarshipEditForm({ ...scholarshipEditForm, scholarshipName: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">SPONSOR</label><input className="fi" value={scholarshipEditForm.sponsor} onChange={e => setScholarshipEditForm({ ...scholarshipEditForm, sponsor: e.target.value })} /></div>
+            <div className="fg"><label className="fl">COVERAGE TYPE</label><select className="fi" value={scholarshipEditForm.coverageType} onChange={e => setScholarshipEditForm({ ...scholarshipEditForm, coverageType: e.target.value })}><option value="FULL">Full</option><option value="PARTIAL">Partial</option></select></div>
+            <div className="fg"><label className="fl">COVERAGE %</label><input className="fi" type="number" value={scholarshipEditForm.coveragePct} onChange={e => setScholarshipEditForm({ ...scholarshipEditForm, coveragePct: +e.target.value })} /></div>
+            <div className="fg"><label className="fl">END DATE</label><input className="fi" type="date" value={scholarshipEditForm.endDate} onChange={e => setScholarshipEditForm({ ...scholarshipEditForm, endDate: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingScholarship(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
         </div>
       )}
     </AppShell>
