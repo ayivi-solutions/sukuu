@@ -27,6 +27,10 @@ export default function AdmissionsPage() {
   const [statusFilter, setStatusFilter] = useState('');
 
   const [showCreate, setShowCreate] = useState(false);
+  const [editingBatch, setEditingBatch] = useState<any>(null);
+  const [batchEditForm, setBatchEditForm] = useState({ name: '', openDate: '', closeDate: '', targetEnrolment: '' });
+  const [editingRequirement, setEditingRequirement] = useState<any>(null);
+  const [requirementEditForm, setRequirementEditForm] = useState({ description: '', isMandatory: true });
   const [form, setForm] = useState({ firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', nationality: 'Ghanaian', applyingForClassId: '', guardianName: '', guardianPhone: '' });
   const [batchForm, setBatchForm] = useState({ academicYearId: '', name: '', openDate: '', closeDate: '', targetEnrolment: '' });
   const [reqForm, setReqForm] = useState({ requirementType: 'DOCUMENT', description: '', isMandatory: true });
@@ -86,6 +90,9 @@ export default function AdmissionsPage() {
     return true;
   });
 
+  async function handleSaveBatch(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/admissions/batches/${editingBatch.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(batchEditForm) }); setEditingBatch(null); load(token); }
+  async function handleSaveRequirement(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/admissions/requirements/${editingRequirement.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requirementEditForm) }); setEditingRequirement(null); load(token); }
+
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
   return (
@@ -141,6 +148,7 @@ export default function AdmissionsPage() {
             {batches.map(b => (
               <div key={b.id} className="ri na"><div className="ri-b"><div className="ri-t">{b.name}</div><div className="ri-s">{b.open_date} → {b.close_date} {b.target_enrolment ? `· Target ${b.target_enrolment}` : ''}</div></div>
                 <span className={`bdg ${b.status === 'OPEN' ? 'bok' : b.status === 'CLOSED' ? 'ber' : 'bwn'}`} style={{ marginRight: 8 }}>{b.status}</span>
+                <button onClick={() => { setEditingBatch(b); setBatchEditForm({ name: b.name, openDate: b.open_date, closeDate: b.close_date, targetEnrolment: b.target_enrolment || '' }); }} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 {b.status === 'OPEN' && <button onClick={() => handleBatchStatus(b.id, 'CLOSED')} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Close</button>}
               </div>
             ))}
@@ -190,6 +198,7 @@ export default function AdmissionsPage() {
           <div className="card" style={{ marginBottom: 16 }}>
             {requirements.map(r => (
               <div key={r.id} className="ri na"><div className="ri-b"><div className="ri-t">{r.requirement_type}</div><div className="ri-s">{r.description} {r.is_mandatory && '· Mandatory'}</div></div>
+                <button onClick={() => { setEditingRequirement(r); setRequirementEditForm({ description: r.description, isMandatory: r.is_mandatory }); }} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => handleArchiveRequirement(r.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
             ))}
@@ -204,6 +213,36 @@ export default function AdmissionsPage() {
               <input className="fi" placeholder="Description" value={reqForm.description} onChange={e => setReqForm({ ...reqForm, description: e.target.value })} required style={{ flex: 1 }} />
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={reqForm.isMandatory} onChange={e => setReqForm({ ...reqForm, isMandatory: e.target.checked })} /> Mandatory</label>
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Add</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingBatch && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingBatch(null)}>
+          <form onSubmit={handleSaveBatch} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Batch</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={batchEditForm.name} onChange={e => setBatchEditForm({ ...batchEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">OPEN DATE</label><input className="fi" type="date" value={batchEditForm.openDate} onChange={e => setBatchEditForm({ ...batchEditForm, openDate: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CLOSE DATE</label><input className="fi" type="date" value={batchEditForm.closeDate} onChange={e => setBatchEditForm({ ...batchEditForm, closeDate: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">TARGET ENROLMENT</label><input className="fi" type="number" value={batchEditForm.targetEnrolment} onChange={e => setBatchEditForm({ ...batchEditForm, targetEnrolment: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingBatch(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingRequirement && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingRequirement(null)}>
+          <form onSubmit={handleSaveRequirement} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Requirement</h3>
+            <div className="fg"><label className="fl">DESCRIPTION</label><input className="fi" value={requirementEditForm.description} onChange={e => setRequirementEditForm({ ...requirementEditForm, description: e.target.value })} required /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={requirementEditForm.isMandatory} onChange={e => setRequirementEditForm({ ...requirementEditForm, isMandatory: e.target.checked })} /> Mandatory</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingRequirement(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
             </div>
           </form>
         </div>

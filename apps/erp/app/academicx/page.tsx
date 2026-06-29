@@ -53,6 +53,8 @@ export default function AcademicXPage() {
   const [ruleForm, setRuleForm] = useState({ fromClassId: '', toClassId: '', minGpa: '', minAttendancePct: '', maxFailedSubjects: '', requiresManualApproval: false });
 
   const [managingCurriculum, setManagingCurriculum] = useState<any>(null);
+  const [editingCurriculum, setEditingCurriculum] = useState<any>(null);
+  const [curriculumEditForm, setCurriculumEditForm] = useState({ title: '', description: '' });
   const [topics, setTopics] = useState<any[]>([]);
   const [topicForm, setTopicForm] = useState({ title: '', topicOrder: 1, weekStart: '', weekEnd: '', description: '' });
   const [managingTopic, setManagingTopic] = useState<any>(null);
@@ -189,6 +191,8 @@ export default function AcademicXPage() {
 
   function nameOf(list: any[], id: string, field = 'name') { return list.find(x => x.id === id)?.[field] || id?.slice(0, 8) || '—'; }
   function staffName(id: string) { const u = staffUsers.find(s => s.id === id); return u ? u.name : id?.slice(0, 8) || '—'; }
+
+  async function handleSaveCurriculum(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/academic/curricula/${editingCurriculum.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(curriculumEditForm) }); setEditingCurriculum(null); loadAll(token); }
 
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
@@ -430,6 +434,7 @@ export default function AcademicXPage() {
             <div className="ch"><span className="ch-t">CURRICULA</span></div>
             {curricula.map(c => (
               <div key={c.id} className="ri na"><div className="ri-b"><div className="ri-t">{c.title}</div><div className="ri-s">{nameOf(subjects, c.subject_id)} · {nameOf(classes, c.class_id)} · {nameOf(terms, c.term_id)}</div></div>
+                <button onClick={() => { setEditingCurriculum(c); setCurriculumEditForm({ title: c.title, description: c.description || '' }); }} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => openManageCurriculum(c)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600, marginRight: 6 }}>Topics</button>
                 <button onClick={() => handleArchiveCurriculum(c.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
@@ -614,6 +619,19 @@ export default function AcademicXPage() {
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
               <button type="button" onClick={() => setEditingSubject(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+      {editingCurriculum && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingCurriculum(null)}>
+          <form onSubmit={handleSaveCurriculum} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Curriculum</h3>
+            <div className="fg"><label className="fl">TITLE</label><input className="fi" value={curriculumEditForm.title} onChange={e => setCurriculumEditForm({ ...curriculumEditForm, title: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">DESCRIPTION</label><input className="fi" value={curriculumEditForm.description} onChange={e => setCurriculumEditForm({ ...curriculumEditForm, description: e.target.value })} /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingCurriculum(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
             </div>
           </form>
         </div>

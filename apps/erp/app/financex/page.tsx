@@ -49,6 +49,10 @@ export default function FinanceXPage() {
   const [reconForm, setReconForm] = useState({ accountId: '', periodStart: '', periodEnd: '', statementBalance: '', bookBalance: '' });
 
   const [managingStructure, setManagingStructure] = useState<any>(null);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
+  const [accountEditForm, setAccountEditForm] = useState({ name: '', accountCode: '', isActive: true });
+  const [editingStructure, setEditingStructure] = useState<any>(null);
+  const [structureEditForm, setStructureEditForm] = useState({ name: '', totalAmount: '', dueDate: '' });
   const [components, setComponents] = useState<any[]>([]);
   const [componentForm, setComponentForm] = useState({ name: '', amount: '', isCompulsory: true });
 
@@ -175,6 +179,9 @@ export default function FinanceXPage() {
   async function handleAddRecon(e: React.FormEvent) { e.preventDefault(); await authedFetch('/api/v1/finance/reconciliations', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reconForm) }); setReconForm({ accountId: '', periodStart: '', periodEnd: '', statementBalance: '', bookBalance: '' }); loadAll(token); }
   async function handleMarkReconciled(id: string) { await authedFetch(`/api/v1/finance/reconciliations/${id}/reconcile`, token, { method: 'PATCH' }); loadAll(token); }
 
+  async function handleSaveAccount(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/finance/accounts/${editingAccount.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(accountEditForm) }); setEditingAccount(null); loadAll(token); }
+  async function handleSaveStructure(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/finance/fee-structures/${editingStructure.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(structureEditForm) }); setEditingStructure(null); loadAll(token); }
+
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
   return (
@@ -200,6 +207,7 @@ export default function FinanceXPage() {
             {feeStructures.map(s => (
               <div key={s.id} className="ri na"><div className="ri-b"><div className="ri-t">{s.name}</div><div className="ri-s">{nameOf(classes, s.class_id)} · {nameOf(terms, s.term_id)} · GHS {s.total_amount}</div></div>
                 <span className={`bdg ${s.is_active ? 'bok' : 'ber'}`} style={{ marginRight: 8 }}>{s.is_active ? 'Active' : 'Inactive'}</span>
+                <button onClick={() => { setEditingStructure(s); setStructureEditForm({ name: s.name, totalAmount: s.total_amount, dueDate: s.due_date }); }} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600, marginRight: 6 }}>Edit</button>
                 <button onClick={() => openManageStructure(s)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600, marginRight: 6 }}>Components</button>
                 <button onClick={() => handleArchiveStructure(s.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
               </div>
@@ -303,7 +311,7 @@ export default function FinanceXPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">CHART OF ACCOUNTS</span></div>
-            {accounts.map(a => (<div key={a.id} className="ri na"><div className="ri-b"><div className="ri-t">{a.name} ({a.account_code})</div><div className="ri-s">{a.account_type}</div></div><strong>GHS {a.current_balance}</strong></div>))}
+            {accounts.map(a => (<div key={a.id} className="ri na"><div className="ri-b"><div className="ri-t">{a.name} ({a.account_code})</div><div className="ri-s">{a.account_type}</div></div><strong style={{ marginRight: 8 }}>GHS {a.current_balance}</strong><button onClick={() => { setEditingAccount(a); setAccountEditForm({ name: a.name, accountCode: a.account_code, isActive: a.is_active }); }} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button></div>))}
             {accounts.length === 0 && <div className="ri na"><div className="ri-s">No accounts yet.</div></div>}
             <form onSubmit={handleAddAccount} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
               <input className="fi" placeholder="Account name" value={accountForm.name} onChange={e => setAccountForm({ ...accountForm, name: e.target.value })} required style={{ flex: 1 }} />
@@ -384,6 +392,36 @@ export default function FinanceXPage() {
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Add</button>
             </form>
           </div>
+        </div>
+      )}
+
+      {editingAccount && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingAccount(null)}>
+          <form onSubmit={handleSaveAccount} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Account</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={accountEditForm.name} onChange={e => setAccountEditForm({ ...accountEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">CODE</label><input className="fi" value={accountEditForm.accountCode} onChange={e => setAccountEditForm({ ...accountEditForm, accountCode: e.target.value })} required /></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}><input type="checkbox" checked={accountEditForm.isActive} onChange={e => setAccountEditForm({ ...accountEditForm, isActive: e.target.checked })} /> Active</label>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingAccount(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {editingStructure && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setEditingStructure(null)}>
+          <form onSubmit={handleSaveStructure} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Edit Fee Structure</h3>
+            <div className="fg"><label className="fl">NAME</label><input className="fi" value={structureEditForm.name} onChange={e => setStructureEditForm({ ...structureEditForm, name: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">TOTAL AMOUNT</label><input className="fi" type="number" value={structureEditForm.totalAmount} onChange={e => setStructureEditForm({ ...structureEditForm, totalAmount: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">DUE DATE</label><input className="fi" type="date" value={structureEditForm.dueDate} onChange={e => setStructureEditForm({ ...structureEditForm, dueDate: e.target.value })} required /></div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Save</button>
+              <button type="button" onClick={() => setEditingStructure(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+            </div>
+          </form>
         </div>
       )}
 
