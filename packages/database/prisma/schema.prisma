@@ -3881,7 +3881,9 @@ model AttendanceSession {
   period_id                      String
   session_date                   String
   created_at                     DateTime  @default(now())
+  archived_at                    DateTime?
 
+  @@unique([class_id, stream_id, day_id, period_id, session_date])
   @@schema("sukuux")
   @@map("attendance_session")
 }
@@ -3895,7 +3897,9 @@ model AttendanceStudent {
   status                         String
   recorded_at                    DateTime
   recorded_by                    String
+  archived_at                    DateTime?
 
+  @@unique([session_id, student_id])
   @@schema("sukuux")
   @@map("attendance_student")
 }
@@ -3954,6 +3958,7 @@ model AttendanceException {
   approved_by                    String
   notes                          String?
   created_at                     DateTime  @default(now())
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("attendance_exception")
@@ -3985,7 +3990,9 @@ model AttendancePolicy {
   minimum_attendance_percentage  Decimal
   late_threshold_minutes         Int
   auto_absent_threshold          Int
+  is_active                      Boolean  @default(true)
   created_at                     DateTime  @default(now())
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("attendance_policy")
