@@ -2747,6 +2747,7 @@ model GradingAssessment {
   weightage                      Decimal
   assessment_date                String?
   status                         AssessmentStatus
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("grading_assessment")
@@ -2764,7 +2765,9 @@ model GradingScore {
   entered_by                     String
   entered_at                     DateTime
   updated_at                     DateTime  @updatedAt
+  archived_at                    DateTime?
 
+  @@unique([enrollment_id, assessment_id])
   @@schema("sukuux")
   @@map("grading_score")
 }
@@ -2780,6 +2783,7 @@ model GradingScale {
   grade_point                    Decimal?
   description                    String?
   is_passing                     Boolean
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("grading_scale")
@@ -2791,6 +2795,7 @@ model GradingResult {
   enrollment_id                  String
   term_id                        String
   total_score                    Decimal?
+  aggregate_score                Int?
   gpa                            Decimal?
   cgpa                           Decimal?
   position                       Int?
@@ -2798,7 +2803,9 @@ model GradingResult {
   remarks                        String?
   is_published                   Boolean
   published_at                   DateTime?
+  archived_at                    DateTime?
 
+  @@unique([enrollment_id, term_id])
   @@schema("sukuux")
   @@map("grading_result")
 }
@@ -2812,6 +2819,7 @@ model GradingComponent {
   class_id                       String
   component_name                 String
   weight_pct                     Decimal
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("grading_component")
@@ -2827,6 +2835,7 @@ model GradingPolicy {
   exam_weight_pct                Decimal
   pass_mark                      Decimal
   grading_scale_id               String
+  archived_at                    DateTime?
 
   @@schema("sukuux")
   @@map("grading_policy")
@@ -2841,7 +2850,9 @@ model GradingRemark {
   teacher_id                     String
   remark                         String
   class_teacher_remark           String?
+  archived_at                    DateTime?
 
+  @@unique([enrollment_id, subject_id, term_id])
   @@schema("sukuux")
   @@map("grading_remark")
 }
@@ -2928,6 +2939,44 @@ model GradingHistory {
 
   @@schema("sukuux")
   @@map("grading_history")
+}
+
+/// Per-subject computed result snapshot — one row per student per subject per term, feeds report cards
+model GradingSubjectResult {
+  id                             String  @id @default(uuid())
+  enrollment_id                  String
+  subject_id                     String
+  term_id                        String
+  class_id                       String
+  ca_score                       Decimal?
+  exam_score                     Decimal?
+  total_score                    Decimal?
+  grade                          String?
+  grade_point                    Decimal?
+  position                       Int?
+  class_size                     Int?
+  remark                         String?
+  computed_at                    DateTime  @default(now())
+  archived_at                    DateTime?
+
+  @@unique([enrollment_id, subject_id, term_id])
+  @@schema("sukuux")
+  @@map("grading_subject_result")
+}
+
+/// Report generation event log
+model GradingReport {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  student_id                     String?
+  class_id                       String?
+  term_id                        String
+  report_type                    String
+  generated_at                   DateTime  @default(now())
+  generated_by                   String
+
+  @@schema("sukuux")
+  @@map("grading_report")
 }
 
 
