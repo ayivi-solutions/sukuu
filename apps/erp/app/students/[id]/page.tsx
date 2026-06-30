@@ -341,15 +341,9 @@ export default function StudentDetailPage() {
         <div style={{ padding: 'var(--pad)' }}>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">ATTENDANCE SUMMARY</span></div>
-            {attendanceSummaries.map(a => (<div key={a.id} className="ri na"><div className="ri-b"><div className="ri-t">{a.attendance_pct}% attendance</div><div className="ri-s">{a.days_present} present / {a.days_absent} absent / {a.days_late} late</div></div></div>))}
-            {attendanceSummaries.length === 0 && <div className="ri na"><div className="ri-s">No attendance recorded yet.</div></div>}
-            <form onSubmit={handleSaveAttendance} style={{ display: 'flex', gap: 8, padding: 12, flexWrap: 'wrap' }}>
-              <input className="fi" placeholder="Term ID" value={attForm.termId} onChange={e => setAttForm({ ...attForm, termId: e.target.value })} required />
-              <input className="fi" type="number" placeholder="Present" value={attForm.daysPresent} onChange={e => setAttForm({ ...attForm, daysPresent: +e.target.value })} style={{ width: 90 }} />
-              <input className="fi" type="number" placeholder="Absent" value={attForm.daysAbsent} onChange={e => setAttForm({ ...attForm, daysAbsent: +e.target.value })} style={{ width: 90 }} />
-              <input className="fi" type="number" placeholder="% " value={attForm.attendancePct} onChange={e => setAttForm({ ...attForm, attendancePct: +e.target.value })} style={{ width: 70 }} />
-              <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 14px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Save</button>
-            </form>
+            <div className="alert al-in" style={{ marginBottom: 8 }}><span className="al-ic">ℹ️</span><div>Auto-computed from AttendanceX session records.</div></div>
+            {attendanceSummaries.map(a => (<div key={a.id} className="ri na"><div className="ri-b"><div className="ri-t"><span className={`bdg ${Number(a.attendance_percentage) >= 75 ? 'bok' : 'ber'}`}>{Number(a.attendance_percentage).toFixed(1)}%</span></div><div className="ri-s">{a.present_count} present · {a.absent_count} absent · {a.late_count} late · {a.total_sessions} sessions</div></div></div>))}
+            {attendanceSummaries.length === 0 && <div className="ri na"><div className="ri-s">No data yet — take attendance in AttendanceX to populate this.</div></div>}
           </div>
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="ch"><span className="ch-t">HOUSE</span></div>
