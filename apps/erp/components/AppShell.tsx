@@ -2,32 +2,97 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
-const NAV_ITEMS = [
-  { icon: '🏠', label: 'Dashboard', href: '/dashboard' },
-  { icon: '⚙️', label: 'SystemX', href: '/systemx' },
-  { icon: '🏫', label: 'SchoolX', href: '/schoolx' },
-  { icon: '🎓', label: 'AcademicX', href: '/academicx' },
-  { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
-  { icon: '👩‍🏫', label: 'StaffX', href: '/staff' },
-  { icon: '📋', label: 'AdmissionX', href: '/admissions' },
-  { icon: '💰', label: 'FinanceX', href: '/financex' },
-  { icon: '🧾', label: 'PayrollX', href: '/payrollx' },
-  { icon: '🗓️', label: 'ScheduleX', href: '/schedulex' },
-  { icon: '✅', label: 'AttendanceX', href: '/attendancex' },
-  { icon: '🗓️', label: 'Staff Leave', href: '/staff/leave' },
-  { icon: '🕘', label: 'Staff Attendance', href: '/staff/attendance' },
+const NAV_SECTIONS = [
+  { sec: 'PLATFORM', items: [
+    { icon: '🏠', label: 'Dashboard', href: '/dashboard' },
+    { icon: '⚙️', label: 'SystemX', href: '/systemx' },
+    { icon: '🏫', label: 'SchoolX', href: '/schoolx' },
+  ]},
+  { sec: 'ACADEMIC', items: [
+    { icon: '🎓', label: 'AcademicX', href: '/academicx' },
+    { icon: '📋', label: 'AdmissionX', href: '/admissions' },
+    { icon: '🗓️', label: 'ScheduleX', href: '/schedulex' },
+    { icon: '✅', label: 'AttendanceX', href: '/attendancex' },
+    { icon: '📊', label: 'GradingX', href: '/gradingx' },
+    { icon: '📜', label: 'TranscriptX', href: '/transcriptx' },
+  ]},
+  { sec: 'PEOPLE', items: [
+    { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
+    { icon: '👩‍🏫', label: 'StaffX', href: '/staff' },
+  ]},
+  { sec: 'FINANCE', items: [
+    { icon: '💰', label: 'FinanceX', href: '/financex' },
+    { icon: '🧾', label: 'PayrollX', href: '/payrollx' },
+  ]},
 ];
+
+const BOTTOM_NAV: Record<string, { icon: string; label: string; href: string }[]> = {
+  superadmin:   [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '⚙️', label: 'SYSTEM', href: '/systemx' },
+    { icon: '🏫', label: 'SCHOOL', href: '/schoolx' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+    { icon: '💰', label: 'FINANCE', href: '/financex' },
+  ],
+  headmaster:   [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+    { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
+    { icon: '💰', label: 'FINANCE', href: '/financex' },
+    { icon: '📊', label: 'GRADES', href: '/gradingx' },
+  ],
+  school_admin: [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+    { icon: '👩‍🏫', label: 'STAFF', href: '/staff' },
+    { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
+    { icon: '📋', label: 'ADMISS.', href: '/admissions' },
+  ],
+  bursar:       [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '💰', label: 'FINANCE', href: '/financex' },
+    { icon: '🧾', label: 'PAYROLL', href: '/payrollx' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+    { icon: '🏫', label: 'SCHOOL', href: '/schoolx' },
+  ],
+  hod:          [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
+    { icon: '📊', label: 'GRADES', href: '/gradingx' },
+    { icon: '🗓️', label: 'SCHEDULE', href: '/schedulex' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+  ],
+  teacher:      [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '🗓️', label: 'SCHEDULE', href: '/schedulex' },
+    { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
+    { icon: '📊', label: 'GRADES', href: '/gradingx' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+  ],
+  registrar:    [
+    { icon: '🏠', label: 'HOME', href: '/dashboard' },
+    { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
+    { icon: '📋', label: 'ADMISS.', href: '/admissions' },
+    { icon: '📜', label: 'TRANSCRIPTS', href: '/transcriptx' },
+    { icon: '🎓', label: 'ACADEMIC', href: '/academicx' },
+  ],
+};
+const DEFAULT_BNAV = [{ icon: '🏠', label: 'HOME', href: '/dashboard' }];
 
 function NavList({ pathname, onNavigate }: { pathname: string; onNavigate: (href: string) => void }) {
   return (
     <div className="sd-nav">
-      <div className="sd-sec">MAIN</div>
-      {NAV_ITEMS.map(item => (
-        <a key={item.href} className={`sd-item${pathname === item.href ? ' act' : ''}`}
-           onClick={() => onNavigate(item.href)} style={{ cursor: 'pointer' }}>
-          <span className="sd-icon">{item.icon}</span>
-          <span className="sd-lbl">{item.label}</span>
-        </a>
+      {NAV_SECTIONS.map(section => (
+        <div key={section.sec}>
+          <div className="sd-sec">{section.sec}</div>
+          {section.items.map(item => (
+            <a key={item.href} className={`sd-item${pathname.startsWith(item.href) && item.href !== '/dashboard' ? ' act' : pathname === item.href ? ' act' : ''}`}
+               onClick={() => onNavigate(item.href)} style={{ cursor: 'pointer' }}>
+              <span className="sd-icon">{item.icon}</span>
+              <span className="sd-lbl">{item.label}</span>
+            </a>
+          ))}
+        </div>
       ))}
     </div>
   );
@@ -38,6 +103,7 @@ export default function AppShell({ children, user, schoolName }: {
 }) {
   const router = useRouter();
   const pathname = usePathname();
+
   useEffect(() => {
     let ro: ResizeObserver | null = null;
     let currentEl: HTMLElement | null = null;
@@ -71,6 +137,7 @@ export default function AppShell({ children, user, schoolName }: {
       })
       .catch(() => {});
   }, []);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [crestUrl, setCrestUrl] = useState('');
@@ -86,6 +153,8 @@ export default function AppShell({ children, user, schoolName }: {
   }
 
   const initials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : '';
+  const roleKey = user?.roleKey || '';
+  const bnavItems = BOTTOM_NAV[roleKey] || DEFAULT_BNAV;
 
   return (
     <div id="app">
@@ -127,7 +196,7 @@ export default function AppShell({ children, user, schoolName }: {
         </header>
         <div id="stack">{children}</div>
         <nav id="bnav">
-          {NAV_ITEMS.map(item => (
+          {bnavItems.map(item => (
             <button key={item.href} className={`bn${pathname === item.href ? ' act' : ''}`} onClick={() => navigate(item.href)}>
               <span className="bn-i">{item.icon}</span>
               <span>{item.label}</span>
@@ -135,7 +204,7 @@ export default function AppShell({ children, user, schoolName }: {
           ))}
           <button className="bn" onClick={() => setShowLogoutConfirm(true)}>
             <span className="bn-i">🚪</span>
-            <span>Sign Out</span>
+            <span>OUT</span>
           </button>
         </nav>
       </div>
@@ -154,6 +223,7 @@ export default function AppShell({ children, user, schoolName }: {
           <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
         </div>
       </div>
+
       {showLogoutConfirm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }} onClick={() => setShowLogoutConfirm(false)}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 28, borderRadius: 'var(--r)', width: 340, boxShadow: 'var(--shL)', textAlign: 'center' }}>
