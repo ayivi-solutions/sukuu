@@ -54,9 +54,6 @@ studentRouter.post('/:studentId/health-incidents', authenticate, ctrl.postHealth
 studentRouter.get('/:studentId/behavior-records', authenticate, ctrl.getBehaviorRecords);
 studentRouter.post('/:studentId/behavior-records', authenticate, ctrl.postBehaviorRecord);
 
-studentRouter.get('/:studentId/attendance-summaries', authenticate, ctrl.getAttendanceSummaries);
-studentRouter.put('/:studentId/attendance-summaries', authenticate, ctrl.putAttendanceSummary);
-
 studentRouter.get('/:studentId/fee-profiles', authenticate, ctrl.getFeeProfiles);
 studentRouter.post('/:studentId/fee-profiles', authenticate, ctrl.postFeeProfile);
 studentRouter.patch('/:studentId/fee-profiles/:id', authenticate, ctrl.patchFeeProfile);

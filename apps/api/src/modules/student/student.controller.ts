@@ -106,8 +106,6 @@ export const postHealthIncident = wrapCreate('CREATE_HEALTH_INCIDENT', fromParam
 export const getBehaviorRecords = wrap(fromParamsSid, req => svc.listBehaviorRecords(req.params.studentId));
 export const postBehaviorRecord = wrapCreate('CREATE_BEHAVIOR_RECORD', fromParamsSid, req => svc.createBehaviorRecord(req.params.studentId, req.body, req.userId || ''));
 
-export const getAttendanceSummaries = wrap(fromParamsSid, req => svc.listAttendanceSummaries(req.params.studentId));
-export const putAttendanceSummary = wrapMutate('UPDATE_ATTENDANCE_SUMMARY', fromParamsSid, req => svc.upsertAttendanceSummary(req.params.studentId, req.body));
 
 export const getFeeProfiles = wrap(fromParamsSid, req => svc.listFeeProfiles(req.params.studentId));
 export const postFeeProfile = wrapCreate('CREATE_FEE_PROFILE', fromParamsSid, req => svc.createFeeProfile(req.params.studentId, req.body));

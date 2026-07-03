@@ -167,17 +167,6 @@ export async function createBehaviorRecord(studentId: string, data: any, recorde
   return prisma.studentsBehaviorProfile.create({ data: { student_id: studentId, record_type: data.recordType, description: data.description, action_taken: data.actionTaken, recorded_by: recordedBy, incident_date: data.incidentDate, parent_notified: !!data.parentNotified } });
 }
 
-// ── Attendance Summary (upsert per term) ─────────────────
-export async function listAttendanceSummaries(studentId: string) {
-  return prisma.studentsAttendanceSummary.findMany({ where: { student_id: studentId } });
-}
-export async function upsertAttendanceSummary(studentId: string, data: any) {
-  const existing = await prisma.studentsAttendanceSummary.findFirst({ where: { student_id: studentId, term_id: data.termId } });
-  const payload = { total_school_days: data.totalSchoolDays, days_present: data.daysPresent, days_absent: data.daysAbsent, days_late: data.daysLate, attendance_pct: data.attendancePct };
-  if (existing) return prisma.studentsAttendanceSummary.update({ where: { id: existing.id }, data: payload });
-  return prisma.studentsAttendanceSummary.create({ data: { student_id: studentId, term_id: data.termId, ...payload } });
-}
-
 // ── Fee Profile ──────────────────────────────────────────
 export async function listFeeProfiles(studentId: string) {
   return prisma.studentsFeeProfile.findMany({ where: { student_id: studentId, archived_at: null } });

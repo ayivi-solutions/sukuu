@@ -58,7 +58,6 @@ export default function StudentDetailPage() {
   const [docForm, setDocForm] = useState({ documentType: '', fileUrl: '' });
   const [idDocForm, setIdDocForm] = useState({ documentType: 'BIRTH_CERTIFICATE', documentNumber: '', verified: false });
   const [noteForm, setNoteForm] = useState({ note: '', category: '', isConfidential: false });
-  const [attForm, setAttForm] = useState({ termId: '', totalSchoolDays: 0, daysPresent: 0, daysAbsent: 0, daysLate: 0, attendancePct: 0 });
   const [houseForm, setHouseForm] = useState({ houseName: '' });
   const [transportForm, setTransportForm] = useState({ routeName: '', pickupPoint: '', dropoffPoint: '' });
   const [tagForm, setTagForm] = useState({ tag: '' });
@@ -106,7 +105,7 @@ export default function StudentDetailPage() {
     authedFetch(`/api/v1/students/${studentId}/documents`, t).then(d => Array.isArray(d) && setDocuments(d));
     authedFetch(`/api/v1/students/${studentId}/identity-documents`, t).then(d => Array.isArray(d) && setIdentityDocuments(d));
     authedFetch(`/api/v1/students/${studentId}/notes`, t).then(d => Array.isArray(d) && setNotes(d));
-    authedFetch(`/api/v1/students/${studentId}/attendance-summaries`, t).then(d => Array.isArray(d) && setAttendanceSummaries(d));
+    authedFetch(`/api/v1/attendance/students/${studentId}/summaries`, t).then(d => Array.isArray(d) && setAttendanceSummaries(d));
     authedFetch(`/api/v1/students/${studentId}/houses`, t).then(d => Array.isArray(d) && setHouses(d));
     authedFetch(`/api/v1/students/${studentId}/transport-assignments`, t).then(d => Array.isArray(d) && setTransportAssignments(d));
     authedFetch(`/api/v1/students/${studentId}/tags`, t).then(d => Array.isArray(d) && setTags(d));
@@ -134,7 +133,6 @@ export default function StudentDetailPage() {
   async function handleVerifyIdDoc(id: string, current: boolean) { await authedFetch(`/api/v1/students/${studentId}/identity-documents/${id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verified: !current }) }); loadAll(token); }
   async function handleArchiveIdDoc(id: string) { await authedFetch(`/api/v1/students/${studentId}/identity-documents/${id}/archive`, token, { method: 'PATCH' }); loadAll(token); }
   async function handleAddNote(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/notes`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(noteForm) }); setNoteForm({ note: '', category: '', isConfidential: false }); loadAll(token); }
-  async function handleSaveAttendance(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/attendance-summaries`, token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(attForm) }); loadAll(token); }
   async function handleAssignHouse(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/houses`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(houseForm) }); setHouseForm({ houseName: '' }); loadAll(token); }
   async function handleAddTransport(e: React.FormEvent) { e.preventDefault(); await authedFetch(`/api/v1/students/${studentId}/transport-assignments`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(transportForm) }); setTransportForm({ routeName: '', pickupPoint: '', dropoffPoint: '' }); loadAll(token); }
   async function handleToggleTransport(id: string, current: boolean) { await authedFetch(`/api/v1/students/${studentId}/transport-assignments/${id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !current }) }); loadAll(token); }
