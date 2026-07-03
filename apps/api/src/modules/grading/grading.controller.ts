@@ -84,7 +84,7 @@ export const postComputeClassResults = wrapCreate(req => svc.computeClassResults
 // Results
 export const getEnrollmentResult = wrap(req => svc.getEnrollmentResult(req.params.enrollmentId, req.query.termId as string));
 export const getEnrollmentSubjectResults = wrap(req => svc.getEnrollmentSubjectResults(req.params.enrollmentId, req.query.termId as string));
-export const getClassResults = wrap(req => svc.listClassResults(req.query.classId as string, req.query.termId as string));
+export const getClassResults = wrap(req => svc.listClassResults(req.schoolId || '', req.query.classId as string, req.query.termId as string));
 
 // Approval
 export const getApprovals = wrap(req => svc.listApprovals(req.schoolId || '', req.query.classId as string, req.query.termId as string));
@@ -97,9 +97,9 @@ export const postPublish = wrapCreate(req => svc.publishResults(req.schoolId || 
 
 // Lock
 export const getLocks = wrap(req => svc.listLocks(req.schoolId || ''));
-export const postLock = wrapCreate(req => svc.lockResults(req.body.classId, req.body.termId, req.userId || ''));
+export const postLock = wrapCreate(req => svc.lockResults(req.schoolId || '', req.body.classId, req.body.termId, req.userId || ''));
 export const deleteLock = async (req: AuthRequest, res: Response) => {
-  try { res.json(await svc.unlockResults(req.params.id)); } catch (err: any) { res.status(400).json({ error: err.message }); }
+  try { res.json(await svc.unlockResults(req.params.id, req.schoolId || '')); } catch (err: any) { res.status(400).json({ error: err.message }); }
 };
 
 // Reports

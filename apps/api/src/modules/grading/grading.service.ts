@@ -11,7 +11,6 @@ export async function getScoreSchoolId(id: string) {
 export async function getScaleSchoolId(id: string) { return (await prisma.gradingScale.findUnique({ where: { id } }))?.school_id; }
 export async function getComponentSchoolId(id: string) { return (await prisma.gradingComponent.findUnique({ where: { id } }))?.school_id; }
 export async function getPolicySchoolId(id: string) { return (await prisma.gradingPolicy.findUnique({ where: { id } }))?.school_id; }
-export async function getResultSchoolId(id: string, schoolId: string) { return schoolId; } // results scoped by enrollment, verified via class/term match upstream
 export async function getApprovalSchoolId(id: string) { return (await prisma.gradingApproval.findUnique({ where: { id } }))?.school_id; }
 export async function getPublicationSchoolId(id: string) { return (await prisma.gradingPublication.findUnique({ where: { id } }))?.school_id; }
 export async function getModerationSchoolId(id: string) {
@@ -19,9 +18,10 @@ export async function getModerationSchoolId(id: string) {
   if (!m) return undefined;
   return getScoreSchoolId(m.assessment_id);
 }
-export async function getLockSchoolId(id: string) {
-  const l = await prisma.gradingLock.findUnique({ where: { id } });
-  return l ? 'lock-exists' : undefined; // school scoping enforced via class_id check at call site
+export async function getClassSchoolId(classId: string) { return (await prisma.academicsClass.findUnique({ where: { id: classId } }))?.school_id; }
+async function getSchoolEnrollmentIds(schoolId: string, classId: string) {
+  const enrollments = await prisma.studentsEnrollment.findMany({ where: { school_id: schoolId, class_id: classId }, select: { id: true } });
+  return enrollments.map(e => e.id);
 }
 
 // ── Lock check helper ──
@@ -207,7 +207,11 @@ export async function computeClassResults(classId: string, termId: string, schoo
 // ── Results, Subject Results ──
 export async function getEnrollmentResult(enrollmentId: string, termId: string) { return prisma.gradingResult.findFirst({ where: { enrollment_id: enrollmentId, term_id: termId } }); }
 export async function getEnrollmentSubjectResults(enrollmentId: string, termId: string) { return prisma.gradingSubjectResult.findMany({ where: { enrollment_id: enrollmentId, term_id: termId, archived_at: null } }); }
-export async function listClassResults(classId: string, termId: string) { return prisma.gradingResult.findMany({ where: { term_id: termId } }); } // filtered client-side by enrollment->class join
+export async function listClassResults(schoolId: string, classId: string, termId: string) {
+  const enrollmentIds = await getSchoolEnrollmentIds(schoolId, classId);
+  if (enrollmentIds.length === 0) return [];
+  return prisma.gradingResult.findMany({ where: { term_id: termId, enrollment_id: { in: enrollmentIds } } });
+}
 
 // ── Approval workflow ──
 export async function listApprovals(schoolId: string, classId?: string, termId?: string) { return prisma.gradingApproval.findMany({ where: { school_id: schoolId, ...(classId && { class_id: classId }), ...(termId && { term_id: termId }) } }); }
@@ -219,14 +223,28 @@ export async function listPublications(schoolId: string) { return prisma.grading
 export async function publishResults(schoolId: string, classId: string, termId: string, publishedBy: string, data: any) {
   const approval = await prisma.gradingApproval.findFirst({ where: { school_id: schoolId, class_id: classId, term_id: termId, status: 'APPROVED' } });
   if (!approval) throw new Error('Results must be approved before publication');
-  await prisma.gradingResult.updateMany({ where: { term_id: termId }, data: { is_published: true, published_at: new Date() } });
+  const enrollmentIds = await getSchoolEnrollmentIds(schoolId, classId);
+  await prisma.gradingResult.updateMany({ where: { term_id: termId, enrollment_id: { in: enrollmentIds } }, data: { is_published: true, published_at: new Date() } });
   return prisma.gradingPublication.create({ data: { school_id: schoolId, term_id: termId, class_id: classId, published_by: publishedBy, published_at: new Date(), visible_to_students: data.visibleToStudents !== false, visible_to_parents: data.visibleToParents !== false } });
 }
 
 // ── Lock ──
-export async function listLocks(schoolId: string) { return prisma.gradingLock.findMany({ where: { } }); }
-export async function lockResults(classId: string, termId: string, lockedBy: string) { return prisma.gradingLock.create({ data: { class_id: classId, term_id: termId, locked_by: lockedBy, locked_at: new Date() } }); }
-export async function unlockResults(id: string) { return prisma.gradingLock.delete({ where: { id } }); }
+export async function listLocks(schoolId: string) {
+  const classes = await prisma.academicsClass.findMany({ where: { school_id: schoolId }, select: { id: true } });
+  return prisma.gradingLock.findMany({ where: { class_id: { in: classes.map(c => c.id) } } });
+}
+export async function lockResults(schoolId: string, classId: string, termId: string, lockedBy: string) {
+  const classSchoolId = await getClassSchoolId(classId);
+  if (!classSchoolId || classSchoolId !== schoolId) throw new Error('Not authorized for this class');
+  return prisma.gradingLock.create({ data: { class_id: classId, term_id: termId, locked_by: lockedBy, locked_at: new Date() } });
+}
+export async function unlockResults(id: string, schoolId: string) {
+  const lock = await prisma.gradingLock.findUnique({ where: { id } });
+  if (!lock) throw new Error('Lock not found');
+  const classSchoolId = await getClassSchoolId(lock.class_id);
+  if (!classSchoolId || classSchoolId !== schoolId) throw new Error('Not authorized for this record');
+  return prisma.gradingLock.delete({ where: { id } });
+}
 
 // ── Reports ──
 export async function generateReport(schoolId: string, data: any, generatedBy: string) { return prisma.gradingReport.create({ data: { school_id: schoolId, student_id: data.studentId, class_id: data.classId, term_id: data.termId, report_type: data.reportType, generated_by: generatedBy } }); }
