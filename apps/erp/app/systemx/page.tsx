@@ -55,6 +55,10 @@ export default function SystemXPage() {
   const [rateLimitForm, setRateLimitForm] = useState({ endpoint: '', maxRequests: 100, windowSeconds: 60 });
   const [retentionForm, setRetentionForm] = useState({ policyName: '', retentionYears: 7, description: '' });
 
+  const [summary, setSummary] = useState<any>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState('');
+
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
     const userStr = localStorage.getItem('sukuu_user');
@@ -77,6 +81,11 @@ export default function SystemXPage() {
     authedFetch('/api/v1/system/api-keys', t).then(d => Array.isArray(d) && setApiKeys(d));
     authedFetch('/api/v1/system/webhooks', t).then(d => Array.isArray(d) && setWebhooks(d));
     loadOps(t);
+    setSummaryLoading(true);
+    authedFetch('/api/v1/system/summary', t)
+      .then(d => { if (d && !d.error) { setSummary(d); setSummaryError(''); } else { setSummaryError(d?.error || 'Failed to load summary'); } })
+      .catch(() => setSummaryError('Failed to load summary'))
+      .finally(() => setSummaryLoading(false));
   }
 
   function loadOps(t: string) {
@@ -241,6 +250,63 @@ export default function SystemXPage() {
           <button onClick={() => setShowCreate(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Create User</button>
         </div>
       </div>
+
+      {summaryError && (
+        <div style={{ padding: '0 var(--pad)', marginBottom: 'var(--gap)' }}>
+          <div className="alert al-er"><span className="al-ic">⚠️</span><div>Couldn't load the system overview: {summaryError}. Figures below may be out of date.</div></div>
+        </div>
+      )}
+
+      {summaryLoading ? (
+        <div className="fx-overview">
+          <div className="stat-grid">
+            {[1, 2, 3, 4].map(i => <div key={i} className="skel skel-card" />)}
+          </div>
+        </div>
+      ) : summary && (
+        <div className="fx-overview">
+          <div className="stat-grid">
+            <button className="fx-card-btn" onClick={() => setTab('users')}>
+              <div className="sc" title="Count of system users tied to this school's current staff employments · live">
+                <div className="sc-top">
+                  <div className="sc-icon" style={{ background: 'var(--inB)' }}>👥</div>
+                  <span className="bdg bin">{summary.users.mfaEnabled} MFA</span>
+                </div>
+                <div className="sc-val">{summary.users.active}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {summary.users.total}</span></div>
+                <div className="sc-lbl">ACTIVE USERS</div>
+              </div>
+            </button>
+
+            <button className="fx-card-btn" onClick={() => setTab('flags')}>
+              <div className="sc" title="Feature flags scoped to this school or global, count currently enabled · live">
+                <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>🚩</div></div>
+                <div className="sc-val">{summary.featureFlags.enabled}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {summary.featureFlags.total}</span></div>
+                <div className="sc-lbl">FLAGS ENABLED</div>
+              </div>
+            </button>
+
+            <button className="fx-card-btn" onClick={() => setTab('audit')}>
+              <div className="sc" title="System audit events with created_at in the last 24 hours, this school only · live">
+                <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>📜</div></div>
+                <div className="sc-val">{summary.auditEventsLast24h}</div>
+                <div className="sc-lbl">AUDIT EVENTS (24H)</div>
+              </div>
+            </button>
+
+            <button className="fx-card-btn" onClick={() => setTab('security')}>
+              <div className="sc" title="Active sessions across this school's users; active API keys and webhooks; whether a password policy is configured — Security-team owned">
+                <div className="sc-top">
+                  <div className="sc-icon" style={{ background: summary.security.passwordPolicyConfigured ? 'var(--okB)' : 'var(--erB)' }}>🔐</div>
+                  {!summary.security.passwordPolicyConfigured && <span className="bdg ber">no policy set</span>}
+                </div>
+                <div className="sc-val">{summary.activeSessions}</div>
+                <div className="sc-lbl">ACTIVE SESSIONS</div>
+                <div className="sc-foot">{summary.security.activeApiKeys} API keys · {summary.security.activeWebhooks} webhooks</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="sys-tabs">
         {TABS.map(t => (

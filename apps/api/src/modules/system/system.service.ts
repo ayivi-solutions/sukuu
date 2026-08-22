@@ -244,3 +244,51 @@ export async function createRole(schoolId: string, name: string, label: string, 
 export async function createFeatureFlag(schoolId: string, flagKey: string, description?: string) {
   return prisma.systemFeatureFlag.create({ data: { flag_key: flagKey, is_enabled: false, school_id: schoolId, description } });
 }
+export async function getSystemSummary(schoolId: string) {
+  const employments = await prisma.staffEmployment.findMany({ where: { school_id: schoolId, is_current: true } });
+  const userIds = (await prisma.staffStaff.findMany({
+    where: { id: { in: employments.map(e => e.staff_id) } },
+    select: { user_id: true },
+  })).map(s => s.user_id);
+
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  const [
+    usersTotal,
+    usersActive,
+    mfaEnabledCount,
+    roles,
+    flags,
+    flagsEnabled,
+    auditLast24h,
+    activeSessions,
+    activeApiKeys,
+    activeWebhooks,
+    passwordPolicy,
+  ] = await Promise.all([
+    prisma.systemUser.count({ where: { id: { in: userIds } } }),
+    prisma.systemUser.count({ where: { id: { in: userIds }, is_active: true } }),
+    prisma.systemMfa.count({ where: { user_id: { in: userIds }, is_enabled: true } }),
+    prisma.systemRole.count({ where: { OR: [{ school_id: schoolId }, { is_system: true }] } }),
+    prisma.systemFeatureFlag.count({ where: { OR: [{ school_id: schoolId }, { school_id: null }] } }),
+    prisma.systemFeatureFlag.count({ where: { OR: [{ school_id: schoolId }, { school_id: null }], is_enabled: true } }),
+    prisma.systemAuditEvent.count({ where: { school_id: schoolId, created_at: { gte: oneDayAgo } } }),
+    prisma.systemSession.count({ where: { user_id: { in: userIds }, is_active: true } }),
+    prisma.systemApiKey.count({ where: { school_id: schoolId, is_active: true } }),
+    prisma.systemWebhook.count({ where: { school_id: schoolId, is_active: true } }),
+    prisma.systemPasswordPolicy.findFirst({ where: { school_id: schoolId } }),
+  ]);
+
+  return {
+    users: { total: usersTotal, active: usersActive, mfaEnabled: mfaEnabledCount },
+    roles: { total: roles },
+    featureFlags: { total: flags, enabled: flagsEnabled },
+    auditEventsLast24h: auditLast24h,
+    activeSessions,
+    security: {
+      activeApiKeys,
+      activeWebhooks,
+      passwordPolicyConfigured: !!passwordPolicy,
+    },
+  };
+}

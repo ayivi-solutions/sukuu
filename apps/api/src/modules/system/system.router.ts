@@ -35,3 +35,5 @@ systemRouter.patch('/api-keys/:id/revoke', authenticate, ctrl.patchRevokeApiKey)
 systemRouter.get('/webhooks', authenticate, ctrl.getWebhooks);
 systemRouter.post('/webhooks', authenticate, ctrl.postWebhook);
 systemRouter.patch('/webhooks/:id', authenticate, ctrl.patchWebhook);
+
+systemRouter.get('/summary', authenticate, ctrl.getSummary);

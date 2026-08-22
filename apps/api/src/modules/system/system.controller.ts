@@ -3,7 +3,7 @@ import { AuthRequest } from '../../middleware/authenticate';
 import {
   listRoles, listPermissions, getRolePermissions,
   listUsers, setUserActive, createUser,
-  listFeatureFlags, toggleFeatureFlag, createFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog, updateUser, archiveUser, updateRole, createRole, logAuditEvent, listUserIdentities, createUserIdentity, getPasswordPolicy, upsertPasswordPolicy, listSecurityPolicies, upsertSecurityPolicy, listApiKeys, createApiKey, revokeApiKey, listWebhooks, createWebhook, toggleWebhook, assignPermission, removePermission,
+  listFeatureFlags, toggleFeatureFlag, createFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog, updateUser, archiveUser, updateRole, createRole, logAuditEvent, listUserIdentities, createUserIdentity, getPasswordPolicy, upsertPasswordPolicy, listSecurityPolicies, upsertSecurityPolicy, listApiKeys, createApiKey, revokeApiKey, listWebhooks, createWebhook, toggleWebhook, assignPermission, removePermission, getSystemSummary,
 } from './system.service';
 
 export async function getRoles(req: AuthRequest, res: Response) {
@@ -255,4 +255,13 @@ export async function postFlag(req: AuthRequest, res: Response) {
     if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_FLAG', 'system_feature_flag', r.id);
     res.status(201).json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+
+export async function getSummary(req: AuthRequest, res: Response) {
+  try {
+    const summary = await getSystemSummary(req.schoolId || '');
+    res.json(summary);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch system summary' });
+  }
 }
