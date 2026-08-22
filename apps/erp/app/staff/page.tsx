@@ -12,6 +12,7 @@ export default function StaffRegisterPage() {
   const [staff, setStaff] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ staffId: '', firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', phone: '', email: '' });
 
@@ -35,7 +36,11 @@ export default function StaffRegisterPage() {
     if (!res?.error) { setShowCreate(false); setForm({ staffId: '', firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', phone: '', email: '' }); load(token); }
   }
 
-  const shown = staff.filter(s => !query || `${s.first_name} ${s.last_name} ${s.staff_id}`.toLowerCase().includes(query.toLowerCase()));
+  const shown = staff.filter(s => {
+    if (statusFilter === 'ACTIVE' && s.employment_status !== 'ACTIVE') return false;
+    if (statusFilter === 'INACTIVE' && s.employment_status === 'ACTIVE') return false;
+    return !query || `${s.first_name} ${s.last_name} ${s.staff_id}`.toLowerCase().includes(query.toLowerCase());
+  });
 
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
@@ -53,17 +58,26 @@ export default function StaffRegisterPage() {
       </div>
       <div className="fx-overview">
         <div className="stat-grid">
-          <div className="sc" title="Staff with employment_status ACTIVE, out of all staff on record" style={{ cursor: 'default' }}>
-            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>👩‍🏫</div></div>
-            <div className="sc-val">{staff.filter(s => s.employment_status === 'ACTIVE').length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {staff.length}</span></div>
-            <div className="sc-lbl">ACTIVE STAFF</div>
-          </div>
-          <div className="sc" title="Staff whose employment_status is not ACTIVE" style={{ cursor: 'default' }}>
-            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--erB)' }}>⛔</div></div>
-            <div className="sc-val">{staff.filter(s => s.employment_status !== 'ACTIVE').length}</div>
-            <div className="sc-lbl">INACTIVE / SEPARATED</div>
-          </div>
+          <button className="fx-card-btn" onClick={() => setStatusFilter('ACTIVE')}>
+            <div className="sc" title="Staff with employment_status ACTIVE, out of all staff on record — click to filter the list below">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>👩‍🏫</div></div>
+              <div className="sc-val">{staff.filter(s => s.employment_status === 'ACTIVE').length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {staff.length}</span></div>
+              <div className="sc-lbl">ACTIVE STAFF</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setStatusFilter('INACTIVE')}>
+            <div className="sc" title="Staff whose employment_status is not ACTIVE — click to filter the list below">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--erB)' }}>⛔</div></div>
+              <div className="sc-val">{staff.filter(s => s.employment_status !== 'ACTIVE').length}</div>
+              <div className="sc-lbl">INACTIVE / SEPARATED</div>
+            </div>
+          </button>
         </div>
+        {statusFilter && (
+          <div style={{ marginTop: 8 }}>
+            <button onClick={() => setStatusFilter('')} className="bdg bin" style={{ border: 'none', cursor: 'pointer' }}>Filtering: {statusFilter} · click to clear ✕</button>
+          </div>
+        )}
       </div>
       <div style={{ padding: 'var(--pad) var(--pad) 8px' }}>
         <input className="fi" placeholder="Search name or ID…" value={query} onChange={e => setQuery(e.target.value)} style={{ maxWidth: 280 }} />

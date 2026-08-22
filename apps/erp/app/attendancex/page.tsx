@@ -162,11 +162,18 @@ export default function AttendanceXPage() {
               <div className="sc-lbl">EXCEPTIONS ON FILE</div>
             </div>
           </button>
-          <button className="fx-card-btn" onClick={() => setTab('devices')}>
-            <div className="sc" title="Attendance capture devices marked active">
-              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>📡</div></div>
-              <div className="sc-val">{devices.filter((d: any) => d.is_active).length}</div>
-              <div className="sc-lbl">ACTIVE DEVICES</div>
+          <button className="fx-card-btn" onClick={() => setTab('reports')}>
+            <div className="sc" title="Average of attendance_percentage across this school's AttendanceSummary records — the same numbers shown in the Reports tab">
+              <div className="sc-top">
+                <div className="sc-icon" style={{ background: classSummaries.length > 0 ? 'var(--okB)' : 'var(--soft)' }}>📊</div>
+              </div>
+              <div className="sc-val">
+                {classSummaries.length > 0
+                  ? `${(classSummaries.reduce((s: number, c: any) => s + Number(c.attendance_percentage), 0) / classSummaries.length).toFixed(1)}%`
+                  : '—'}
+              </div>
+              <div className="sc-lbl">AVERAGE ATTENDANCE</div>
+              {classSummaries.length === 0 && <div className="sc-foot">No attendance data yet</div>}
             </div>
           </button>
           <button className="fx-card-btn" onClick={() => setTab('policies')}>

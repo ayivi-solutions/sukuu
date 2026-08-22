@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 // ── Ownership lookups ──
 export async function getStaffSchoolId(staffId: string) { return (await prisma.staffStaff.findUnique({ where: { id: staffId } }))?.school_id; }

@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 // ── Ownership lookups for sub-resources lacking direct school_id ──
 export async function getFeeStructureSchoolId(id: string) { return (await prisma.financeFeeStructure.findUnique({ where: { id } }))?.school_id; }
@@ -278,7 +277,10 @@ export async function getFinanceSummary(schoolId: string) {
       where: { school_id: schoolId, status: 'ACTIVE' },
       select: { budgeted_amount: true, spent_amount: true, remaining_amount: true },
     }),
-    prisma.financeRefund.count({ where: { status: 'PENDING' } }),
+    // financeRefund has no school_id column — scope it via payment_id against
+    // this school's own payments, otherwise this counts every school's refunds.
+    prisma.financePayment.findMany({ where: { school_id: schoolId }, select: { id: true } })
+      .then(payments => prisma.financeRefund.count({ where: { status: 'PENDING', payment_id: { in: payments.map(p => p.id) } } })),
     prisma.financeBankReconciliation.count({ where: { school_id: schoolId, is_reconciled: false } }),
     prisma.financePayment.findMany({
       where: { school_id: schoolId, status: 'CONFIRMED', paid_date: { gte: thirtyDaysAgo } },

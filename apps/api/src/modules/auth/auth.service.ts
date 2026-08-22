@@ -1,8 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 async function logAuthAttempt(userId: string | null, status: 'SUCCESS' | 'FAILED' | 'LOCKED') {
   await prisma.systemAuthenticationLog.create({

@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
   console.error('[Error]', err.message);

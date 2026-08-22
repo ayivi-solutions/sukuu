@@ -1,8 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import { AuthRequest } from './authenticate';
-
-const prisma = new PrismaClient();
 
 export function requireModuleAccess(module: string, minLevel: 'read' | 'full') {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 // ── Multi-tenancy guard ──────────────────────────────────
 export async function verifyApplicantInSchool(applicantId: string, schoolId: string): Promise<boolean> {
