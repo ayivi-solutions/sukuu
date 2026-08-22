@@ -28,6 +28,9 @@ export default function SchoolXPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [subscription, setSubscription] = useState<any>(null);
   const [accreditations, setAccreditations] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState('');
   const [audit, setAudit] = useState<any[]>([]);
   const [settings, setSettings] = useState<any[]>([]);
   const [error, setError] = useState('');
@@ -65,6 +68,11 @@ export default function SchoolXPage() {
     authedFetch('/api/v1/school/accreditations', t).then(d => Array.isArray(d) && setAccreditations(d));
     authedFetch('/api/v1/school/audit-log', t).then(d => Array.isArray(d) && setAudit(d));
     authedFetch('/api/v1/school/settings', t).then(d => Array.isArray(d) && setSettings(d));
+    setSummaryLoading(true);
+    authedFetch('/api/v1/school/summary', t)
+      .then(d => { if (d && !d.error) { setSummary(d); setSummaryError(''); } else { setSummaryError(d?.error || 'Failed to load summary'); } })
+      .catch(() => setSummaryError('Failed to load summary'))
+      .finally(() => setSummaryLoading(false));
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
@@ -213,6 +221,66 @@ export default function SchoolXPage() {
           </div>
         </div>
       </div>
+
+      {summaryError && (
+        <div style={{ padding: '0 var(--pad)', marginBottom: 'var(--gap)' }}>
+          <div className="alert al-er"><span className="al-ic">⚠️</span><div>Couldn't load the school overview: {summaryError}. Figures below may be out of date.</div></div>
+        </div>
+      )}
+
+      {summaryLoading ? (
+        <div className="fx-overview">
+          <div className="stat-grid">
+            {[1, 2, 3, 4].map(i => <div key={i} className="skel skel-card" />)}
+          </div>
+        </div>
+      ) : summary && (
+        <div className="fx-overview">
+          <div className="stat-grid">
+            <button className="fx-card-btn" onClick={() => setTab('campuses')}>
+              <div className="sc" title="Count of campuses recorded for this school, and how many are marked active · live">
+                <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>🏫</div></div>
+                <div className="sc-val">{summary.campuses.active}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {summary.campuses.total}</span></div>
+                <div className="sc-lbl">ACTIVE CAMPUSES</div>
+              </div>
+            </button>
+
+            <button className="fx-card-btn" onClick={() => setTab('accreditations')}>
+              <div className="sc" title="Non-archived accreditations with expiry_date within the next 60 days · live">
+                <div className="sc-top">
+                  <div className="sc-icon" style={{ background: summary.accreditations.expiringWithin60d > 0 ? 'var(--erB)' : 'var(--okB)' }}>📄</div>
+                  {summary.accreditations.expiringWithin60d > 0 && <span className="bdg ber">{summary.accreditations.expiringWithin60d} expiring</span>}
+                </div>
+                <div className="sc-val">{summary.accreditations.total}</div>
+                <div className="sc-lbl">ACCREDITATIONS</div>
+              </div>
+            </button>
+
+            <button className="fx-card-btn" onClick={() => setTab('documents')}>
+              <div className="sc" title="School documents with expiry_date within the next 60 days · live">
+                <div className="sc-top">
+                  <div className="sc-icon" style={{ background: summary.documents.expiringWithin60d > 0 ? 'var(--erB)' : 'var(--okB)' }}>🗂️</div>
+                  {summary.documents.expiringWithin60d > 0 && <span className="bdg ber">{summary.documents.expiringWithin60d} expiring</span>}
+                </div>
+                <div className="sc-val">{summary.documents.total}</div>
+                <div className="sc-lbl">DOCUMENTS ON FILE</div>
+              </div>
+            </button>
+
+            <button className="fx-card-btn" onClick={() => setTab('subscription')}>
+              <div className="sc" title="Current subscription plan and status, and the next billing date — Finance-owned">
+                <div className="sc-top">
+                  <div className="sc-icon" style={{ background: summary.subscription?.status === 'ACTIVE' ? 'var(--okB)' : 'var(--erB)' }}>💳</div>
+                  {summary.subscription && summary.subscription.status !== 'ACTIVE' && <span className="bdg ber">{summary.subscription.status}</span>}
+                </div>
+                <div className="sc-val" style={{ fontSize: 18 }}>{summary.subscription?.plan || 'No plan'}</div>
+                <div className="sc-lbl">SUBSCRIPTION</div>
+                {summary.subscription && <div className="sc-foot">Next billing: {new Date(summary.subscription.nextBillingDate).toLocaleDateString()}</div>}
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="sys-tabs">
         {TABS.map(t => (

@@ -27,3 +27,5 @@ schoolRouter.get('/documents', authenticate, ctrl.getDocuments);
 schoolRouter.post('/documents', authenticate, ctrl.postDocument);
 schoolRouter.get('/subscription', authenticate, ctrl.getSubscriptionHandler);
 schoolRouter.patch('/subscription', authenticate, ctrl.patchSubscription);
+
+schoolRouter.get('/summary', authenticate, ctrl.getSummary);

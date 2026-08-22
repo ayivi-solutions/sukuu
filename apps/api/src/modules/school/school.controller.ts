@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, getSettingSchoolId, archiveSetting } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, getSettingSchoolId, archiveSetting, getSchoolSummary } from './school.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -181,4 +181,14 @@ export async function patchArchiveSetting(req: AuthRequest, res: Response) {
     if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this setting' });
     res.json(await archiveSetting(req.params.id));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
+}
+
+export async function getSummary(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const summary = await getSchoolSummary(req.schoolId);
+    res.json(summary);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch school summary' });
+  }
 }

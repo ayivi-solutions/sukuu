@@ -130,3 +130,37 @@ export async function updateAccreditation(id: string, data: { authority?: string
 
 export async function archiveSetting(id: string) { return prisma.schoolSettings.update({ where: { id }, data: { archived_at: new Date() } }); }
 export async function getSettingSchoolId(id: string) { return (await prisma.schoolSettings.findUnique({ where: { id } }))?.school_id; }
+export async function getSchoolSummary(schoolId: string) {
+  const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+
+  const [campuses, accreditations, documents, subscription] = await Promise.all([
+    prisma.schoolCampus.findMany({ where: { school_id: schoolId } }),
+    prisma.schoolAccreditation.findMany({ where: { school_id: schoolId, archived_at: null } }),
+    prisma.schoolDocument.findMany({ where: { school_id: schoolId } }),
+    prisma.schoolSubscription.findFirst({ where: { school_id: schoolId } }),
+  ]);
+
+  const expiringAccreditations = accreditations.filter(a => {
+    const exp = new Date(a.expiry_date);
+    return !isNaN(exp.getTime()) && exp <= in60Days;
+  });
+  const expiringDocuments = documents.filter(d => {
+    if (!d.expiry_date) return false;
+    const exp = new Date(d.expiry_date);
+    return !isNaN(exp.getTime()) && exp <= in60Days;
+  });
+
+  return {
+    campuses: { total: campuses.length, active: campuses.filter(c => c.is_active).length },
+    accreditations: { total: accreditations.length, expiringWithin60d: expiringAccreditations.length },
+    documents: { total: documents.length, expiringWithin60d: expiringDocuments.length },
+    subscription: subscription
+      ? {
+          plan: subscription.plan_name,
+          status: subscription.status,
+          nextBillingDate: subscription.next_billing_date,
+          amountGhs: Number(subscription.amount_ghs),
+        }
+      : null,
+  };
+}
