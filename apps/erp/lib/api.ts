@@ -21,12 +21,12 @@ export async function authedFetch(path: string, token: string, opts: RequestInit
     headers: { ...(opts.headers || {}), Authorization: `Bearer ${token}` },
   });
   const data = await res.json().catch(() => ({}));
-  if (res.status === 401 || data.error === 'Invalid or expired token' || data.error === 'No token provided') {
+  if (res.status === 401 || data?.error === 'Invalid or expired token' || data?.error === 'No token provided') {
     localStorage.removeItem('sukuu_token');
     localStorage.removeItem('sukuu_user');
     if (typeof window !== 'undefined') window.location.href = '/login?expired=1';
     return null;
   }
-  if (!res.ok && data.error) throw new Error(data.error);
+  if (!res.ok && data?.error) throw new Error(data.error);
   return data;
 }
