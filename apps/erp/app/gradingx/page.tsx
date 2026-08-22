@@ -166,6 +166,41 @@ export default function GradingXPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <button className="fx-card-btn" onClick={() => setTab('assessments')}>
+            <div className="sc" title="Assessments with status ACTIVE, out of all non-archived assessments">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>📝</div></div>
+              <div className="sc-val">{assessments.filter((a: any) => a.status === 'ACTIVE').length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {assessments.length}</span></div>
+              <div className="sc-lbl">ACTIVE ASSESSMENTS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('approval')}>
+            <div className="sc" title="Grading approvals with status PENDING — awaiting sign-off">
+              <div className="sc-top">
+                <div className="sc-icon" style={{ background: approvals.filter((a: any) => a.status === 'PENDING').length > 0 ? 'var(--erB)' : 'var(--okB)' }}>✍️</div>
+              </div>
+              <div className="sc-val">{approvals.filter((a: any) => a.status === 'PENDING').length}</div>
+              <div className="sc-lbl">PENDING APPROVAL</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('approval')}>
+            <div className="sc" title="Class-term result publications recorded — a class only appears once its results have been published">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>📢</div></div>
+              <div className="sc-val">{publications.length}</div>
+              <div className="sc-lbl">CLASSES PUBLISHED</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('scoring')}>
+            <div className="sc" title="Assessments still in DRAFT status — scores not yet entered or finalized">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>✏️</div></div>
+              <div className="sc-val">{assessments.filter((a: any) => a.status === 'DRAFT').length}</div>
+              <div className="sc-lbl">DRAFT ASSESSMENTS</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>

@@ -61,6 +61,31 @@ export default function StudentsRegisterPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <div className="sc" title="Students with status ACTIVE, out of all students on record" style={{ cursor: 'default' }}>
+            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>🧑‍🎓</div></div>
+            <div className="sc-val">{students.filter(s => s.status === 'ACTIVE').length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {students.length}</span></div>
+            <div className="sc-lbl">ACTIVE STUDENTS</div>
+          </div>
+          <div className="sc" title="Students with status SUSPENDED" style={{ cursor: 'default' }}>
+            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--erB)' }}>⛔</div></div>
+            <div className="sc-val">{students.filter(s => s.status === 'SUSPENDED').length}</div>
+            <div className="sc-lbl">SUSPENDED</div>
+          </div>
+          <div className="sc" title="Students with status GRADUATED" style={{ cursor: 'default' }}>
+            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>🎓</div></div>
+            <div className="sc-val">{students.filter(s => s.status === 'GRADUATED').length}</div>
+            <div className="sc-lbl">GRADUATED</div>
+          </div>
+          <div className="sc" title="Students with status TRANSFERRED or WITHDRAWN" style={{ cursor: 'default' }}>
+            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>↪️</div></div>
+            <div className="sc-val">{students.filter(s => s.status === 'TRANSFERRED' || s.status === 'WITHDRAWN').length}</div>
+            <div className="sc-lbl">TRANSFERRED / WITHDRAWN</div>
+          </div>
+        </div>
+      </div>
+
       <div style={{ padding: 'var(--pad) var(--pad) 8px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input className="fi" placeholder="Search name or ID…" value={query} onChange={e => setQuery(e.target.value)} style={{ flex: 1, minWidth: 160, maxWidth: 280 }} />
         <select className="fi" style={{ width: 'auto' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>

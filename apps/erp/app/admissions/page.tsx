@@ -108,6 +108,39 @@ export default function AdmissionsPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <button className="fx-card-btn" onClick={() => setTab('pipeline')}>
+            <div className="sc" title="Applicants with status PENDING or UNDER_REVIEW">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--erB)' }}>📥</div></div>
+              <div className="sc-val">{applicants.filter((a: any) => a.status === 'PENDING' || a.status === 'UNDER_REVIEW').length}</div>
+              <div className="sc-lbl">AWAITING REVIEW</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('pipeline')}>
+            <div className="sc" title="Applicants with status OFFERED">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>🎓</div></div>
+              <div className="sc-val">{applicants.filter((a: any) => a.status === 'OFFERED').length}</div>
+              <div className="sc-lbl">OFFERS OUT</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('pipeline')}>
+            <div className="sc" title="Applicants with status ENROLLED">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>✅</div></div>
+              <div className="sc-val">{applicants.filter((a: any) => a.status === 'ENROLLED').length}</div>
+              <div className="sc-lbl">ENROLLED</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('waitlist')}>
+            <div className="sc" title="Waitlist entries with status WAITING">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>⏳</div></div>
+              <div className="sc-val">{waitlist.filter((w: any) => w.status === 'WAITING').length}</div>
+              <div className="sc-lbl">ON WAITLIST</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>

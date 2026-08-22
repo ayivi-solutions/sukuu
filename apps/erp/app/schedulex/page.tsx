@@ -187,6 +187,41 @@ export default function ScheduleXPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <button className="fx-card-btn" onClick={() => setTab('timetable')}>
+            <div className="sc" title="Timetable entries currently marked is_active">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>🗓️</div></div>
+              <div className="sc-val">{timetable.filter((t: any) => t.is_active).length}</div>
+              <div className="sc-lbl">ACTIVE PERIODS SCHEDULED</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('conflicts')}>
+            <div className="sc" title="Detected scheduling conflicts with resolved = false">
+              <div className="sc-top">
+                <div className="sc-icon" style={{ background: conflicts.filter((c: any) => !c.resolved).length > 0 ? 'var(--erB)' : 'var(--okB)' }}>⚠️</div>
+              </div>
+              <div className="sc-val">{conflicts.filter((c: any) => !c.resolved).length}</div>
+              <div className="sc-lbl">UNRESOLVED CONFLICTS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('events')}>
+            <div className="sc" title="Calendar events on record, not archived">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>📆</div></div>
+              <div className="sc-val">{events.length}</div>
+              <div className="sc-lbl">CALENDAR EVENTS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('locks')}>
+            <div className="sc" title="Schedule locks currently in place for a term/year">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--goldF)' }}>🔒</div></div>
+              <div className="sc-val">{locks.filter((l: any) => !l.unlocked_by).length}</div>
+              <div className="sc-lbl">ACTIVE LOCKS</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>

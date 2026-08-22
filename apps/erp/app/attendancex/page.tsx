@@ -146,6 +146,39 @@ export default function AttendanceXPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <button className="fx-card-btn" onClick={() => setTab('sessions')}>
+            <div className="sc" title="Attendance sessions with session_date equal to today">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>✅</div></div>
+              <div className="sc-val">{sessions.filter((s: any) => s.session_date === new Date().toISOString().slice(0, 10)).length}</div>
+              <div className="sc-lbl">SESSIONS TODAY</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('exceptions')}>
+            <div className="sc" title="Recorded attendance exceptions, not archived">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>📝</div></div>
+              <div className="sc-val">{exceptions.length}</div>
+              <div className="sc-lbl">EXCEPTIONS ON FILE</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('devices')}>
+            <div className="sc" title="Attendance capture devices marked active">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>📡</div></div>
+              <div className="sc-val">{devices.filter((d: any) => d.is_active).length}</div>
+              <div className="sc-lbl">ACTIVE DEVICES</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('policies')}>
+            <div className="sc" title="Attendance policies marked active">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--goldF)' }}>📋</div></div>
+              <div className="sc-val">{policies.filter((p: any) => p.is_active).length}</div>
+              <div className="sc-lbl">ACTIVE POLICIES</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>

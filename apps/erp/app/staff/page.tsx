@@ -51,6 +51,20 @@ export default function StaffRegisterPage() {
           <button onClick={() => setShowCreate(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Add Staff</button>
         </div>
       </div>
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <div className="sc" title="Staff with employment_status ACTIVE, out of all staff on record" style={{ cursor: 'default' }}>
+            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>👩‍🏫</div></div>
+            <div className="sc-val">{staff.filter(s => s.employment_status === 'ACTIVE').length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {staff.length}</span></div>
+            <div className="sc-lbl">ACTIVE STAFF</div>
+          </div>
+          <div className="sc" title="Staff whose employment_status is not ACTIVE" style={{ cursor: 'default' }}>
+            <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--erB)' }}>⛔</div></div>
+            <div className="sc-val">{staff.filter(s => s.employment_status !== 'ACTIVE').length}</div>
+            <div className="sc-lbl">INACTIVE / SEPARATED</div>
+          </div>
+        </div>
+      </div>
       <div style={{ padding: 'var(--pad) var(--pad) 8px' }}>
         <input className="fi" placeholder="Search name or ID…" value={query} onChange={e => setQuery(e.target.value)} style={{ maxWidth: 280 }} />
       </div>

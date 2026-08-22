@@ -208,6 +208,39 @@ export default function AcademicXPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <button className="fx-card-btn" onClick={() => setTab('years')}>
+            <div className="sc" title="Academic years marked is_active, out of all years on record for this school">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>📅</div></div>
+              <div className="sc-val">{years.filter((y: any) => y.is_active).length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {years.length}</span></div>
+              <div className="sc-lbl">ACTIVE YEARS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('classes')}>
+            <div className="sc" title="Classes marked is_active, out of all classes on record">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>🏫</div></div>
+              <div className="sc-val">{classes.filter((c: any) => c.is_active).length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {classes.length}</span></div>
+              <div className="sc-lbl">ACTIVE CLASSES</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('subjects')}>
+            <div className="sc" title="Subjects marked is_active, out of all subjects on record">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>📚</div></div>
+              <div className="sc-val">{subjects.filter((s: any) => s.is_active).length}<span style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}> / {subjects.length}</span></div>
+              <div className="sc-lbl">ACTIVE SUBJECTS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('subjects')}>
+            <div className="sc" title="Departments on record for this school">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--goldF)' }}>🏛️</div></div>
+              <div className="sc-val">{departments.length}</div>
+              <div className="sc-lbl">DEPARTMENTS</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>

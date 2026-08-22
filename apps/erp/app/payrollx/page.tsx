@@ -159,6 +159,41 @@ export default function PayrollXPage() {
         </div>
       </div>
 
+      <div className="fx-overview">
+        <div className="stat-grid">
+          <button className="fx-card-btn" onClick={() => setTab('bonuses')}>
+            <div className="sc" title="The payroll period with status OPEN, if any">
+              <div className="sc-top"><div className="sc-icon" style={{ background: periods.some((p: any) => p.status === 'OPEN') ? 'var(--okB)' : 'var(--erB)' }}>📆</div></div>
+              <div className="sc-val" style={{ fontSize: 18 }}>{(() => { const p = periods.find((p: any) => p.status === 'OPEN'); return p ? `${p.month}/${p.year}` : 'None open'; })()}</div>
+              <div className="sc-lbl">OPEN PERIOD</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('runs')}>
+            <div className="sc" title="Status of the most recently run payroll run, most recent run_at first">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--inB)' }}>🧾</div></div>
+              <div className="sc-val" style={{ fontSize: 18 }}>{[...runs].sort((a: any, b: any) => new Date(b.run_at).getTime() - new Date(a.run_at).getTime())[0]?.status || 'No runs yet'}</div>
+              <div className="sc-lbl">LATEST RUN STATUS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('loans')}>
+            <div className="sc" title="Sum of outstanding_balance across loans with status ACTIVE">
+              <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>💵</div></div>
+              <div className="sc-val" style={{ fontSize: 18 }}>GHS {loans.filter((l: any) => l.status === 'ACTIVE').reduce((s: number, l: any) => s + Number(l.outstanding_balance), 0).toLocaleString()}</div>
+              <div className="sc-lbl">OUTSTANDING LOANS</div>
+            </div>
+          </button>
+          <button className="fx-card-btn" onClick={() => setTab('loans')}>
+            <div className="sc" title="Reimbursement requests with status PENDING">
+              <div className="sc-top">
+                <div className="sc-icon" style={{ background: reimbursements.filter((r: any) => r.status === 'PENDING').length > 0 ? 'var(--erB)' : 'var(--okB)' }}>🧾</div>
+              </div>
+              <div className="sc-val">{reimbursements.filter((r: any) => r.status === 'PENDING').length}</div>
+              <div className="sc-lbl">PENDING REIMBURSEMENTS</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>
