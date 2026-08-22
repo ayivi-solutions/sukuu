@@ -12,10 +12,9 @@ const NAV_SECTIONS = [
     { icon: '🎓', label: 'AcademicX', href: '/academicx' },
     { icon: '📋', label: 'AdmissionX', href: '/admissions' },
     { icon: '🗓️', label: 'ScheduleX', href: '/schedulex' },
-    { icon: '📊', label: 'GradingX', href: '/gradingx' },
     { icon: '✅', label: 'AttendanceX', href: '/attendancex' },
     { icon: '📊', label: 'GradingX', href: '/gradingx' },
-    { icon: '📜', label: 'TranscriptX', href: '/transcriptx' },
+    { icon: '📜', label: 'TranscriptX', href: '/transcriptx', disabled: true },
   ]},
   { sec: 'PEOPLE', items: [
     { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
@@ -61,22 +60,20 @@ const BOTTOM_NAV: Record<string, { icon: string; label: string; href: string }[]
     { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
     { icon: '📊', label: 'GRADES', href: '/gradingx' },
     { icon: '🗓️', label: 'SCHEDULE', href: '/schedulex' },
-    { icon: '📊', label: 'GradingX', href: '/gradingx' },
     { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
   ],
   teacher:      [
     { icon: '🏠', label: 'HOME', href: '/dashboard' },
     { icon: '🗓️', label: 'SCHEDULE', href: '/schedulex' },
-    { icon: '📊', label: 'GradingX', href: '/gradingx' },
-    { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
     { icon: '📊', label: 'GRADES', href: '/gradingx' },
+    { icon: '✅', label: 'ATTEND.', href: '/attendancex' },
     { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
   ],
   registrar:    [
     { icon: '🏠', label: 'HOME', href: '/dashboard' },
     { icon: '🧑‍🎒', label: 'STUDENTS', href: '/students' },
     { icon: '📋', label: 'ADMISS.', href: '/admissions' },
-    { icon: '📜', label: 'TRANSCRIPTS', href: '/transcriptx' },
+    { icon: '🗓️', label: 'SCHEDULE', href: '/schedulex' },
     { icon: '🎓', label: 'ACADEMIC', href: '/academicx' },
   ],
 };
@@ -88,13 +85,21 @@ function NavList({ pathname, onNavigate }: { pathname: string; onNavigate: (href
       {NAV_SECTIONS.map(section => (
         <div key={section.sec}>
           <div className="sd-sec">{section.sec}</div>
-          {section.items.map(item => (
-            <a key={item.href} className={`sd-item${pathname.startsWith(item.href) && item.href !== '/dashboard' ? ' act' : pathname === item.href ? ' act' : ''}`}
-               onClick={() => onNavigate(item.href)} style={{ cursor: 'pointer' }}>
-              <span className="sd-icon">{item.icon}</span>
-              <span className="sd-lbl">{item.label}</span>
-            </a>
-          ))}
+          {section.items.map(item => {
+            const isDisabled = 'disabled' in item && item.disabled;
+            const isActive = !isDisabled && (pathname.startsWith(item.href) && item.href !== '/dashboard' ? true : pathname === item.href);
+            return (
+              <a key={item.href}
+                 className={`sd-item${isActive ? ' act' : ''}${isDisabled ? ' disabled' : ''}`}
+                 onClick={() => !isDisabled && onNavigate(item.href)}
+                 style={{ cursor: isDisabled ? 'default' : 'pointer' }}
+                 title={isDisabled ? `${item.label} is coming soon` : undefined}>
+                <span className="sd-icon">{item.icon}</span>
+                <span className="sd-lbl">{item.label}</span>
+                {isDisabled && <span className="sd-soon">SOON</span>}
+              </a>
+            );
+          })}
         </div>
       ))}
     </div>
