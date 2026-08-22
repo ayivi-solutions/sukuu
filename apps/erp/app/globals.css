@@ -190,3 +190,21 @@ button,input,select,textarea{font-family:inherit;border:none;outline:none;backgr
 /* ═══ NAV: DISABLED / COMING SOON ═══ */
 .sd-item.disabled,.bn.disabled{opacity:.4;cursor:default;pointer-events:none}
 .sd-soon{font-size:8px;font-weight:700;letter-spacing:.04em;color:rgba(242,230,201,.35);background:rgba(255,255,255,.06);border-radius:6px;padding:1px 5px;margin-left:auto;flex-shrink:0}
+
+/* ═══ FINANCEX: OVERVIEW STRIP ═══ */
+.fx-overview{padding:0 var(--pad);margin-bottom:var(--gap)}
+.fx-card-btn{all:unset;cursor:pointer;display:block;width:100%;box-sizing:border-box}
+.fx-budget-bar{margin-top:8px}
+.fx-budget-track{height:6px;border-radius:4px;background:var(--bd);overflow:hidden}
+.fx-budget-fill{height:100%;border-radius:4px;background:var(--gold2);transition:width .5s var(--ease)}
+.fx-budget-fill.over{background:var(--er)}
+
+/* ═══ FINANCEX: 30-DAY TREND (accessible sparkline) ═══ */
+.fx-trend-card{margin:0 var(--pad) var(--gap)}
+.fx-trend-summary{font-size:12px;color:var(--muted);margin-bottom:12px}
+.fx-trend-summary b{color:var(--ink)}
+.fx-spark{display:flex;align-items:flex-end;gap:2px;height:64px;padding:0 2px}
+.fx-spark-bar{flex:1;min-width:2px;background:var(--gold2);border-radius:2px 2px 0 0;transition:background .12s;cursor:default}
+.fx-spark-bar:hover{background:var(--gold)}
+.fx-spark-bar.zero{background:var(--bd)}
+.fx-spark-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:6px}

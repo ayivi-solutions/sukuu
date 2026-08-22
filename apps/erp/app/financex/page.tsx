@@ -69,6 +69,10 @@ export default function FinanceXPage() {
   const [refunds, setRefunds] = useState<any[]>([]);
   const [refundForm, setRefundForm] = useState({ studentId: '', amount: '', reason: '', refundMethod: 'CASH' });
 
+  const [summary, setSummary] = useState<any>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState('');
+
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
     const userStr = localStorage.getItem('sukuu_user');
@@ -94,6 +98,11 @@ export default function FinanceXPage() {
     authedFetch('/api/v1/finance/budgets', t).then(d => Array.isArray(d) && setBudgets(d));
     authedFetch('/api/v1/finance/expenses', t).then(d => Array.isArray(d) && setExpenses(d));
     authedFetch('/api/v1/finance/reconciliations', t).then(d => Array.isArray(d) && setReconciliations(d));
+    setSummaryLoading(true);
+    authedFetch('/api/v1/finance/summary', t)
+      .then(d => { if (d && !d.error) { setSummary(d); setSummaryError(''); } else { setSummaryError(d?.error || 'Failed to load summary'); } })
+      .catch(() => setSummaryError('Failed to load summary'))
+      .finally(() => setSummaryLoading(false));
   }
 
   function nameOf(list: any[], id: string, field = 'name') { return list.find(x => x.id === id)?.[field] || id?.slice(0, 8) || '—'; }
@@ -199,6 +208,101 @@ export default function FinanceXPage() {
       <div className="sys-tabs">
         {TABS.map(t => <button key={t.key} className={`sys-tab-btn${tab === t.key ? ' act' : ''}`} onClick={() => setTab(t.key)}>{t.label}</button>)}
       </div>
+
+      {summaryError && (
+        <div style={{ padding: '0 var(--pad)', marginBottom: 'var(--gap)' }}>
+          <div className="alert al-er"><span className="al-ic">⚠️</span><div>Couldn't load the financial overview: {summaryError}. Figures below may be out of date.</div></div>
+        </div>
+      )}
+
+      {summaryLoading ? (
+        <div className="fx-overview">
+          <div className="stat-grid">
+            {[1, 2, 3, 4].map(i => <div key={i} className="skel skel-card" />)}
+          </div>
+        </div>
+      ) : summary && (
+        <>
+          <div className="fx-overview">
+            <div className="stat-grid">
+              <button className="fx-card-btn" onClick={() => setTab('invoices')}>
+                <div className="sc" title={`Sum of balance_due on issued, overdue, and partial invoices · live · school year ${summary.financialYear || 'n/a'}`}>
+                  <div className="sc-top">
+                    <div className="sc-icon" style={{ background: summary.outstanding.overdueCount > 0 ? 'var(--erB)' : 'var(--goldF)' }}>💰</div>
+                    {summary.outstanding.overdueCount > 0 && <span className="bdg ber">{summary.outstanding.overdueCount} overdue</span>}
+                  </div>
+                  <div className="sc-val" style={{ fontSize: 20 }}>GHS {summary.outstanding.total.toLocaleString()}</div>
+                  <div className="sc-lbl">OUTSTANDING FEES</div>
+                  <div className="sc-foot">{summary.outstanding.issuedCount} issued · {summary.outstanding.partialCount} partially paid</div>
+                </div>
+              </button>
+
+              <button className="fx-card-btn" onClick={() => setTab('payments')}>
+                <div className="sc" title="Sum of CONFIRMED payments with paid_date in the current calendar month · live">
+                  <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--okB)' }}>📥</div></div>
+                  <div className="sc-val" style={{ fontSize: 20 }}>GHS {summary.collectedThisMonth.toLocaleString()}</div>
+                  <div className="sc-lbl">COLLECTED THIS MONTH</div>
+                </div>
+              </button>
+
+              <button className="fx-card-btn" onClick={() => setTab('budget')}>
+                <div className="sc" title="Active budgets: spent_amount ÷ budgeted_amount, summed across all ACTIVE budgets for this school">
+                  <div className="sc-top"><div className="sc-icon" style={{ background: 'var(--puB)' }}>📊</div></div>
+                  <div className="sc-val">{summary.budget.utilizationPct !== null ? `${summary.budget.utilizationPct}%` : '—'}</div>
+                  <div className="sc-lbl">BUDGET UTILIZATION</div>
+                  {summary.budget.utilizationPct !== null && (
+                    <div className="fx-budget-bar">
+                      <div className="fx-budget-track"><div className={`fx-budget-fill${summary.budget.utilizationPct > 100 ? ' over' : ''}`} style={{ width: `${Math.min(summary.budget.utilizationPct, 100)}%` }} /></div>
+                    </div>
+                  )}
+                  <div className="sc-foot">GHS {summary.budget.spent.toLocaleString()} of {summary.budget.budgeted.toLocaleString()}</div>
+                </div>
+              </button>
+
+              <button className="fx-card-btn" onClick={() => setTab('budget')}>
+                <div className="sc" title="Overdue invoices (owned by Bursar) + pending refunds + unreconciled bank accounts">
+                  <div className="sc-top">
+                    <div className="sc-icon" style={{ background: (summary.needsAttention.overdueInvoices + summary.needsAttention.pendingRefunds + summary.needsAttention.unreconciledAccounts) > 0 ? 'var(--erB)' : 'var(--okB)' }}>🔔</div>
+                  </div>
+                  <div className="sc-val">{summary.needsAttention.overdueInvoices + summary.needsAttention.pendingRefunds + summary.needsAttention.unreconciledAccounts}</div>
+                  <div className="sc-lbl">NEEDS ATTENTION</div>
+                  <div className="sc-foot">{summary.needsAttention.pendingRefunds} refunds · {summary.needsAttention.unreconciledAccounts} unreconciled — Bursar-owned</div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div className="card fx-trend-card">
+            <div className="ch"><span className="ch-t">COLLECTIONS — LAST 30 DAYS</span></div>
+            <div className="cb">
+              {(() => {
+                const total = summary.trend30d.reduce((s: number, d: any) => s + d.amount, 0);
+                const avg = total / 30;
+                const max = Math.max(...summary.trend30d.map((d: any) => d.amount), 1);
+                return (
+                  <>
+                    <div className="fx-trend-summary">
+                      <b>GHS {total.toLocaleString()}</b> collected across the last 30 days · averaging <b>GHS {avg.toLocaleString(undefined, { maximumFractionDigits: 0 })}</b>/day
+                    </div>
+                    <div className="fx-spark">
+                      {summary.trend30d.map((d: any) => (
+                        <div key={d.date}
+                             className={`fx-spark-bar${d.amount === 0 ? ' zero' : ''}`}
+                             style={{ height: `${Math.max((d.amount / max) * 100, 3)}%` }}
+                             title={`${d.date}: GHS ${d.amount.toLocaleString()}`} />
+                      ))}
+                    </div>
+                    <div className="fx-spark-labels">
+                      <span>{summary.trend30d[0]?.date}</span>
+                      <span>{summary.trend30d[summary.trend30d.length - 1]?.date}</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </>
+      )}
 
       {tab === 'fees' && (
         <div style={{ padding: 'var(--pad)' }}>

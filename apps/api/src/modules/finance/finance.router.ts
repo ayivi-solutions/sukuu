@@ -75,3 +75,5 @@ financeRouter.get('/transactions', authenticate, R, ctrl.getTransactions);
 financeRouter.post('/transactions', authenticate, F, ctrl.postTransaction);
 
 financeRouter.get('/audit-log', authenticate, R, ctrl.getFinanceAuditLog);
+
+financeRouter.get('/summary', authenticate, R, ctrl.getSummary);

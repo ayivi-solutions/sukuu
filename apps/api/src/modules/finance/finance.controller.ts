@@ -130,3 +130,5 @@ export const postTransaction = wrapCreate('CREATE_TRANSACTION', req => svc.creat
 
 // Audit (read-only)
 export const getFinanceAuditLog = wrap(req => svc.listFinanceAudit(req.schoolId || ''));
+
+export const getSummary = wrap(req => svc.getFinanceSummary(req.schoolId || ''));

@@ -250,3 +250,80 @@ export async function getBudgetSchoolId(id: string) { return (await prisma.finan
 export async function getExpenseSchoolId(id: string) { return (await prisma.financeExpense.findUnique({ where: { id } }))?.school_id; }
 export async function getReconciliationSchoolId(id: string) { return (await prisma.financeBankReconciliation.findUnique({ where: { id } }))?.school_id; }
 export async function getFinancialYearSchoolId(id: string) { return (await prisma.financeFinancialYear.findUnique({ where: { id } }))?.school_id; }
+export async function getFinanceSummary(schoolId: string) {
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+  const [
+    activeYear,
+    outstandingByStatus,
+    paymentsThisMonth,
+    activeBudgets,
+    pendingRefunds,
+    unreconciledAccounts,
+    recentPayments,
+  ] = await Promise.all([
+    prisma.financeFinancialYear.findFirst({ where: { school_id: schoolId, is_active: true } }),
+    prisma.financeInvoice.groupBy({
+      by: ['status'],
+      where: { school_id: schoolId, status: { in: ['ISSUED', 'OVERDUE', 'PARTIAL'] } },
+      _sum: { balance_due: true },
+      _count: { _all: true },
+    }),
+    prisma.financePayment.aggregate({
+      where: { school_id: schoolId, status: 'CONFIRMED', paid_date: { gte: monthStart } },
+      _sum: { amount: true },
+    }),
+    prisma.financeBudget.findMany({
+      where: { school_id: schoolId, status: 'ACTIVE' },
+      select: { budgeted_amount: true, spent_amount: true, remaining_amount: true },
+    }),
+    prisma.financeRefund.count({ where: { status: 'PENDING' } }),
+    prisma.financeBankReconciliation.count({ where: { school_id: schoolId, is_reconciled: false } }),
+    prisma.financePayment.findMany({
+      where: { school_id: schoolId, status: 'CONFIRMED', paid_date: { gte: thirtyDaysAgo } },
+      select: { amount: true, paid_date: true },
+    }),
+  ]);
+
+  const outstanding = { total: 0, issuedCount: 0, overdueCount: 0, overdueAmount: 0, partialCount: 0 };
+  for (const row of outstandingByStatus) {
+    const amt = Number(row._sum.balance_due ?? 0);
+    outstanding.total += amt;
+    if (row.status === 'ISSUED') outstanding.issuedCount = row._count._all;
+    if (row.status === 'OVERDUE') { outstanding.overdueCount = row._count._all; outstanding.overdueAmount = amt; }
+    if (row.status === 'PARTIAL') outstanding.partialCount = row._count._all;
+  }
+
+  const budgetedTotal = activeBudgets.reduce((s, b) => s + Number(b.budgeted_amount), 0);
+  const spentTotal = activeBudgets.reduce((s, b) => s + Number(b.spent_amount), 0);
+
+  // Bucket the last 30 days of confirmed payments into daily totals for the trend strip.
+  const dailyMap: Record<string, number> = {};
+  for (const p of recentPayments) {
+    const day = p.paid_date.toISOString().slice(0, 10);
+    dailyMap[day] = (dailyMap[day] || 0) + Number(p.amount);
+  }
+  const trend: { date: string; amount: number }[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    trend.push({ date: d, amount: dailyMap[d] || 0 });
+  }
+
+  return {
+    financialYear: activeYear ? activeYear.name : null,
+    outstanding,
+    collectedThisMonth: Number(paymentsThisMonth._sum.amount ?? 0),
+    budget: {
+      budgeted: budgetedTotal,
+      spent: spentTotal,
+      utilizationPct: budgetedTotal > 0 ? Math.round((spentTotal / budgetedTotal) * 1000) / 10 : null,
+    },
+    needsAttention: {
+      overdueInvoices: outstanding.overdueCount,
+      pendingRefunds,
+      unreconciledAccounts,
+    },
+    trend30d: trend,
+  };
+}
