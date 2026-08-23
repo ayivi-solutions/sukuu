@@ -241,15 +241,35 @@ export default function SystemXPage() {
     loadAll(token);
   }
   async function handleRevokeSession(id: string) { await authedFetch(`/api/v1/system/sessions/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
+  const [justAdded, setJustAdded] = useState<any>(null);
+  const [staffPickerOpen, setStaffPickerOpen] = useState(false);
+  const [staffPickerQuery, setStaffPickerQuery] = useState('');
+  const [selectedStaffLabel, setSelectedStaffLabel] = useState('');
   async function handleAddRosterEntry(e: React.FormEvent) {
     e.preventDefault();
     const res = await authedFetch('/api/v1/system/staff-roster', token, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rosterForm),
     });
     if (res.error) { setRosterMsg(res.error); return; }
-    setRosterMsg(`Added ${rosterForm.firstName} ${rosterForm.lastName} to the roster. Grant them system access separately when they're ready to log in.`);
+    setJustAdded(res);
+    setRosterMsg(`Added ${rosterForm.firstName} ${rosterForm.lastName} to the roster.`);
     setRosterForm({ firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', phone: '', email: '', roleId: '', employmentType: 'PERMANENT' });
     loadAll(token);
+  }
+  function grantAccessToJustAdded() {
+    if (!justAdded) return;
+    setGrantForm({ staffId: justAdded.id, email: justAdded.email, roleId: '' });
+    setSelectedStaffLabel(`${justAdded.first_name} ${justAdded.last_name} — ${justAdded.staff_id}`);
+    setShowAddRoster(false);
+    setShowGrantAccess(true);
+    setJustAdded(null);
+  }
+  function closeGrantAccessModal() {
+    setShowGrantAccess(false);
+    setStaffPickerOpen(false);
+    setStaffPickerQuery('');
+    setSelectedStaffLabel('');
+    setGrantForm({ staffId: '', email: '', roleId: '' });
   }
   async function loadUnlinkedStaff() {
     const res = await authedFetch('/api/v1/system/staff-roster/unlinked', token);
@@ -271,6 +291,7 @@ export default function SystemXPage() {
       ? `Already granted (this was a repeat submission). Temp password: ${res.tempPassword}`
       : `Access granted to ${res.staffName}. Temp password: ${res.tempPassword} — record this now, it will not be shown again.`);
     setGrantForm({ staffId: '', email: '', roleId: '' });
+    setSelectedStaffLabel('');
     loadUnlinkedStaff();
     loadAll(token);
   }
@@ -421,8 +442,8 @@ export default function SystemXPage() {
             <div className="ph-title">⚙️ SystemX</div>
             <div className="ph-sub">Authentication · RBAC · Sessions · Audit · Feature Flags · Security · CRUAA enforced (no hard deletes)</div>
           </div>
-          <button onClick={() => setShowAddRoster(true)} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Add to Roster</button>
-          <button onClick={() => { setShowGrantAccess(true); loadUnlinkedStaff(); }} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginLeft: 8 }}>+ Grant System Access</button>
+          <button onClick={() => setShowAddRoster(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Add to Roster</button>
+          <button onClick={() => { setShowGrantAccess(true); loadUnlinkedStaff(); }} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginLeft: 8 }}>+ Grant System Access</button>
         </div>
       </div>
 
@@ -797,7 +818,16 @@ export default function SystemXPage() {
           <form onSubmit={handleAddRosterEntry} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, maxHeight: '85vh', overflowY: 'auto', boxShadow: 'var(--shL)' }}>
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 4 }}>Add to Staff Roster</h3>
             <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>Adds a real person and their role/department to the roster. This does not grant them a login — that's a separate step, once they're ready.</p>
-            {rosterMsg && <div className="alert al-ok" style={{ marginBottom: 12 }}>{rosterMsg}</div>}
+            {rosterMsg && (
+              <div className="alert al-ok" style={{ marginBottom: 12 }}>
+                {rosterMsg}
+                {justAdded && (
+                  <button type="button" onClick={grantAccessToJustAdded} style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 600, color: 'var(--navy)', textDecoration: 'underline' }}>
+                    Grant them system access now →
+                  </button>
+                )}
+              </div>
+            )}
             <div className="fg"><label className="fl">FIRST NAME</label><input className="fi" value={rosterForm.firstName} onChange={e => setRosterForm({ ...rosterForm, firstName: e.target.value })} required /></div>
             <div className="fg"><label className="fl">LAST NAME</label><input className="fi" value={rosterForm.lastName} onChange={e => setRosterForm({ ...rosterForm, lastName: e.target.value })} required /></div>
             <div className="fg"><label className="fl">GENDER</label>
@@ -826,25 +856,65 @@ export default function SystemXPage() {
       )}
 
       {showGrantAccess && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowGrantAccess(false)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={closeGrantAccessModal}>
           <form onSubmit={handleGrantAccess} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, boxShadow: 'var(--shL)' }}>
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 4 }}>Grant System Access</h3>
             <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>Only people already on the staff roster can be selected here — type to search.</p>
             {grantMsg && <div className="alert al-ok" style={{ marginBottom: 12 }}>{grantMsg}</div>}
             <div className="fg">
               <label className="fl">STAFF MEMBER</label>
-              <input
-                className="fi" list="unlinked-staff-options" placeholder="Type a name to search…"
-                onChange={e => {
-                  const match = unlinkedStaff.find(s => `${s.first_name} ${s.last_name} — ${s.staff_id}` === e.target.value);
-                  if (match) setGrantForm({ ...grantForm, staffId: match.id, email: match.email });
-                }}
-                required
-              />
-              <datalist id="unlinked-staff-options">
-                {unlinkedStaff.map(s => <option key={s.id} value={`${s.first_name} ${s.last_name} — ${s.staff_id}`} />)}
-              </datalist>
-              {unlinkedStaff.length === 0 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Everyone on the roster already has access. Add someone new first.</div>}
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="fi"
+                  placeholder="Click to see everyone, or type to filter…"
+                  value={staffPickerOpen ? staffPickerQuery : selectedStaffLabel}
+                  onFocus={() => { setStaffPickerOpen(true); setStaffPickerQuery(''); }}
+                  onChange={e => setStaffPickerQuery(e.target.value)}
+                  onBlur={() => setTimeout(() => setStaffPickerOpen(false), 150)}
+                  autoComplete="off"
+                  required={!grantForm.staffId}
+                />
+                {staffPickerOpen && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4, background: 'var(--white)', border: '1px solid var(--bd)', borderRadius: 8, maxHeight: 220, overflowY: 'auto', boxShadow: 'var(--shL)', zIndex: 10 }}>
+                    {unlinkedStaff
+                      .filter(s => `${s.first_name} ${s.last_name}`.toLowerCase().includes(staffPickerQuery.toLowerCase()))
+                      .map(s => (
+                        <div
+                          key={s.id}
+                          // onMouseDown (not onClick) fires before the input's
+                          // onBlur closes the panel — using onClick here would
+                          // mean blur closes it first and the click never lands.
+                          onMouseDown={() => {
+                            setGrantForm({ ...grantForm, staffId: s.id, email: s.email });
+                            setSelectedStaffLabel(`${s.first_name} ${s.last_name} — ${s.staff_id}`);
+                            setStaffPickerOpen(false);
+                          }}
+                          style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 12, borderBottom: '1px solid var(--faint)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--faint)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <div style={{ fontWeight: 600 }}>{s.first_name} {s.last_name}</div>
+                          <div style={{ fontSize: 10, color: 'var(--muted)' }}>{s.staff_id} · {s.email}</div>
+                        </div>
+                      ))}
+                    {unlinkedStaff.filter(s => `${s.first_name} ${s.last_name}`.toLowerCase().includes(staffPickerQuery.toLowerCase())).length === 0 && unlinkedStaff.length > 0 && (
+                      <div style={{ padding: '9px 12px', fontSize: 12, color: 'var(--muted)' }}>No match for "{staffPickerQuery}"</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {unlinkedStaff.length === 0 && (
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8, padding: 10, background: 'var(--faint)', borderRadius: 8 }}>
+                  Nobody available to grant access to yet.
+                  <button
+                    type="button"
+                    onClick={() => { closeGrantAccessModal(); setShowAddRoster(true); }}
+                    style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 600, color: 'var(--navy)', textDecoration: 'underline' }}
+                  >
+                    Add someone to the roster now →
+                  </button>
+                </div>
+              )}
             </div>
             {grantForm.staffId && (
               <>
@@ -859,7 +929,7 @@ export default function SystemXPage() {
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button type="submit" disabled={!grantForm.staffId} style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Grant Access</button>
-              <button type="button" onClick={() => setShowGrantAccess(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
+              <button type="button" onClick={closeGrantAccessModal} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
             </div>
           </form>
         </div>
