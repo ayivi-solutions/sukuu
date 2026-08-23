@@ -74,7 +74,7 @@ export async function recordAuthAttempt(
   ipAddress: string | null,
   userAgent: string | null
 ): Promise<void> {
-  await prisma.$queryRaw`
+  await prisma.$executeRaw`
     SELECT system.auth_record_attempt(${userId}, ${status}, ${ipAddress}, ${userAgent})
   `;
 }
