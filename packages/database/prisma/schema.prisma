@@ -1059,7 +1059,7 @@ model SystemUserRole {
   assigned_by                    String?
   expires_at                     DateTime?
 
-  @@unique([user_id, role_id, school_id])
+  @@unique([user_id, role_id, school_id], map: "uq_system_user_role_user_role_school")
   @@schema("system")
   @@map("system_user_role")
 }
@@ -2282,7 +2282,7 @@ model StaffStaff {
   created_at                     DateTime  @default(now())
   updated_at                     DateTime  @updatedAt
 
-  @@unique([user_id])
+  @@unique([user_id], map: "uq_staff_staff_user_id")
   @@schema("sukuux")
   @@map("staff_staff")
 }
@@ -5369,22 +5369,24 @@ model PayrollAuditLog {
 
 /// Domain event outbox for SystemX (EEAS-SYS-0026..0030, ETAS-ARC-015)
 model SystemDomainEvent {
-  id                             String  @id @default(uuid())
+  id                             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   aggregate_type                 String
   aggregate_id                   String
   event_type                     String
-  occurred_at                    DateTime  @default(now())
-  recorded_at                    DateTime  @default(now())
+  occurred_at                    DateTime  @default(now()) @db.Timestamptz(6)
+  recorded_at                    DateTime  @default(now()) @db.Timestamptz(6)
   producer                       String  @default("sukuu-api")
   correlation_id                 String
   causation_id                   String?
   tenant_id                      String?
   payload                        Json  @default("{}")
   status                         String  @default("PENDING")
-  published_at                   DateTime?
+  published_at                   DateTime? @db.Timestamptz(6)
   attempt_count                  Int  @default(0)
   last_error                     String?
 
+  @@index([aggregate_type, aggregate_id], map: "idx_system_domain_event_aggregate")
+  @@index([tenant_id], map: "idx_system_domain_event_tenant")
   @@schema("system")
   @@map("system_domain_event")
 }
@@ -5399,9 +5401,10 @@ model SystemCommandLog {
   request_hash                   String?
   result_status                  Int?
   result_body                    Json?
-  issued_at                      DateTime  @default(now())
-  completed_at                   DateTime?
+  issued_at                      DateTime  @default(now()) @db.Timestamptz(6)
+  completed_at                   DateTime? @db.Timestamptz(6)
 
+  @@index([tenant_id], map: "idx_system_command_log_tenant")
   @@schema("system")
   @@map("system_command_log")
 }

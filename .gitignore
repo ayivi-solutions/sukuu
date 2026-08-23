@@ -8,3 +8,6 @@ dist/
 .turbo/
 .next/
 .expo/
+
+# Sukuu database baseline-builder scratch files
+.sukuu-baseline-work/
