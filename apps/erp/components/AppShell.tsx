@@ -97,6 +97,21 @@ const BOTTOM_NAV: Record<string, { icon: string; label: string; href: string }[]
 };
 const DEFAULT_BNAV = [{ icon: '🏠', label: 'HOME', href: '/dashboard' }];
 
+// Derived from NAV_SECTIONS rather than hand-maintained separately — one
+// source of truth for "which module gates which page," used to filter
+// both the sidebar and BOTTOM_NAV/the Settings and school-crest shortcuts
+// below, so all four navigation surfaces stay consistent with each other
+// automatically instead of silently drifting apart the way BOTTOM_NAV,
+// the Settings button and the school-crest link all had before this fix.
+const HREF_TO_MODULE: Record<string, string | null> = Object.fromEntries(
+  NAV_SECTIONS.flatMap(s => s.items.map(i => [i.href, i.module]))
+);
+function hrefIsAccessible(href: string, access: Record<string, 'read' | 'full'> | null): boolean {
+  const mod = HREF_TO_MODULE[href];
+  if (mod === null || mod === undefined) return true; // no gate on this page (e.g. Dashboard)
+  return !!access && mod in access;
+}
+
 function NavList({ pathname, onNavigate, access }: { pathname: string; onNavigate: (href: string) => void; access: Record<string, 'read' | 'full'> | null }) {
   return (
     <div className="sd-nav">
@@ -199,7 +214,9 @@ export default function AppShell({ children, user, schoolName }: {
 
   const initials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : '';
   const roleKey = user?.roleKey || '';
-  const bnavItems = BOTTOM_NAV[roleKey] || DEFAULT_BNAV;
+  const bnavItems = (BOTTOM_NAV[roleKey] || DEFAULT_BNAV).filter(item => hrefIsAccessible(item.href, access));
+  const canAccessSchool = hrefIsAccessible('/schoolx', access);
+  const canAccessSystem = hrefIsAccessible('/systemx', access);
 
   return (
     <div id="app">
@@ -211,17 +228,17 @@ export default function AppShell({ children, user, schoolName }: {
             <div className="sd-pver">V1.0 · AYIVI SOLUTIONS</div>
           </div>
         </div>
-        <div className="sd-school" onClick={() => navigate('/schoolx')}>
+        <div className="sd-school" onClick={() => canAccessSchool && navigate('/schoolx')} style={{ cursor: canAccessSchool ? 'pointer' : 'default' }}>
           <div className="sd-sav">{crestUrl ? <img src={crestUrl} alt="Crest" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : (schoolName?.[0] || 'S')}</div>
           <div className="sd-sinf">
             <div className="sd-sname">{schoolName || 'School'}</div>
             <div className="sd-srole">{user?.roleLabel}</div>
           </div>
-          <span style={{ color: 'rgba(242,230,201,.3)', fontSize: 12 }}>⌄</span>
+          {canAccessSchool && <span style={{ color: 'rgba(242,230,201,.3)', fontSize: 12 }}>⌄</span>}
         </div>
         <NavList pathname={pathname} onNavigate={navigate} access={access} />
         <div className="sd-foot">
-          <button className="sd-ftn" onClick={() => navigate('/systemx')}><span>⚙️</span>Settings</button>
+          {canAccessSystem && <button className="sd-ftn" onClick={() => navigate('/systemx')}><span>⚙️</span>Settings</button>}
           <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
         </div>
       </nav>
