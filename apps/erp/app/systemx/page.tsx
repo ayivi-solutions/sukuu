@@ -106,6 +106,8 @@ export default function SystemXPage() {
   const [summary, setSummary] = useState<any>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState('');
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
@@ -113,7 +115,21 @@ export default function SystemXPage() {
     if (!t) { router.push('/login'); return; }
     setToken(t);
     setUser(userStr ? JSON.parse(userStr) : null);
-    loadAll(t);
+
+    // One lightweight check before the page's ~15 data requests fire —
+    // if this role has no system access, say so once, cleanly, instead
+    // of letting every one of those requests fail independently.
+    fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api/v1/auth/my-access', { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(access => {
+        setAccessChecked(true);
+        if (!access || typeof access !== 'object' || !('system' in access)) {
+          setAccessDenied(true);
+          return;
+        }
+        loadAll(t);
+      })
+      .catch(() => { setAccessChecked(true); setAccessDenied(true); });
   }, [router]);
 
   function loadAll(t: string) {
@@ -478,6 +494,22 @@ export default function SystemXPage() {
     URL.revokeObjectURL(url);
   }
 
+  if (accessDenied) {
+    return (
+      <AppShell user={user}>
+        <div style={{ padding: '60px 40px', textAlign: 'center', maxWidth: 440, margin: '0 auto' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, marginBottom: 8 }}>You don't have access to SystemX</h2>
+          <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
+            Your current role doesn't include system administration. If you believe this is wrong, ask an administrator to check your role assignment.
+          </p>
+        </div>
+      </AppShell>
+    );
+  }
+  if (!accessChecked) {
+    return <AppShell user={user}><div style={{ padding: 40, color: 'var(--muted)' }}>Checking access…</div></AppShell>;
+  }
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
   return (

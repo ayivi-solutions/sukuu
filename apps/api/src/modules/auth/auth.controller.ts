@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { loginUser, refreshAccessToken, changeOwnPassword } from './auth.service';
+import { getMyModuleAccess } from '../../lib/roleGrants';
 import { AuthRequest } from '../../middleware/authenticate';
 
 export async function login(req: Request, res: Response) {
@@ -48,5 +49,15 @@ export async function changePassword(req: AuthRequest, res: Response) {
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Could not change password' });
+  }
+}
+
+export async function myAccess(req: AuthRequest, res: Response) {
+  try {
+    if (!req.userId || !req.schoolId) return res.status(401).json({ error: 'Not authenticated' });
+    const access = await getMyModuleAccess(req.userId, req.schoolId);
+    res.json(access);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
   }
 }

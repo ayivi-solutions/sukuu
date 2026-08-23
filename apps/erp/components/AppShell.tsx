@@ -4,43 +4,43 @@ import { useRouter, usePathname } from 'next/navigation';
 
 const NAV_SECTIONS = [
   { sec: 'PLATFORM', items: [
-    { icon: '🏠', label: 'Dashboard', href: '/dashboard' },
-    { icon: '⚙️', label: 'SystemX', href: '/systemx' },
-    { icon: '🏫', label: 'SchoolX', href: '/schoolx' },
+    { icon: '🏠', label: 'Dashboard', href: '/dashboard', module: null },
+    { icon: '⚙️', label: 'SystemX', href: '/systemx', module: 'system' },
+    { icon: '🏫', label: 'SchoolX', href: '/schoolx', module: 'school' },
   ]},
   { sec: 'ACADEMIC', items: [
-    { icon: '🎓', label: 'AcademicX', href: '/academicx' },
-    { icon: '📋', label: 'AdmissionX', href: '/admissions' },
-    { icon: '🗓️', label: 'ScheduleX', href: '/schedulex' },
-    { icon: '✅', label: 'AttendanceX', href: '/attendancex' },
-    { icon: '📝', label: 'ExamX', href: '/examx' },
-    { icon: '📖', label: 'LearnX', href: '/learnx' },
-    { icon: '📊', label: 'GradingX', href: '/gradingx' },
-    { icon: '📜', label: 'TranscriptX', href: '/transcriptx' },
+    { icon: '🎓', label: 'AcademicX', href: '/academicx', module: 'academic' },
+    { icon: '📋', label: 'AdmissionX', href: '/admissions', module: 'admission' },
+    { icon: '🗓️', label: 'ScheduleX', href: '/schedulex', module: 'schedule' },
+    { icon: '✅', label: 'AttendanceX', href: '/attendancex', module: 'attendance' },
+    { icon: '📝', label: 'ExamX', href: '/examx', module: 'exam' },
+    { icon: '📖', label: 'LearnX', href: '/learnx', module: 'learn' },
+    { icon: '📊', label: 'GradingX', href: '/gradingx', module: 'grading' },
+    { icon: '📜', label: 'TranscriptX', href: '/transcriptx', module: 'transcript' },
   ]},
   { sec: 'PEOPLE', items: [
-    { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
-    { icon: '👩‍🏫', label: 'StaffX', href: '/staff' },
+    { icon: '🧑‍🎒', label: 'StudentX', href: '/students', module: 'student' },
+    { icon: '👩‍🏫', label: 'StaffX', href: '/staff', module: 'staff' },
   ]},
   { sec: 'FINANCE', items: [
-    { icon: '💰', label: 'FinanceX', href: '/financex' },
-    { icon: '🧾', label: 'PayrollX', href: '/payrollx' },
+    { icon: '💰', label: 'FinanceX', href: '/financex', module: 'finance' },
+    { icon: '🧾', label: 'PayrollX', href: '/payrollx', module: 'payroll' },
   ]},
   { sec: 'STUDENT SERVICES', items: [
-    { icon: '⚖️', label: 'DisciplineX', href: '/disciplinex' },
-    { icon: '🏠', label: 'HostelX', href: '/hostelx' },
-    { icon: '🏥', label: 'ClinicX', href: '/clinicx' },
-    { icon: '📚', label: 'LibraryX', href: '/libraryx' },
-    { icon: '🚌', label: 'TransportX', href: '/transportx' },
+    { icon: '⚖️', label: 'DisciplineX', href: '/disciplinex', module: 'discipline' },
+    { icon: '🏠', label: 'HostelX', href: '/hostelx', module: 'hostel' },
+    { icon: '🏥', label: 'ClinicX', href: '/clinicx', module: 'clinic' },
+    { icon: '📚', label: 'LibraryX', href: '/libraryx', module: 'library' },
+    { icon: '🚌', label: 'TransportX', href: '/transportx', module: 'transport' },
   ]},
   { sec: 'OPERATIONS', items: [
-    { icon: '📦', label: 'InventoryX', href: '/inventoryx' },
-    { icon: '🔁', label: 'WorkflowX', href: '/workflowx' },
+    { icon: '📦', label: 'InventoryX', href: '/inventoryx', module: 'inventory' },
+    { icon: '🔁', label: 'WorkflowX', href: '/workflowx', module: 'workflow' },
   ]},
   { sec: 'ENGAGEMENT', items: [
-    { icon: '🔔', label: 'NotificationX', href: '/notificationx' },
-    { icon: '💬', label: 'CommunicationX', href: '/communicationx' },
-    { icon: '📊', label: 'AnalyticsX', href: '/analyticsx' },
+    { icon: '🔔', label: 'NotificationX', href: '/notificationx', module: 'notification' },
+    { icon: '💬', label: 'CommunicationX', href: '/communicationx', module: 'communication' },
+    { icon: '📊', label: 'AnalyticsX', href: '/analyticsx', module: 'analytics' },
   ]},
 ];
 
@@ -97,29 +97,38 @@ const BOTTOM_NAV: Record<string, { icon: string; label: string; href: string }[]
 };
 const DEFAULT_BNAV = [{ icon: '🏠', label: 'HOME', href: '/dashboard' }];
 
-function NavList({ pathname, onNavigate }: { pathname: string; onNavigate: (href: string) => void }) {
+function NavList({ pathname, onNavigate, access }: { pathname: string; onNavigate: (href: string) => void; access: Record<string, 'read' | 'full'> | null }) {
   return (
     <div className="sd-nav">
-      {NAV_SECTIONS.map(section => (
-        <div key={section.sec}>
-          <div className="sd-sec">{section.sec}</div>
-          {section.items.map(item => {
-            const isDisabled = 'disabled' in item && item.disabled;
-            const isActive = !isDisabled && (pathname.startsWith(item.href) && item.href !== '/dashboard' ? true : pathname === item.href);
-            return (
-              <a key={item.href}
-                 className={`sd-item${isActive ? ' act' : ''}${isDisabled ? ' disabled' : ''}`}
-                 onClick={() => !isDisabled && onNavigate(item.href)}
-                 style={{ cursor: isDisabled ? 'default' : 'pointer' }}
-                 title={isDisabled ? `${item.label} is coming soon` : undefined}>
-                <span className="sd-icon">{item.icon}</span>
-                <span className="sd-lbl">{item.label}</span>
-                {isDisabled && <span className="sd-soon">SOON</span>}
-              </a>
-            );
-          })}
-        </div>
-      ))}
+      {NAV_SECTIONS.map(section => {
+        // While access is still loading (null), only show items with no
+        // module gate (Dashboard) — avoids flashing the full list and
+        // then yanking items away a moment later. Once loaded, an item
+        // shows if its module is null (always visible) or present in the
+        // access map at all (read or full — both mean "can use this").
+        const visibleItems = section.items.filter(item => item.module === null || (access && item.module in access));
+        if (visibleItems.length === 0) return null;
+        return (
+          <div key={section.sec}>
+            <div className="sd-sec">{section.sec}</div>
+            {visibleItems.map(item => {
+              const isDisabled = 'disabled' in item && item.disabled;
+              const isActive = !isDisabled && (pathname.startsWith(item.href) && item.href !== '/dashboard' ? true : pathname === item.href);
+              return (
+                <a key={item.href}
+                   className={`sd-item${isActive ? ' act' : ''}${isDisabled ? ' disabled' : ''}`}
+                   onClick={() => !isDisabled && onNavigate(item.href)}
+                   style={{ cursor: isDisabled ? 'default' : 'pointer' }}
+                   title={isDisabled ? `${item.label} is coming soon` : undefined}>
+                  <span className="sd-icon">{item.icon}</span>
+                  <span className="sd-lbl">{item.label}</span>
+                  {isDisabled && <span className="sd-soon">SOON</span>}
+                </a>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -129,6 +138,16 @@ export default function AppShell({ children, user, schoolName }: {
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [access, setAccess] = useState<Record<string, 'read' | 'full'> | null>(null);
+
+  useEffect(() => {
+    const t = localStorage.getItem('sukuu_token');
+    if (!t) return;
+    fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/v1/auth/my-access', { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(a => setAccess(a && typeof a === 'object' ? a : {}))
+      .catch(() => setAccess({}));
+  }, []);
 
   useEffect(() => {
     let ro: ResizeObserver | null = null;
@@ -200,7 +219,7 @@ export default function AppShell({ children, user, schoolName }: {
           </div>
           <span style={{ color: 'rgba(242,230,201,.3)', fontSize: 12 }}>⌄</span>
         </div>
-        <NavList pathname={pathname} onNavigate={navigate} />
+        <NavList pathname={pathname} onNavigate={navigate} access={access} />
         <div className="sd-foot">
           <button className="sd-ftn" onClick={() => navigate('/systemx')}><span>⚙️</span>Settings</button>
           <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
@@ -244,7 +263,7 @@ export default function AppShell({ children, user, schoolName }: {
             <div className="sd-pver">V1.0 · AYIVI SOLUTIONS</div>
           </div>
         </div>
-        <NavList pathname={pathname} onNavigate={navigate} />
+        <NavList pathname={pathname} onNavigate={navigate} access={access} />
         <div className="sd-foot">
           <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
         </div>
