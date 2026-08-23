@@ -45,8 +45,14 @@ export async function getInventorySummary(schoolId: string) {
     prisma.inventoryAsset.count({ where: { school_id: schoolId, status: 'ACTIVE' } }),
   ]);
   const items = await prisma.inventoryItem.findMany({ where: { school_id: schoolId } });
-  const entryMap = new Map(entries.map(e => [e.item_id, e._sum.quantity || 0]));
-  const issueMap = new Map(issues.map(i => [i.item_id, i._sum.quantity || 0]));
-  const lowStockItems = items.filter(it => (entryMap.get(it.id) || 0) - (issueMap.get(it.id) || 0) <= it.reorder_level).length;
+  const entryMap = new Map<string, number>(
+    entries.map(e => [e.item_id, Number(e._sum.quantity ?? 0)] as [string, number])
+  );
+  const issueMap = new Map<string, number>(
+    issues.map(i => [i.item_id, Number(i._sum.quantity ?? 0)] as [string, number])
+  );
+  const lowStockItems = items.filter(
+    it => (entryMap.get(it.id) ?? 0) - (issueMap.get(it.id) ?? 0) <= it.reorder_level
+  ).length;
   return { totalItems, lowStockItems, pendingOrders, activeAssets };
 }

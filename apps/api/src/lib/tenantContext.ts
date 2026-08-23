@@ -49,10 +49,10 @@ function assertSafe(value: string, label: string): string {
  * their "no context = no rows" default rather than accidentally granting
  * broad access.
  */
-export async function withTenantContext<T>(
+export async function withTenantContext<TResult>(
   explicitCtx: Partial<TenantCtx> | undefined,
-  fn: (tx: Prisma.TransactionClient) => Promise<T>
-): Promise<T> {
+  fn: (tx: Prisma.TransactionClient) => TResult
+): Promise<Awaited<TResult>> {
   const ambient = getTenantContext();
   const ctx: TenantCtx = {
     schoolId: explicitCtx?.schoolId ?? ambient?.schoolId ?? '',
@@ -68,7 +68,7 @@ export async function withTenantContext<T>(
     await tx.$executeRawUnsafe(`SET LOCAL app.current_school_id = '${schoolId}'`);
     await tx.$executeRawUnsafe(`SET LOCAL app.current_user_id = '${userId}'`);
     await tx.$executeRawUnsafe(`SET LOCAL app.actor_role = '${role}'`);
-    return fn(tx);
+    return await fn(tx);
   }, {
     // Prisma's default is 5000ms, which assumes low-latency access to the
     // database. A typical SystemX write (createUser, for example) makes
