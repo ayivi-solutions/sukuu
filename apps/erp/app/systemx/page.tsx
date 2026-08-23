@@ -57,6 +57,19 @@ export default function SystemXPage() {
   const [editingRole, setEditingRole] = useState<any>(null);
   const [roleForm, setRoleForm] = useState({ label: '', description: '' });
   const [managingRole, setManagingRole] = useState<any>(null);
+
+  // Single reusable dialog — replaces every native alert()/confirm()/
+  // prompt() in this page with one styled, on-brand modal instead of
+  // browser-chrome dialogs that don't match the app and give the user no
+  // reliable way to keep something like a temp password once dismissed.
+  const [dialog, setDialog] = useState<
+    | null
+    | { type: 'confirm'; title: string; message: string; danger?: boolean; confirmLabel?: string; onConfirm: () => void }
+    | { type: 'reason'; title: string; message: string; onConfirm: (reason: string) => void }
+    | { type: 'info'; title: string; message: string; copyable?: string }
+  >(null);
+  const [dialogReason, setDialogReason] = useState('');
+  const [dialogCopied, setDialogCopied] = useState(false);
   const [managingUserRoles, setManagingUserRoles] = useState<any>(null);
   const [userRoleAssignments, setUserRoleAssignments] = useState<any[]>([]);
   const [assignRoleForm, setAssignRoleForm] = useState({ roleId: '', expiresAt: '' });
@@ -142,28 +155,40 @@ export default function SystemXPage() {
   }
 
   async function handleSuspend(id: string, name: string) {
-    const reason = prompt(`Reason for suspending ${name}? (required — becomes part of the permanent audit record)`);
-    if (reason === null) return; // cancelled
-    if (!reason.trim()) { alert('A reason is required to suspend an account.'); return; }
-    if (!confirm(`Suspend ${name}? They will lose access immediately. This can be reversed by reinstating them.`)) return;
-    const res = await authedFetch(`/api/v1/system/users/${id}/suspend`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
-    if (res?.error) { alert(`Could not suspend: ${res.error}`); return; }
-    alert(`${name} suspended. Reason recorded: "${reason}". This action is reversible via Reinstate.`);
-    loadAll(token);
+    setDialog({
+      type: 'reason',
+      title: `Suspend ${name}?`,
+      message: 'They will lose access immediately. This is reversible via Reinstate. The reason becomes part of the permanent audit record.',
+      onConfirm: async (reason) => {
+        const res = await authedFetch(`/api/v1/system/users/${id}/suspend`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+        if (res?.error) { setDialog({ type: 'info', title: 'Could not suspend', message: res.error }); return; }
+        setDialog({ type: 'info', title: 'Suspended', message: `${name} has been suspended. Reason recorded: "${reason}". Reversible via Reinstate.` });
+        loadAll(token);
+      },
+    });
   }
   async function handleReinstate(id: string, name: string) {
-    const reason = prompt(`Reason for reinstating ${name}? (required — becomes part of the permanent audit record)`);
-    if (reason === null) return;
-    if (!reason.trim()) { alert('A reason is required to reinstate an account.'); return; }
-    const res = await authedFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
-    if (res?.error) { alert(`Could not reinstate: ${res.error}`); return; }
-    alert(`${name} reinstated. Reason recorded: "${reason}".`);
-    loadAll(token);
+    setDialog({
+      type: 'reason',
+      title: `Reinstate ${name}?`,
+      message: 'They will regain the access they had before being suspended. The reason becomes part of the permanent audit record.',
+      onConfirm: async (reason) => {
+        const res = await authedFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+        if (res?.error) { setDialog({ type: 'info', title: 'Could not reinstate', message: res.error }); return; }
+        setDialog({ type: 'info', title: 'Reinstated', message: `${name} has been reinstated. Reason recorded: "${reason}".` });
+        loadAll(token);
+      },
+    });
   }
   async function handleArchive(id: string) {
-    if (!confirm('Archive this user? They will be deactivated permanently but the record is retained.')) return;
-    await authedFetch(`/api/v1/system/users/${id}/archive`, token, { method: 'PATCH' });
-    loadAll(token);
+    setDialog({
+      type: 'confirm', danger: true, title: 'Archive this user?',
+      message: 'They will be deactivated permanently but the record is retained (no hard deletes).',
+      onConfirm: async () => {
+        await authedFetch(`/api/v1/system/users/${id}/archive`, token, { method: 'PATCH' });
+        loadAll(token);
+      },
+    });
   }
   function openEdit(u: any) {
     setEditingUser(u);
@@ -191,16 +216,21 @@ export default function SystemXPage() {
       body: JSON.stringify({ roleId: assignRoleForm.roleId, expiresAt: assignRoleForm.expiresAt || undefined }),
     });
     setAssignRoleBusy(false);
-    if (res?.error) { alert(res.error); return; }
+    if (res?.error) { setDialog({ type: 'info', title: 'Could not assign role', message: res.error }); return; }
     setAssignRoleForm({ roleId: '', expiresAt: '' });
     openUserRoles(managingUserRoles);
     loadAll(token);
   }
   async function handleRevokeRoleAssignment(assignmentId: string) {
-    if (!confirm('Revoke this role assignment? Takes effect on their very next request — no need for them to log out.')) return;
-    await authedFetch(`/api/v1/system/role-assignments/${assignmentId}/revoke`, token, { method: 'PATCH' });
-    openUserRoles(managingUserRoles);
-    loadAll(token);
+    setDialog({
+      type: 'confirm', title: 'Revoke this role assignment?',
+      message: 'Takes effect on their very next request — no need for them to log out.',
+      onConfirm: async () => {
+        await authedFetch(`/api/v1/system/role-assignments/${assignmentId}/revoke`, token, { method: 'PATCH' });
+        openUserRoles(managingUserRoles);
+        loadAll(token);
+      },
+    });
   }
   async function handleSaveRole(e: React.FormEvent) {
     e.preventDefault();
@@ -272,10 +302,16 @@ export default function SystemXPage() {
     setGrantForm({ staffId: '', email: '', roleId: '' });
   }
   async function handleResetPassword(id: string, name: string) {
-    if (!confirm(`Reset ${name}'s password? Their current password stops working immediately.`)) return;
-    const res = await authedFetch(`/api/v1/system/users/${id}/reset-password`, token, { method: 'PATCH' });
-    if (res?.error) { alert(`Could not reset: ${res.error}`); return; }
-    alert(`New temporary password for ${name}: ${res.tempPassword}\n\nRecord this now — it will not be shown again.`);
+    setDialog({
+      type: 'confirm', danger: true, title: `Reset ${name}'s password?`,
+      message: 'Their current password stops working immediately.',
+      confirmLabel: 'Reset Password',
+      onConfirm: async () => {
+        const res = await authedFetch(`/api/v1/system/users/${id}/reset-password`, token, { method: 'PATCH' });
+        if (res?.error) { setDialog({ type: 'info', title: 'Could not reset', message: res.error }); return; }
+        setDialog({ type: 'info', title: 'New Temporary Password', message: `For ${name}. Record this now — it will not be shown again.`, copyable: res.tempPassword });
+      },
+    });
   }
   async function loadUnlinkedStaff() {
     const res = await authedFetch('/api/v1/system/staff-roster/unlinked', token);
@@ -387,16 +423,21 @@ export default function SystemXPage() {
     setBulkBusy(false);
   }
   async function handleBulkCommit() {
-    if (!confirm('Commit this import? Valid rows will create real user accounts immediately.')) return;
-    setBulkBusy(true);
-    const rows = parseBulkCsv();
-    const res = await authedFetch('/api/v1/system/users/bulk/commit', token, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
+    setDialog({
+      type: 'confirm', title: 'Commit this import?', confirmLabel: 'Commit',
+      message: 'Valid rows will create real user accounts immediately.',
+      onConfirm: async () => {
+        setBulkBusy(true);
+        const rows = parseBulkCsv();
+        const res = await authedFetch('/api/v1/system/users/bulk/commit', token, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
+        });
+        setBulkResult(Array.isArray(res) ? res : []);
+        setBulkPreview(null);
+        setBulkBusy(false);
+        loadAll(token);
+      },
     });
-    setBulkResult(Array.isArray(res) ? res : []);
-    setBulkPreview(null);
-    setBulkBusy(false);
-    loadAll(token);
   }
   function downloadBulkErrorFile() {
     const rows = bulkResult || bulkPreview || [];
@@ -1180,6 +1221,69 @@ export default function SystemXPage() {
                   {events.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>No events recorded yet.</td></tr>}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {dialog && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 }}>
+          <div style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 19, marginBottom: 10 }}>{dialog.title}</h3>
+            <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: dialog.type === 'reason' ? 12 : 0 }}>{dialog.message}</p>
+
+            {dialog.type === 'reason' && (
+              <textarea
+                className="fi" rows={2} placeholder="Reason (required — becomes part of the permanent audit record)"
+                value={dialogReason} onChange={e => setDialogReason(e.target.value)}
+                style={{ width: '100%', resize: 'vertical' }} autoFocus
+              />
+            )}
+
+            {dialog.type === 'info' && dialog.copyable && (
+              <div style={{ marginTop: 16, padding: 12, background: 'var(--faint)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <code style={{ fontSize: 14, fontWeight: 700, letterSpacing: '.02em', wordBreak: 'break-all' }}>{dialog.copyable}</code>
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(dialog.copyable!); setDialogCopied(true); setTimeout(() => setDialogCopied(false), 2000); }}
+                  style={{ flexShrink: 0, fontSize: 11, padding: '6px 10px', borderRadius: 6, background: dialogCopied ? 'var(--okB)' : 'var(--soft)', color: dialogCopied ? 'var(--ok)' : 'var(--ink)', fontWeight: 600 }}
+                >
+                  {dialogCopied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+              {dialog.type === 'confirm' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => { const d = dialog; setDialog(null); d.onConfirm(); }}
+                    style={{ flex: 1, background: dialog.danger ? 'var(--erB)' : 'var(--navy)', color: dialog.danger ? 'var(--er)' : 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}
+                  >
+                    {dialog.confirmLabel || 'Confirm'}
+                  </button>
+                  <button type="button" onClick={() => setDialog(null)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+                </>
+              )}
+              {dialog.type === 'reason' && (
+                <>
+                  <button
+                    type="button"
+                    disabled={!dialogReason.trim()}
+                    onClick={() => { const d = dialog; const reason = dialogReason; setDialog(null); setDialogReason(''); d.onConfirm(reason); }}
+                    style={{ flex: 1, background: dialogReason.trim() ? 'var(--navy)' : 'var(--soft)', color: dialogReason.trim() ? 'var(--gold)' : 'var(--muted)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}
+                  >
+                    Confirm
+                  </button>
+                  <button type="button" onClick={() => { setDialog(null); setDialogReason(''); }} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+                </>
+              )}
+              {dialog.type === 'info' && (
+                <button type="button" onClick={() => setDialog(null)} style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>
+                  {dialog.copyable ? "I've saved this" : 'Close'}
+                </button>
+              )}
             </div>
           </div>
         </div>

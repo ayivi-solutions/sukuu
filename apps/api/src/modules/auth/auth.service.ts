@@ -104,7 +104,7 @@ export async function loginUser(email: string, password: string) {
     : await prisma.systemRole.findFirst({ where: { name: primaryRoleKey } });
 
   const accessToken = jwt.sign(
-    { userId: user.id, schoolId, roleKey, staffId: staff?.id || null },
+    { userId: user.id, schoolId, roleKey, staffId: staff?.id || null, mustResetPassword: !!user.must_reset_password },
     process.env.JWT_SECRET!,
     { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as any }
   );
@@ -185,6 +185,7 @@ export async function refreshAccessToken(token: string) {
       schoolId,
       roleKey:  primaryRoleKey,
       staffId:  staff?.id || null,
+      mustResetPassword: !!user.must_reset_password,
     },
     process.env.JWT_SECRET!,
     { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as any }
