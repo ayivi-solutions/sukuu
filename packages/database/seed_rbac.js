@@ -2,19 +2,21 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 
-const MODULES = ['system','school','academic','admission','student','staff','schedule','grading','transcript','finance','payroll','notification','communication','attendance'];
+// Order: [system,school,academic,admission,student,staff,schedule,grading,transcript,finance,payroll,notification,communication,attendance,
+//         exam,learn,discipline,hostel,clinic,library,transport,inventory,workflow,analytics] -- 24 modules total, matching the ECD's 24-module ERP register.
+const MODULES = ['system','school','academic','admission','student','staff','schedule','grading','transcript','finance','payroll','notification','communication','attendance','exam','learn','discipline','hostel','clinic','library','transport','inventory','workflow','analytics'];
 
 const MATRIX = {
-  superadmin:    ['F','F','F','F','F','F','F','F','F','F','F','F','F','F'],
-  headmaster:    ['F','F','F','F','F','F','F','F','F','F','F','F','F','F'],
-  school_admin:  ['N','F','F','F','F','F','F','F','F','F','F','F','F','F'],
-  bursar:        ['N','N','N','N','N','N','N','N','N','F','F','N','N','N'],
-  hod:           ['N','N','F','N','N','F','F','F','N','N','N','F','F','F'],
-  teacher:       ['N','N','F','N','R','N','F','F','N','N','N','F','F','F'],
-  registrar:     ['N','N','F','F','F','N','F','F','F','N','N','N','N','F'],
-  staff:         ['N','N','N','N','N','N','N','N','N','N','N','F','F','N'],
-  student:       ['N','N','N','N','R','N','N','N','R','N','N','N','F','R'],
-  parent:        ['N','N','N','N','R','N','N','N','N','N','N','N','F','R'],
+  superadmin:    ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  headmaster:    ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  school_admin:  ['N','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  bursar:        ['N','N','N','N','N','N','N','N','N','F','F','N','N','N', 'N','N','N','N','N','N','N','F','N','N'],
+  hod:           ['N','N','F','N','N','F','F','F','N','N','N','F','F','F', 'F','F','N','N','N','N','N','N','N','R'],
+  teacher:       ['N','N','F','N','R','N','F','F','N','N','N','F','F','F', 'F','F','R','N','N','R','N','N','N','N'],
+  registrar:     ['N','N','F','F','F','N','F','F','F','N','N','N','N','F', 'F','N','F','F','N','N','F','N','N','N'],
+  staff:         ['N','N','N','N','N','N','N','N','N','N','N','F','F','N', 'N','N','N','F','F','F','F','F','F','N'],
+  student:       ['N','N','N','N','R','N','N','N','R','N','N','N','F','R', 'R','R','N','N','N','R','R','N','N','N'],
+  parent:        ['N','N','N','N','R','N','N','N','N','N','N','N','F','R', 'R','R','N','N','N','N','R','N','N','N'],
 };
 
 async function main() {

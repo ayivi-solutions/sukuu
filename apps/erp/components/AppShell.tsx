@@ -13,8 +13,10 @@ const NAV_SECTIONS = [
     { icon: '📋', label: 'AdmissionX', href: '/admissions' },
     { icon: '🗓️', label: 'ScheduleX', href: '/schedulex' },
     { icon: '✅', label: 'AttendanceX', href: '/attendancex' },
+    { icon: '📝', label: 'ExamX', href: '/examx' },
+    { icon: '📖', label: 'LearnX', href: '/learnx' },
     { icon: '📊', label: 'GradingX', href: '/gradingx' },
-    { icon: '📜', label: 'TranscriptX', href: '/transcriptx', disabled: true },
+    { icon: '📜', label: 'TranscriptX', href: '/transcriptx' },
   ]},
   { sec: 'PEOPLE', items: [
     { icon: '🧑‍🎒', label: 'StudentX', href: '/students' },
@@ -23,6 +25,22 @@ const NAV_SECTIONS = [
   { sec: 'FINANCE', items: [
     { icon: '💰', label: 'FinanceX', href: '/financex' },
     { icon: '🧾', label: 'PayrollX', href: '/payrollx' },
+  ]},
+  { sec: 'STUDENT SERVICES', items: [
+    { icon: '⚖️', label: 'DisciplineX', href: '/disciplinex' },
+    { icon: '🏠', label: 'HostelX', href: '/hostelx' },
+    { icon: '🏥', label: 'ClinicX', href: '/clinicx' },
+    { icon: '📚', label: 'LibraryX', href: '/libraryx' },
+    { icon: '🚌', label: 'TransportX', href: '/transportx' },
+  ]},
+  { sec: 'OPERATIONS', items: [
+    { icon: '📦', label: 'InventoryX', href: '/inventoryx' },
+    { icon: '🔁', label: 'WorkflowX', href: '/workflowx' },
+  ]},
+  { sec: 'ENGAGEMENT', items: [
+    { icon: '🔔', label: 'NotificationX', href: '/notificationx' },
+    { icon: '💬', label: 'CommunicationX', href: '/communicationx' },
+    { icon: '📊', label: 'AnalyticsX', href: '/analyticsx' },
   ]},
 ];
 
