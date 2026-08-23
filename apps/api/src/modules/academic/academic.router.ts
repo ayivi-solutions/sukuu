@@ -1,77 +1,80 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
+import { requireModuleAccess } from '../../middleware/requireModuleAccess';
 import * as ctrl from './academic.controller';
 
 export const academicRouter = Router();
+const R = requireModuleAccess('academic', 'read');
+const F = requireModuleAccess('academic', 'full');
 
-academicRouter.get('/years', authenticate, ctrl.getYears);
-academicRouter.post('/years', authenticate, ctrl.postYear);
-academicRouter.patch('/years/:id', authenticate, ctrl.patchYear);
-academicRouter.patch('/years/:id/activate', authenticate, ctrl.patchActivateYear);
-academicRouter.patch('/years/:id/archive', authenticate, ctrl.patchArchiveYear);
+academicRouter.get('/years', authenticate, R, ctrl.getYears);
+academicRouter.post('/years', authenticate, F, ctrl.postYear);
+academicRouter.patch('/years/:id', authenticate, F, ctrl.patchYear);
+academicRouter.patch('/years/:id/activate', authenticate, F, ctrl.patchActivateYear);
+academicRouter.patch('/years/:id/archive', authenticate, F, ctrl.patchArchiveYear);
 
-academicRouter.get('/terms', authenticate, ctrl.getTerms);
-academicRouter.post('/terms', authenticate, ctrl.postTerm);
-academicRouter.patch('/terms/:id', authenticate, ctrl.patchTerm);
-academicRouter.patch('/terms/:id/archive', authenticate, ctrl.patchArchiveTerm);
+academicRouter.get('/terms', authenticate, R, ctrl.getTerms);
+academicRouter.post('/terms', authenticate, F, ctrl.postTerm);
+academicRouter.patch('/terms/:id', authenticate, F, ctrl.patchTerm);
+academicRouter.patch('/terms/:id/archive', authenticate, F, ctrl.patchArchiveTerm);
 
-academicRouter.get('/classes', authenticate, ctrl.getClasses);
-academicRouter.post('/classes', authenticate, ctrl.postClass);
-academicRouter.patch('/classes/:id', authenticate, ctrl.patchClass);
-academicRouter.patch('/classes/:id/archive', authenticate, ctrl.patchArchiveClass);
+academicRouter.get('/classes', authenticate, R, ctrl.getClasses);
+academicRouter.post('/classes', authenticate, F, ctrl.postClass);
+academicRouter.patch('/classes/:id', authenticate, F, ctrl.patchClass);
+academicRouter.patch('/classes/:id/archive', authenticate, F, ctrl.patchArchiveClass);
 
-academicRouter.get('/streams', authenticate, ctrl.getStreams);
-academicRouter.post('/streams', authenticate, ctrl.postStream);
-academicRouter.patch('/streams/:id', authenticate, ctrl.patchStream);
-academicRouter.patch('/streams/:id/archive', authenticate, ctrl.patchArchiveStream);
+academicRouter.get('/streams', authenticate, R, ctrl.getStreams);
+academicRouter.post('/streams', authenticate, F, ctrl.postStream);
+academicRouter.patch('/streams/:id', authenticate, F, ctrl.patchStream);
+academicRouter.patch('/streams/:id/archive', authenticate, F, ctrl.patchArchiveStream);
 
-academicRouter.get('/subjects', authenticate, ctrl.getSubjects);
-academicRouter.post('/subjects', authenticate, ctrl.postSubject);
-academicRouter.patch('/subjects/:id', authenticate, ctrl.patchSubject);
-academicRouter.patch('/subjects/:id/archive', authenticate, ctrl.patchArchiveSubject);
+academicRouter.get('/subjects', authenticate, R, ctrl.getSubjects);
+academicRouter.post('/subjects', authenticate, F, ctrl.postSubject);
+academicRouter.patch('/subjects/:id', authenticate, F, ctrl.patchSubject);
+academicRouter.patch('/subjects/:id/archive', authenticate, F, ctrl.patchArchiveSubject);
 
-academicRouter.get('/departments', authenticate, ctrl.getDepartments);
-academicRouter.post('/departments', authenticate, ctrl.postDepartment);
-academicRouter.patch('/departments/:id', authenticate, ctrl.patchDepartment);
-academicRouter.patch('/departments/:id/archive', authenticate, ctrl.patchArchiveDepartment);
+academicRouter.get('/departments', authenticate, R, ctrl.getDepartments);
+academicRouter.post('/departments', authenticate, F, ctrl.postDepartment);
+academicRouter.patch('/departments/:id', authenticate, F, ctrl.patchDepartment);
+academicRouter.patch('/departments/:id/archive', authenticate, F, ctrl.patchArchiveDepartment);
 
-academicRouter.get('/subject-assignments', authenticate, ctrl.getSubjectAssignments);
-academicRouter.post('/subject-assignments', authenticate, ctrl.postSubjectAssignment);
-academicRouter.patch('/subject-assignments/:id/archive', authenticate, ctrl.patchArchiveSubjectAssignment);
+academicRouter.get('/subject-assignments', authenticate, R, ctrl.getSubjectAssignments);
+academicRouter.post('/subject-assignments', authenticate, F, ctrl.postSubjectAssignment);
+academicRouter.patch('/subject-assignments/:id/archive', authenticate, F, ctrl.patchArchiveSubjectAssignment);
 
-academicRouter.get('/class-subjects', authenticate, ctrl.getClassSubjects);
-academicRouter.post('/class-subjects', authenticate, ctrl.postClassSubject);
-academicRouter.patch('/class-subjects/:id/archive', authenticate, ctrl.patchArchiveClassSubject);
+academicRouter.get('/class-subjects', authenticate, R, ctrl.getClassSubjects);
+academicRouter.post('/class-subjects', authenticate, F, ctrl.postClassSubject);
+academicRouter.patch('/class-subjects/:id/archive', authenticate, F, ctrl.patchArchiveClassSubject);
 
-academicRouter.get('/stream-subjects', authenticate, ctrl.getStreamSubjects);
-academicRouter.post('/stream-subjects', authenticate, ctrl.postStreamSubject);
-academicRouter.patch('/stream-subjects/:id/archive', authenticate, ctrl.patchArchiveStreamSubject);
+academicRouter.get('/stream-subjects', authenticate, R, ctrl.getStreamSubjects);
+academicRouter.post('/stream-subjects', authenticate, F, ctrl.postStreamSubject);
+academicRouter.patch('/stream-subjects/:id/archive', authenticate, F, ctrl.patchArchiveStreamSubject);
 
-academicRouter.get('/subject-groups', authenticate, ctrl.getSubjectGroups);
-academicRouter.post('/subject-groups', authenticate, ctrl.postSubjectGroup);
-academicRouter.patch('/subject-groups/:id/archive', authenticate, ctrl.patchArchiveSubjectGroup);
+academicRouter.get('/subject-groups', authenticate, R, ctrl.getSubjectGroups);
+academicRouter.post('/subject-groups', authenticate, F, ctrl.postSubjectGroup);
+academicRouter.patch('/subject-groups/:id/archive', authenticate, F, ctrl.patchArchiveSubjectGroup);
 
-academicRouter.get('/curricula', authenticate, ctrl.getCurricula);
-academicRouter.post('/curricula', authenticate, ctrl.postCurriculum);
-academicRouter.patch('/curricula/:id', authenticate, ctrl.patchCurriculum);
-academicRouter.patch('/curricula/:id/archive', authenticate, ctrl.patchArchiveCurriculum);
+academicRouter.get('/curricula', authenticate, R, ctrl.getCurricula);
+academicRouter.post('/curricula', authenticate, F, ctrl.postCurriculum);
+academicRouter.patch('/curricula/:id', authenticate, F, ctrl.patchCurriculum);
+academicRouter.patch('/curricula/:id/archive', authenticate, F, ctrl.patchArchiveCurriculum);
 
-academicRouter.get('/curricula/:curriculumId/topics', authenticate, ctrl.getTopics);
-academicRouter.post('/curricula/:curriculumId/topics', authenticate, ctrl.postTopic);
-academicRouter.patch('/topics/:id/archive', authenticate, ctrl.patchArchiveTopic);
+academicRouter.get('/curricula/:curriculumId/topics', authenticate, R, ctrl.getTopics);
+academicRouter.post('/curricula/:curriculumId/topics', authenticate, F, ctrl.postTopic);
+academicRouter.patch('/topics/:id/archive', authenticate, F, ctrl.patchArchiveTopic);
 
-academicRouter.get('/topics/:topicId/objectives', authenticate, ctrl.getObjectives);
-academicRouter.post('/topics/:topicId/objectives', authenticate, ctrl.postObjective);
-academicRouter.patch('/objectives/:id/archive', authenticate, ctrl.patchArchiveObjective);
+academicRouter.get('/topics/:topicId/objectives', authenticate, R, ctrl.getObjectives);
+academicRouter.post('/topics/:topicId/objectives', authenticate, F, ctrl.postObjective);
+academicRouter.patch('/objectives/:id/archive', authenticate, F, ctrl.patchArchiveObjective);
 
-academicRouter.get('/outcomes', authenticate, ctrl.getOutcomes);
-academicRouter.post('/outcomes', authenticate, ctrl.postOutcome);
-academicRouter.patch('/outcomes/:id/archive', authenticate, ctrl.patchArchiveOutcome);
+academicRouter.get('/outcomes', authenticate, R, ctrl.getOutcomes);
+academicRouter.post('/outcomes', authenticate, F, ctrl.postOutcome);
+academicRouter.patch('/outcomes/:id/archive', authenticate, F, ctrl.patchArchiveOutcome);
 
-academicRouter.get('/promotion-rules', authenticate, ctrl.getPromotionRules);
-academicRouter.post('/promotion-rules', authenticate, ctrl.postPromotionRule);
-academicRouter.patch('/promotion-rules/:id/archive', authenticate, ctrl.patchArchivePromotionRule);
+academicRouter.get('/promotion-rules', authenticate, R, ctrl.getPromotionRules);
+academicRouter.post('/promotion-rules', authenticate, F, ctrl.postPromotionRule);
+academicRouter.patch('/promotion-rules/:id/archive', authenticate, F, ctrl.patchArchivePromotionRule);
 
-academicRouter.get('/class-teachers', authenticate, ctrl.getClassTeachers);
-academicRouter.post('/class-teachers', authenticate, ctrl.postClassTeacher);
-academicRouter.patch('/class-teachers/:id/archive', authenticate, ctrl.patchArchiveClassTeacher);
+academicRouter.get('/class-teachers', authenticate, R, ctrl.getClassTeachers);
+academicRouter.post('/class-teachers', authenticate, F, ctrl.postClassTeacher);
+academicRouter.patch('/class-teachers/:id/archive', authenticate, F, ctrl.patchArchiveClassTeacher);
