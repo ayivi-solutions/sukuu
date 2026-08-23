@@ -1,267 +1,127 @@
 import { Request, Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import {
-  listRoles, listPermissions, getRolePermissions,
-  listUsers, setUserActive, createUser,
-  listFeatureFlags, toggleFeatureFlag, createFeatureFlag, listAuditEvents, listSessions, revokeSession, listAuthLog, updateUser, archiveUser, updateRole, createRole, logAuditEvent, listUserIdentities, createUserIdentity, getPasswordPolicy, upsertPasswordPolicy, listSecurityPolicies, upsertSecurityPolicy, listApiKeys, createApiKey, revokeApiKey, listWebhooks, createWebhook, toggleWebhook, assignPermission, removePermission, getSystemSummary,
-} from './system.service';
+import { TenantCtx } from '../../lib/tenantContext';
+import * as svc from './system.service';
 
-export async function getRoles(req: AuthRequest, res: Response) {
-  try {
-    const roles = await listRoles(req.schoolId);
-    res.json(roles);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch roles' });
-  }
+function ctxFrom(req: AuthRequest): TenantCtx {
+  return { schoolId: req.schoolId || '', userId: req.userId || '', role: req.roleKey || '' };
 }
 
-export async function getPermissions(_req: Request, res: Response) {
-  try {
-    const permissions = await listPermissions();
-    res.json(permissions);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch permissions' });
-  }
+function handle(fn: (req: AuthRequest) => Promise<any>) {
+  return async (req: AuthRequest, res: Response) => {
+    try {
+      res.json(await fn(req));
+    } catch (err: any) {
+      if (err instanceof svc.InvalidTransitionError) {
+        return res.status(409).json({ error: err.message, currentState: err.currentState, attemptedState: err.attemptedState });
+      }
+      res.status(500).json({ error: err.message || 'Request failed' });
+    }
+  };
 }
 
-export async function getRolePermissionsHandler(req: Request, res: Response) {
-  try {
-    const { roleId } = req.params;
-    const permissions = await getRolePermissions(roleId);
-    res.json(permissions);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch role permissions' });
-  }
+function handleCreate(fn: (req: AuthRequest) => Promise<any>) {
+  return async (req: AuthRequest, res: Response) => {
+    try {
+      res.status(201).json(await fn(req));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Request failed' });
+    }
+  };
 }
 
-export async function getUsers(req: AuthRequest, res: Response) {
-  try {
-    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
-    const users = await listUsers(req.schoolId);
-    res.json(users);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch users' });
-  }
-}
+// ── Roles & Permissions ──
+export const getRoles = handle(req => svc.listRoles(ctxFrom(req)));
+export const getPermissions = handle(req => svc.listPermissions(ctxFrom(req)));
+export const getRolePermissionsHandler = handle(req => svc.getRolePermissions(ctxFrom(req), req.params.roleId));
+export const postAssignPermission = handleCreate(req => svc.assignPermission(ctxFrom(req), req.params.roleId, req.body.permissionId));
+export const deleteRemovePermission = handle(req => svc.removePermission(ctxFrom(req), req.params.roleId, req.params.permissionId));
+export const patchRole = handle(req => svc.updateRole(ctxFrom(req), req.params.roleId, req.body));
+export const postRole = handleCreate(req => svc.createRole(ctxFrom(req), req.body.name, req.body.label, req.body.description));
 
-export async function postUser(req: AuthRequest, res: Response) {
+// ── Users ──
+export const getUsers = handle(req => {
+  if (!req.schoolId) throw new Error('No school associated with this user');
+  return svc.listUsers(ctxFrom(req));
+});
+
+export const postUser = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
     const { firstName, lastName, email, phone, roleId } = req.body;
     if (!firstName || !lastName || !email || !roleId) {
       return res.status(400).json({ error: 'firstName, lastName, email, roleId are required' });
     }
-    const result = await createUser(req.schoolId, {
-      firstName, lastName, email, phone, roleId, assignedBy: req.userId || '',
-    });
-    await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_USER', 'system_user', result.user.id);
-    res.status(201).json({
+    const operationId = req.header('X-Operation-Id') || req.body.operationId;
+    if (!operationId) return res.status(400).json({ error: 'X-Operation-Id header (or operationId in body) is required for idempotent user creation' });
+
+    const { result, replayed } = await svc.withIdempotency(ctxFrom(req), operationId, 'CreateUser', () =>
+      svc.createUser(ctxFrom(req), { firstName, lastName, email, phone, roleId }));
+
+    res.status(replayed ? 200 : 201).json({
       user: { id: result.user.id, email: result.user.email },
       tempPassword: result.tempPassword,
+      replayed,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to create user' });
   }
-}
+};
 
-export async function patchSuspend(req: AuthRequest, res: Response) {
-  try {
-    const updated = await setUserActive(req.params.userId, false);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'SUSPEND_USER', 'system_user', req.params.userId);
-    res.json({ id: updated.id, status: 'SUSPENDED' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to suspend user' });
-  }
-}
+export const patchUser = handle(req => svc.updateUser(ctxFrom(req), req.params.userId, req.body));
 
-export async function patchReinstate(req: AuthRequest, res: Response) {
-  try {
-    const updated = await setUserActive(req.params.userId, true);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'REINSTATE_USER', 'system_user', req.params.userId);
-    res.json({ id: updated.id, status: 'ACTIVE' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to reinstate user' });
-  }
-}
+export const patchSuspend = handle(req => svc.transitionUserStatus(ctxFrom(req), req.params.userId, 'SUSPENDED', req.body.reason || 'Suspended by administrator'));
+export const patchReinstate = handle(req => svc.transitionUserStatus(ctxFrom(req), req.params.userId, 'ACTIVE', req.body.reason || 'Reinstated by administrator'));
+export const patchArchiveUser = handle(req => svc.archiveUser(ctxFrom(req), req.params.userId));
+export const patchUserStatus = handle(req => svc.transitionUserStatus(ctxFrom(req), req.params.userId, req.body.status, req.body.reason || 'Manual transition'));
 
-export async function getFlags(req: AuthRequest, res: Response) {
-  try {
-    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
-    const flags = await listFeatureFlags(req.schoolId);
-    res.json(flags);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch feature flags' });
-  }
-}
+export const getUserIdentities = handle(req => svc.listUserIdentities(ctxFrom(req), req.params.userId));
+export const postUserIdentity = handleCreate(req => svc.createUserIdentity(ctxFrom(req), req.params.userId, req.body.identityType, req.body.identityId));
 
-export async function patchFlag(req: AuthRequest, res: Response) {
-  try {
-    const { isEnabled } = req.body;
-    const updated = await toggleFeatureFlag(req.params.flagId, !!isEnabled);
-    res.json(updated);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'TOGGLE_FLAG', 'system_feature_flag', req.params.flagId);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to update feature flag' });
-  }
-}
+// ── Feature Flags ──
+export const getFlags = handle(req => svc.listFeatureFlags(ctxFrom(req)));
+export const patchFlag = handle(req => svc.toggleFeatureFlag(ctxFrom(req), req.params.flagId, req.body.isEnabled));
+export const postFlag = handleCreate(req => svc.createFeatureFlag(ctxFrom(req), req.body.flagKey, req.body.description));
 
-export async function getAuditLog(req: AuthRequest, res: Response) {
-  try {
-    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
-    const events = await listAuditEvents(req.schoolId);
-    res.json(events);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch audit log' });
-  }
-}
+// ── Audit & Sessions ──
+export const getAuditLog = handle(req => svc.listAuditEvents(ctxFrom(req)));
+export const getSessions = handle(req => svc.listSessions(ctxFrom(req), (req.query.userIds as string || '').split(',').filter(Boolean)));
+export const patchRevoke = handle(req => svc.revokeSession(ctxFrom(req), req.params.sessionId));
+export const getAuthLog = handle(req => svc.listAuthLog(ctxFrom(req), req.query.limit ? Number(req.query.limit) : undefined));
 
-export async function getSessions(req: AuthRequest, res: Response) {
-  try {
-    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
-    const users = await listUsers(req.schoolId);
-    const sessions = await listSessions(users.map(u => u.id));
-    res.json(sessions);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch sessions' });
-  }
-}
+// ── Password & Security Policy ──
+export const getPwdPolicy = handle(req => svc.getPasswordPolicy(ctxFrom(req)));
+export const putPwdPolicy = handleCreate(req => svc.upsertPasswordPolicy(ctxFrom(req), req.body));
+export const getSecPolicies = handle(req => svc.listSecurityPolicies(ctxFrom(req)));
+export const putSecPolicy = handleCreate(req => svc.upsertSecurityPolicy(ctxFrom(req), req.body.policyName, req.body.policyValue));
 
-export async function patchRevoke(req: Request, res: Response) {
-  try {
-    const revoked = await revokeSession(req.params.sessionId);
-    res.json({ id: revoked.id, status: 'REVOKED' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to revoke session' });
-  }
-}
+// ── API Keys & Webhooks ──
+export const getApiKeys = handle(req => svc.listApiKeys(ctxFrom(req)));
+export const postApiKey = handleCreate(req => svc.createApiKey(ctxFrom(req), req.body.label, req.body.scopes));
+export const patchRevokeApiKey = handle(req => svc.revokeApiKey(ctxFrom(req), req.params.id));
+export const getWebhooks = handle(req => svc.listWebhooks(ctxFrom(req)));
+export const postWebhook = handleCreate(req => svc.createWebhook(ctxFrom(req), req.body.url, req.body.events));
+export const patchWebhook = handle(req => svc.toggleWebhook(ctxFrom(req), req.params.id, req.body.isActive));
 
-export async function getAuthLog(_req: Request, res: Response) {
-  try {
-    const logs = await listAuthLog();
-    res.json(logs);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch auth log' });
-  }
-}
+// ── Summary ──
+export const getSummary = handle(req => svc.getSystemSummary(ctxFrom(req)));
 
-export async function patchUser(req: AuthRequest, res: Response) {
-  try {
-    await updateUser(req.params.userId, req.body);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_USER', 'system_user', req.params.userId);
-    res.json({ id: req.params.userId, updated: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to update user' });
-  }
-}
+// ── Bulk Import (EFS-SYS-0020) ──
+export const postBulkPreview = handle(req => svc.previewBulkUserImport(ctxFrom(req), req.body.rows));
+export const postBulkCommit = handle(req => svc.commitBulkUserImport(ctxFrom(req), req.body.rows));
 
-export async function patchArchiveUser(req: AuthRequest, res: Response) {
-  try {
-    const archived = await archiveUser(req.params.userId);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'ARCHIVE_USER', 'system_user', req.params.userId);
-    res.json({ id: archived.id, status: 'ARCHIVED' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to archive user' });
-  }
-}
+// ── Six Named Governed Reports (EFS-SYS-0040) ──
+export const getReportUserRoleRegister = handle(req => svc.reportUserAndRoleRegister(ctxFrom(req)));
+export const getReportPrivilegedAccess = handle(req => svc.reportPrivilegedAccessReview(ctxFrom(req)));
+export const getReportActiveSessions = handle(req => svc.reportActiveSessionRegister(ctxFrom(req)));
+export const getReportFailedLoginTrend = handle(req => svc.reportFailedLoginTrend(ctxFrom(req)));
+export const getReportFeatureFlagHistory = handle(req => svc.reportFeatureFlagHistory(ctxFrom(req)));
+export const getReportAuditExport = handle(req => svc.reportAuditExport(ctxFrom(req), {
+  entityType: req.query.entityType as string | undefined,
+  action: req.query.action as string | undefined,
+  fromDate: req.query.fromDate as string | undefined,
+  toDate: req.query.toDate as string | undefined,
+}));
 
-export async function patchRole(req: AuthRequest, res: Response) {
-  try {
-    const updated = await updateRole(req.params.roleId, req.body);
-    res.json(updated);
-  } catch (err: any) {
-    res.status(403).json({ error: err.message || 'Failed to update role' });
-  }
-}
-
-export async function getUserIdentities(req: Request, res: Response) {
-  try { res.json(await listUserIdentities(req.params.userId)); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function postUserIdentity(req: Request, res: Response) {
-  try { res.status(201).json(await createUserIdentity(req.params.userId, req.body.identityType, req.body.identityId)); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function getPwdPolicy(req: AuthRequest, res: Response) {
-  try { res.json(await getPasswordPolicy(req.schoolId || '')); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function putPwdPolicy(req: AuthRequest, res: Response) {
-  try { const r = await upsertPasswordPolicy(req.schoolId || '', req.body); if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_PASSWORD_POLICY', 'system_password_policy', ''); res.json(r); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function getSecPolicies(req: AuthRequest, res: Response) {
-  try { res.json(await listSecurityPolicies(req.schoolId || '')); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function putSecPolicy(req: AuthRequest, res: Response) {
-  try { const r = await upsertSecurityPolicy(req.schoolId || '', req.body.policyName, req.body.policyValue); if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'UPDATE_SECURITY_POLICY', 'system_security_policy', ''); res.json(r); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function getApiKeys(req: AuthRequest, res: Response) {
-  try { res.json(await listApiKeys(req.schoolId || '')); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function postApiKey(req: AuthRequest, res: Response) {
-  try { const r = await createApiKey(req.schoolId || '', req.body.label, req.body.scopes, req.userId || ''); if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_API_KEY', 'system_api_key', r.id); res.status(201).json(r); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function patchRevokeApiKey(req: AuthRequest, res: Response) {
-  try { const r = await revokeApiKey(req.params.id); if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'REVOKE_API_KEY', 'system_api_key', req.params.id); res.json(r); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function getWebhooks(req: AuthRequest, res: Response) {
-  try { res.json(await listWebhooks(req.schoolId || '')); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function postWebhook(req: AuthRequest, res: Response) {
-  try { const r = await createWebhook(req.schoolId || '', req.body.url, req.body.events, req.userId || ''); if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_WEBHOOK', 'system_webhook', r.id); res.status(201).json(r); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function patchWebhook(req: AuthRequest, res: Response) {
-  try { res.json(await toggleWebhook(req.params.id, !!req.body.isActive)); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function postAssignPermission(req: AuthRequest, res: Response) {
-  try {
-    const result = await assignPermission(req.params.roleId, req.body.permissionId, req.userId || '');
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'GRANT_PERMISSION', 'system_role', req.params.roleId);
-    res.status(201).json(result);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-export async function deleteRemovePermission(req: AuthRequest, res: Response) {
-  try {
-    const result = await removePermission(req.params.roleId, req.params.permissionId);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'REVOKE_PERMISSION', 'system_role', req.params.roleId);
-    res.json(result);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-
-export async function postRole(req: AuthRequest, res: Response) {
-  try {
-    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
-    const { name, label, description } = req.body;
-    if (!name || !label) return res.status(400).json({ error: 'name and label are required' });
-    const r = await createRole(req.schoolId, name, label, description);
-    await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_ROLE', 'system_role', r.id);
-    res.status(201).json(r);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to create role' });
-  }
-}
-
-export async function postFlag(req: AuthRequest, res: Response) {
-  try {
-    const r = await createFeatureFlag(req.schoolId || '', req.body.flagKey, req.body.description);
-    if (req.schoolId) await logAuditEvent(req.schoolId, req.userId || '', 'CREATE_FLAG', 'system_feature_flag', r.id);
-    res.status(201).json(r);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
-}
-
-export async function getSummary(req: AuthRequest, res: Response) {
-  try {
-    const summary = await getSystemSummary(req.schoolId || '');
-    res.json(summary);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to fetch system summary' });
-  }
-}
+// ── Event log viewer ──
+export const getEvents = handle(req => svc.listDomainEvents(ctxFrom(req), req.query.limit ? Number(req.query.limit) : undefined));

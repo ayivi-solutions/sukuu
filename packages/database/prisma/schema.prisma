@@ -13,7 +13,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["sukuux"]
+  schemas   = ["sukuux", "system"]
 }
 
 // ── ENUMS ────────────────────────────────────────────────────
@@ -966,7 +966,7 @@ model SystemSettings {
   updated_at                     DateTime  @updatedAt
   updated_by                     String
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_settings")
 }
 
@@ -982,7 +982,7 @@ model SystemLog {
   payload                        String?
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_log")
 }
 
@@ -998,11 +998,13 @@ model SystemUser {
   failed_login_count             Int
   locked_until                   DateTime?
   must_reset_password            Boolean
+  status                         String
+  row_version                    Int  @default(1)
   created_at                     DateTime  @default(now())
   updated_at                     DateTime  @updatedAt
   archived_at                    DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_user")
 }
 
@@ -1014,10 +1016,11 @@ model SystemRole {
   description                    String?
   is_system                      Boolean
   school_id                      String?
+  row_version                    Int  @default(1)
   created_at                     DateTime  @default(now())
   archived_at                    DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_role")
 }
 
@@ -1030,7 +1033,7 @@ model SystemPermission {
   label                          String
   description                    String?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_permission")
 }
 
@@ -1042,7 +1045,7 @@ model SystemRolePermission {
   granted_at                     DateTime
   granted_by                     String?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_role_permission")
 }
 
@@ -1056,7 +1059,7 @@ model SystemUserRole {
   assigned_by                    String?
   expires_at                     DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_user_role")
 }
 
@@ -1074,7 +1077,7 @@ model SystemSession {
   last_activity_at               DateTime
   invalidated_at                 DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_session")
 }
 
@@ -1089,7 +1092,7 @@ model SystemDevice {
   first_seen_at                  DateTime
   last_seen_at                   DateTime
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_device")
 }
 
@@ -1106,7 +1109,7 @@ model SystemApiKey {
   expires_at                     DateTime?
   last_used_at                   DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_api_key")
 }
 
@@ -1120,7 +1123,7 @@ model SystemLoginHistory {
   ip_address                     String?
   attempted_at                   DateTime
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_login_history")
 }
 
@@ -1131,7 +1134,7 @@ model SystemPasswordHistory {
   password_hash                  String
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_password_history")
 }
 
@@ -1145,7 +1148,7 @@ model SystemMfa {
   backup_codes                   String
   verified_at                    DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_mfa")
 }
 
@@ -1157,8 +1160,9 @@ model SystemFeatureFlag {
   school_id                      String?
   description                    String?
   updated_at                     DateTime  @updatedAt
+  row_version                    Int  @default(1)
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_feature_flag")
 }
 
@@ -1174,7 +1178,7 @@ model SystemBackup {
   completed_at                   DateTime?
   error_message                  String?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_backup")
 }
 
@@ -1192,7 +1196,7 @@ model SystemJobQueue {
   started_at                     DateTime?
   completed_at                   DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_job_queue")
 }
 
@@ -1207,7 +1211,7 @@ model SystemWebhook {
   created_by                     String
   last_triggered_at              DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_webhook")
 }
 
@@ -1223,7 +1227,7 @@ model SystemAuditEvent {
   after_state                    String?
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_audit_event")
 }
 
@@ -1237,7 +1241,7 @@ model SystemNotificationPreference {
   email                          Boolean
   push                           Boolean
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_notification_preference")
 }
 
@@ -1254,7 +1258,7 @@ model SystemSubscription {
   grace_period_end               DateTime?
   cancelled_at                   DateTime?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_subscription")
 }
 
@@ -1271,7 +1275,7 @@ model SystemTenantPlan {
   features                       String
   is_active                      Boolean
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_tenant_plan")
 }
 
@@ -4967,7 +4971,7 @@ model SystemUserIdentity {
   identity_type                  UserIdentityType
   identity_id                    String
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_user_identity")
 }
 
@@ -4989,7 +4993,7 @@ model SystemAuthenticationLog {
   user_agent                     String?
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_authentication_log")
 }
 
@@ -5011,7 +5015,7 @@ model SystemPasswordPolicy {
   require_symbols                Boolean
   password_expiry_days           Int
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_password_policy")
 }
 
@@ -5022,7 +5026,7 @@ model SystemSecurityPolicy {
   policy_name                    String
   policy_value                  String
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_security_policy")
 }
 
@@ -5033,7 +5037,7 @@ model SystemConfiguration {
   config_value                  String
   updated_at                     DateTime  @updatedAt
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_configuration")
 }
 
@@ -5044,7 +5048,7 @@ model SystemEnvironment {
   description                    String?
   is_active                      Boolean
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_environment")
 }
 
@@ -5054,7 +5058,7 @@ model SystemDepartment {
   name                           String
   description                    String?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_department")
 }
 
@@ -5067,7 +5071,7 @@ model SystemIntegration {
   is_active                      Boolean
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_integration")
 }
 
@@ -5079,7 +5083,7 @@ model SystemBackupLog {
   message                        String?
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_backup_log")
 }
 
@@ -5092,7 +5096,7 @@ model SystemJobExecution {
   completed_at                   DateTime?
   result                         String?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_job_execution")
 }
 
@@ -5104,7 +5108,7 @@ model SystemHealthCheck {
   status                         String
   checked_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_health_check")
 }
 
@@ -5115,7 +5119,7 @@ model SystemRateLimit {
   max_requests                   Int
   time_window_seconds            Int
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_rate_limit")
 }
 
@@ -5126,7 +5130,7 @@ model SystemDataRetention {
   retention_years                Int
   description                    String?
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_data_retention")
 }
 
@@ -5139,7 +5143,7 @@ model SystemErrorLog {
   module_name                    String?
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_error_log")
 }
 
@@ -5150,7 +5154,7 @@ model SystemService {
   service_description            String?
   created_at                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_service")
 }
 
@@ -5161,7 +5165,7 @@ model SystemServiceStatus {
   status                         ServiceRuntimeStatus
   last_check                     DateTime  @default(now())
 
-  @@schema("sukuux")
+  @@schema("system")
   @@map("system_service_status")
 }
 
@@ -5359,4 +5363,43 @@ model PayrollAuditLog {
 
   @@schema("sukuux")
   @@map("payroll_audit_log")
+}
+
+/// Domain event outbox for SystemX (EEAS-SYS-0026..0030, ETAS-ARC-015)
+model SystemDomainEvent {
+  id                             String  @id @default(uuid())
+  aggregate_type                 String
+  aggregate_id                   String
+  event_type                     String
+  occurred_at                    DateTime  @default(now())
+  recorded_at                    DateTime  @default(now())
+  producer                       String  @default("sukuu-api")
+  correlation_id                 String
+  causation_id                   String?
+  tenant_id                      String?
+  payload                        Json  @default("{}")
+  status                         String  @default("PENDING")
+  published_at                   DateTime?
+  attempt_count                  Int  @default(0)
+  last_error                     String?
+
+  @@schema("system")
+  @@map("system_domain_event")
+}
+
+/// Idempotency ledger for SystemX commands (EEAS-SYS-0027, EFS-SYS-0023)
+model SystemCommandLog {
+  operation_id                   String  @id
+  tenant_id                      String?
+  actor_id                       String?
+  command_type                   String
+  aggregate_id                   String?
+  request_hash                   String?
+  result_status                  Int?
+  result_body                    Json?
+  issued_at                      DateTime  @default(now())
+  completed_at                   DateTime?
+
+  @@schema("system")
+  @@map("system_command_log")
 }

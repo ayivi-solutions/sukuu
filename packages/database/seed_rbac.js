@@ -6,17 +6,24 @@ const bcrypt = require('bcryptjs');
 //         exam,learn,discipline,hostel,clinic,library,transport,inventory,workflow,analytics] -- 24 modules total, matching the ECD's 24-module ERP register.
 const MODULES = ['system','school','academic','admission','student','staff','schedule','grading','transcript','finance','payroll','notification','communication','attendance','exam','learn','discipline','hostel','clinic','library','transport','inventory','workflow','analytics'];
 
+// auditor and support_operator added per ESS-SYS-141: named authorized
+// SystemX actors alongside "Sukuu system administrator, school head,
+// delegated school administrator". Both get read-only ('R') access to
+// system for now — least privilege by default. Their reach into other
+// modules is a decision for each module's own turn, not assumed here.
 const MATRIX = {
-  superadmin:    ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  headmaster:    ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  school_admin:  ['N','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  bursar:        ['N','N','N','N','N','N','N','N','N','F','F','N','N','N', 'N','N','N','N','N','N','N','F','N','N'],
-  hod:           ['N','N','F','N','N','F','F','F','N','N','N','F','F','F', 'F','F','N','N','N','N','N','N','N','R'],
-  teacher:       ['N','N','F','N','R','N','F','F','N','N','N','F','F','F', 'F','F','R','N','N','R','N','N','N','N'],
-  registrar:     ['N','N','F','F','F','N','F','F','F','N','N','N','N','F', 'F','N','F','F','N','N','F','N','N','N'],
-  staff:         ['N','N','N','N','N','N','N','N','N','N','N','F','F','N', 'N','N','N','F','F','F','F','F','F','N'],
-  student:       ['N','N','N','N','R','N','N','N','R','N','N','N','F','R', 'R','R','N','N','N','R','R','N','N','N'],
-  parent:        ['N','N','N','N','R','N','N','N','N','N','N','N','F','R', 'R','R','N','N','N','N','R','N','N','N'],
+  superadmin:       ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  headmaster:       ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  school_admin:     ['N','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  bursar:           ['N','N','N','N','N','N','N','N','N','F','F','N','N','N', 'N','N','N','N','N','N','N','F','N','N'],
+  hod:              ['N','N','F','N','N','F','F','F','N','N','N','F','F','F', 'F','F','N','N','N','N','N','N','N','R'],
+  teacher:          ['N','N','F','N','R','N','F','F','N','N','N','F','F','F', 'F','F','R','N','N','R','N','N','N','N'],
+  registrar:        ['N','N','F','F','F','N','F','F','F','N','N','N','N','F', 'F','N','F','F','N','N','F','N','N','N'],
+  staff:            ['N','N','N','N','N','N','N','N','N','N','N','F','F','N', 'N','N','N','F','F','F','F','F','F','N'],
+  student:          ['N','N','N','N','R','N','N','N','R','N','N','N','F','R', 'R','R','N','N','N','R','R','N','N','N'],
+  parent:           ['N','N','N','N','R','N','N','N','N','N','N','N','F','R', 'R','R','N','N','N','N','R','N','N','N'],
+  auditor:          ['R','N','N','N','N','N','N','N','N','N','N','N','N','N', 'N','N','N','N','N','N','N','N','N','N'],
+  support_operator: ['R','N','N','N','N','N','N','N','N','N','N','N','N','N', 'N','N','N','N','N','N','N','N','N','N'],
 };
 
 async function main() {
@@ -31,6 +38,18 @@ async function main() {
     staffRole = await prisma.systemRole.create({ data: { id: 'ROL-011', name: 'staff', label: 'General Staff', description: 'Non-teaching support staff', is_system: true, school_id: null } });
     console.log('Created staff role');
   } else console.log('staff role already exists');
+
+  let auditorRole = await prisma.systemRole.findFirst({ where: { name: 'auditor' } });
+  if (!auditorRole) {
+    auditorRole = await prisma.systemRole.create({ data: { id: 'ROL-012', name: 'auditor', label: 'Auditor', description: 'Read-only review of system records, audit trail and security policy - named actor in ESS-SYS-141', is_system: true, school_id: null } });
+    console.log('Created auditor role');
+  } else console.log('auditor role already exists');
+
+  let supportOperatorRole = await prisma.systemRole.findFirst({ where: { name: 'support_operator' } });
+  if (!supportOperatorRole) {
+    supportOperatorRole = await prisma.systemRole.create({ data: { id: 'ROL-013', name: 'support_operator', label: 'Support Operator', description: 'Read-only support/diagnosis access - named actor in ESS-SYS-141', is_system: true, school_id: null } });
+    console.log('Created support_operator role');
+  } else console.log('support_operator role already exists');
 
   const permMap = {};
   for (const mod of MODULES) {
@@ -64,7 +83,11 @@ async function main() {
   const existingUser = await prisma.systemUser.findFirst({ where: { email: 'superadmin@presec.edu.gh' } });
   if (!existingUser) {
     const hash = await bcrypt.hash('Sukuu@Super2026!', 10);
-    const user = await prisma.systemUser.create({ data: { email: 'superadmin@presec.edu.gh', password_hash: hash, is_active: true, is_verified: true, must_reset_password: false, failed_login_count: 0 } });
+    // status + row_version are now required fields (SystemX state machine
+    // migration) — this bootstrap user is created ACTIVE directly rather
+    // than going through the INVITED->PENDING_VERIFICATION->ACTIVE flow,
+    // since it's a system seed, not a real onboarding.
+    const user = await prisma.systemUser.create({ data: { email: 'superadmin@presec.edu.gh', password_hash: hash, is_active: true, is_verified: true, must_reset_password: false, failed_login_count: 0, status: 'ACTIVE', row_version: 1 } });
     await prisma.systemUserRole.create({ data: { user_id: user.id, role_id: superadminRole.id, school_id: 'SCH-001', assigned_at: new Date() } });
     console.log('Created superadmin user: superadmin@presec.edu.gh / Sukuu@Super2026!');
   } else console.log('Superadmin user already exists');

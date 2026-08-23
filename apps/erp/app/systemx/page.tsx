@@ -12,6 +12,18 @@ const TABS = [
   { key: 'sessions', label: 'Sessions' },
   { key: 'security', label: 'Security' },
   { key: 'ops', label: 'Platform Ops' },
+  { key: 'bulk', label: 'Bulk Import' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'events', label: 'Event Log' },
+];
+
+const REPORTS = [
+  { key: 'user-role-register', label: 'User & Role Register' },
+  { key: 'privileged-access-review', label: 'Privileged Access Review' },
+  { key: 'active-session-register', label: 'Active Session Register' },
+  { key: 'failed-login-trend', label: 'Failed Login Trend' },
+  { key: 'feature-flag-history', label: 'Feature Flag History' },
+  { key: 'audit-export', label: 'Audit Export' },
 ];
 
 
@@ -55,6 +67,21 @@ export default function SystemXPage() {
   const [rateLimitForm, setRateLimitForm] = useState({ endpoint: '', maxRequests: 100, windowSeconds: 60 });
   const [retentionForm, setRetentionForm] = useState({ policyName: '', retentionYears: 7, description: '' });
 
+  // Bulk import (EFS-SYS-0020)
+  const [bulkCsv, setBulkCsv] = useState('');
+  const [bulkPreview, setBulkPreview] = useState<any[] | null>(null);
+  const [bulkResult, setBulkResult] = useState<any[] | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Six named governed reports (EFS-SYS-0040)
+  const [activeReport, setActiveReport] = useState('user-role-register');
+  const [reportData, setReportData] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [auditExportFilters, setAuditExportFilters] = useState({ entityType: '', action: '', fromDate: '', toDate: '' });
+
+  // Event log (EEAS-SYS-0026)
+  const [events, setEvents] = useState<any[]>([]);
+
   const [summary, setSummary] = useState<any>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState('');
@@ -80,6 +107,7 @@ export default function SystemXPage() {
     authedFetch('/api/v1/system/security-policies', t).then(d => Array.isArray(d) && setSecPolicies(d));
     authedFetch('/api/v1/system/api-keys', t).then(d => Array.isArray(d) && setApiKeys(d));
     authedFetch('/api/v1/system/webhooks', t).then(d => Array.isArray(d) && setWebhooks(d));
+    authedFetch('/api/v1/system/events', t).then(d => Array.isArray(d) && setEvents(d));
     loadOps(t);
     setSummaryLoading(true);
     authedFetch('/api/v1/system/summary', t)
@@ -105,8 +133,25 @@ export default function SystemXPage() {
     });
   }
 
-  async function handleSuspend(id: string) { await authedFetch(`/api/v1/system/users/${id}/suspend`, token, { method: 'PATCH' }); loadAll(token); }
-  async function handleReinstate(id: string) { await authedFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH' }); loadAll(token); }
+  async function handleSuspend(id: string, name: string) {
+    const reason = prompt(`Reason for suspending ${name}? (required — becomes part of the permanent audit record)`);
+    if (reason === null) return; // cancelled
+    if (!reason.trim()) { alert('A reason is required to suspend an account.'); return; }
+    if (!confirm(`Suspend ${name}? They will lose access immediately. This can be reversed by reinstating them.`)) return;
+    const res = await authedFetch(`/api/v1/system/users/${id}/suspend`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+    if (res?.error) { alert(`Could not suspend: ${res.error}`); return; }
+    alert(`${name} suspended. Reason recorded: "${reason}". This action is reversible via Reinstate.`);
+    loadAll(token);
+  }
+  async function handleReinstate(id: string, name: string) {
+    const reason = prompt(`Reason for reinstating ${name}? (required — becomes part of the permanent audit record)`);
+    if (reason === null) return;
+    if (!reason.trim()) { alert('A reason is required to reinstate an account.'); return; }
+    const res = await authedFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+    if (res?.error) { alert(`Could not reinstate: ${res.error}`); return; }
+    alert(`${name} reinstated. Reason recorded: "${reason}".`);
+    loadAll(token);
+  }
   async function handleArchive(id: string) {
     if (!confirm('Archive this user? They will be deactivated permanently but the record is retained.')) return;
     await authedFetch(`/api/v1/system/users/${id}/archive`, token, { method: 'PATCH' });
@@ -165,9 +210,19 @@ export default function SystemXPage() {
   async function handleRevokeSession(id: string) { await authedFetch(`/api/v1/system/sessions/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
-    const res = await authedFetch('/api/v1/system/users', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+    // Client-generated operationId makes this safe to retry (double-tap,
+    // flaky connection, browser back) without creating a duplicate user —
+    // the API returns the original result instead of re-running the command.
+    const operationId = crypto.randomUUID();
+    const res = await authedFetch('/api/v1/system/users', token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Operation-Id': operationId },
+      body: JSON.stringify(form),
+    });
     if (res.error) { setCreateMsg(res.error); return; }
-    setCreateMsg(`Created. Temp password: ${res.tempPassword}`);
+    setCreateMsg(res.replayed
+      ? `Already created (this was a repeat submission). Temp password: ${res.tempPassword}`
+      : `Created. Temp password: ${res.tempPassword} — record this now, it will not be shown again.`);
     loadAll(token);
   }
   async function handleSavePwdPolicy(e: React.FormEvent) {
@@ -234,6 +289,76 @@ export default function SystemXPage() {
     await authedFetch('/api/v1/ops/retention', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(retentionForm) });
     setRetentionForm({ policyName: '', retentionYears: 7, description: '' });
     loadOps(token);
+  }
+
+  // ── Bulk import (EFS-SYS-0020: preview -> validate -> error file -> commit) ──
+  function parseBulkCsv(): any[] {
+    const lines = bulkCsv.trim().split('\n').filter(l => l.trim());
+    const dataLines = lines[0]?.toLowerCase().includes('firstname') ? lines.slice(1) : lines;
+    return dataLines.map((line, i) => {
+      const [firstName, lastName, email, phone, roleId] = line.split(',').map(s => s.trim());
+      return { rowNumber: i + 1, firstName, lastName, email, phone, roleId };
+    });
+  }
+  async function handleBulkPreview() {
+    setBulkBusy(true);
+    setBulkResult(null);
+    const rows = parseBulkCsv();
+    const res = await authedFetch('/api/v1/system/users/bulk/preview', token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
+    });
+    setBulkPreview(Array.isArray(res) ? res : []);
+    setBulkBusy(false);
+  }
+  async function handleBulkCommit() {
+    if (!confirm('Commit this import? Valid rows will create real user accounts immediately.')) return;
+    setBulkBusy(true);
+    const rows = parseBulkCsv();
+    const res = await authedFetch('/api/v1/system/users/bulk/commit', token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
+    });
+    setBulkResult(Array.isArray(res) ? res : []);
+    setBulkPreview(null);
+    setBulkBusy(false);
+    loadAll(token);
+  }
+  function downloadBulkErrorFile() {
+    const rows = bulkResult || bulkPreview || [];
+    const failed = rows.filter((r: any) => r.status === 'error' || r.status === 'skipped' || r.status === 'failed');
+    const csv = 'rowNumber,status,errors\n' + failed.map((r: any) => `${r.rowNumber},${r.status},"${r.errors.join('; ')}"`).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'bulk-import-errors.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Six named governed reports (EFS-SYS-0040) ──
+  async function loadReport(key: string) {
+    setActiveReport(key);
+    setReportLoading(true);
+    let url = `/api/v1/system/reports/${key}`;
+    if (key === 'audit-export') {
+      const params = new URLSearchParams();
+      if (auditExportFilters.entityType) params.set('entityType', auditExportFilters.entityType);
+      if (auditExportFilters.action) params.set('action', auditExportFilters.action);
+      if (auditExportFilters.fromDate) params.set('fromDate', auditExportFilters.fromDate);
+      if (auditExportFilters.toDate) params.set('toDate', auditExportFilters.toDate);
+      url += `?${params.toString()}`;
+    }
+    const res = await authedFetch(url, token);
+    setReportData(Array.isArray(res) ? res : (res?.error ? [] : res));
+    setReportLoading(false);
+  }
+  function downloadReportCsv() {
+    if (!Array.isArray(reportData) || reportData.length === 0) return;
+    const keys = Object.keys(reportData[0]);
+    const csv = keys.join(',') + '\n' + reportData.map((row: any) => keys.map(k => JSON.stringify(row[k] ?? '')).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${activeReport}.csv`; a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
@@ -331,8 +456,8 @@ export default function SystemXPage() {
                   <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', display: 'flex', gap: 6 }}>
                     <button onClick={() => openEdit(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>
                     {u.status === 'ACTIVE'
-                      ? <button onClick={() => handleSuspend(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
-                      : <button onClick={() => handleReinstate(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>}
+                      ? <button onClick={() => handleSuspend(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
+                      : <button onClick={() => handleReinstate(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>}
                     <button onClick={() => handleArchive(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
                   </td>
                 </tr>
@@ -696,6 +821,143 @@ export default function SystemXPage() {
             ))}
             {permissions.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 12 }}>No permissions defined in the system yet.</div>}
             <button onClick={() => setManagingRole(null)} style={{ marginTop: 16, width: '100%', background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'bulk' && (
+        <div style={{ padding: 'var(--pad)' }}>
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="ch"><span className="ch-t">BULK USER IMPORT</span></div>
+            <div className="cb">
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+                Paste CSV rows: firstName,lastName,email,phone,roleId (header row optional). Preview validates every row — including duplicate-email checks against existing users and duplicates within the file — before anything is created.
+              </p>
+              <textarea
+                className="fi"
+                style={{ width: '100%', minHeight: 140, fontFamily: 'monospace', fontSize: 12 }}
+                placeholder={'firstName,lastName,email,phone,roleId\nJane,Doe,jane@school.edu,0244000000,ROL-013'}
+                value={bulkCsv}
+                onChange={e => { setBulkCsv(e.target.value); setBulkPreview(null); setBulkResult(null); }}
+              />
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button onClick={handleBulkPreview} disabled={bulkBusy || !bulkCsv.trim()} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>
+                  {bulkBusy ? 'Validating…' : 'Preview & Validate'}
+                </button>
+                {bulkPreview && (
+                  <button onClick={handleBulkCommit} disabled={bulkBusy || bulkPreview.every(r => r.status === 'error')} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>
+                    {bulkBusy ? 'Committing…' : `Commit ${bulkPreview.filter(r => r.status === 'valid').length} Valid Row(s)`}
+                  </button>
+                )}
+                {(bulkPreview || bulkResult) && (bulkResult || bulkPreview)!.some((r: any) => r.status !== 'valid' && r.status !== 'created') && (
+                  <button onClick={downloadBulkErrorFile} style={{ background: 'var(--erB)', color: 'var(--er)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Download Error File</button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {(bulkPreview || bulkResult) && (
+            <div className="card">
+              <div className="ch"><span className="ch-t">{bulkResult ? 'IMPORT RESULT' : 'PREVIEW — nothing has been created yet'}</span></div>
+              <div className="tbl">
+                <table className="data-table">
+                  <thead><tr><th>Row</th><th>Status</th><th>Details</th></tr></thead>
+                  <tbody>
+                    {(bulkResult || bulkPreview)!.map((r: any) => (
+                      <tr key={r.rowNumber}>
+                        <td>{r.rowNumber}</td>
+                        <td><span className={`bdg ${r.status === 'valid' || r.status === 'created' ? 'bok' : r.status === 'error' || r.status === 'failed' ? 'ber' : 'bwn'}`}>{r.status}</span></td>
+                        <td style={{ fontSize: 12 }}>{r.errors?.length ? r.errors.join('; ') : (r.userId ? `Created — id ${r.userId}` : '—')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {bulkResult && (
+                <div style={{ padding: 12, fontSize: 12, color: 'var(--muted)' }}>
+                  {bulkResult.filter((r: any) => r.status === 'created').length} created · {bulkResult.filter((r: any) => r.status !== 'created').length} skipped or failed
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'reports' && (
+        <div style={{ padding: 'var(--pad)' }}>
+          <div className="sys-tabs" style={{ marginBottom: 16 }}>
+            {REPORTS.map(r => (
+              <button key={r.key} className={`sys-tab-btn${activeReport === r.key ? ' act' : ''}`} onClick={() => loadReport(r.key)}>{r.label}</button>
+            ))}
+          </div>
+
+          {activeReport === 'audit-export' && (
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div className="ch"><span className="ch-t">FILTERS</span></div>
+              <div className="cb" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input className="fi" placeholder="Entity type" value={auditExportFilters.entityType} onChange={e => setAuditExportFilters({ ...auditExportFilters, entityType: e.target.value })} style={{ width: 160 }} />
+                <input className="fi" placeholder="Action contains…" value={auditExportFilters.action} onChange={e => setAuditExportFilters({ ...auditExportFilters, action: e.target.value })} style={{ width: 160 }} />
+                <input className="fi" type="date" value={auditExportFilters.fromDate} onChange={e => setAuditExportFilters({ ...auditExportFilters, fromDate: e.target.value })} />
+                <input className="fi" type="date" value={auditExportFilters.toDate} onChange={e => setAuditExportFilters({ ...auditExportFilters, toDate: e.target.value })} />
+                <button onClick={() => loadReport('audit-export')} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>Apply</button>
+              </div>
+            </div>
+          )}
+
+          <div className="card">
+            <div className="ch" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="ch-t">{REPORTS.find(r => r.key === activeReport)?.label}</span>
+              {Array.isArray(reportData) && reportData.length > 0 && (
+                <button onClick={downloadReportCsv} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Export CSV</button>
+              )}
+            </div>
+            <div style={{ padding: 12, fontSize: 11, color: 'var(--muted)' }}>
+              Source: system.* live records, school-scoped to your current tenant · refreshed on load
+            </div>
+            {reportLoading ? (
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Loading…</div>
+            ) : !Array.isArray(reportData) || reportData.length === 0 ? (
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>No data for this report yet.</div>
+            ) : (
+              <div className="tbl" style={{ overflowX: 'auto' }}>
+                <table className="data-table">
+                  <thead><tr>{Object.keys(reportData[0]).map(k => <th key={k}>{k}</th>)}</tr></thead>
+                  <tbody>
+                    {reportData.map((row: any, i: number) => (
+                      <tr key={i}>{Object.keys(reportData[0]).map(k => <td key={k} style={{ fontSize: 11 }}>{typeof row[k] === 'object' ? JSON.stringify(row[k]) : String(row[k] ?? '—')}</td>)}</tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'events' && (
+        <div style={{ padding: 'var(--pad)' }}>
+          <div className="card">
+            <div className="ch"><span className="ch-t">DOMAIN EVENT OUTBOX</span></div>
+            <div style={{ padding: 12, fontSize: 11, color: 'var(--muted)' }}>
+              UserInvited · UserActivated · RoleGranted · SessionRevoked · AccountSuspended · FeatureFlagChanged — every consequential SystemX action, most recent first.
+            </div>
+            <div className="tbl">
+              <table className="data-table">
+                <thead><tr><th>Event</th><th>Aggregate</th><th>Occurred</th><th>Status</th><th>Correlation</th></tr></thead>
+                <tbody>
+                  {events.map(e => (
+                    <tr key={e.id}>
+                      <td><span className="bdg bin">{e.event_type}</span></td>
+                      <td style={{ fontSize: 11 }}>{e.aggregate_type} · {String(e.aggregate_id).slice(0, 8)}</td>
+                      <td style={{ fontSize: 11 }}>{new Date(e.occurred_at).toLocaleString()}</td>
+                      <td><span className={`bdg ${e.status === 'PUBLISHED' ? 'bok' : e.status === 'FAILED' ? 'ber' : 'bwn'}`}>{e.status}</span></td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--muted)' }}>{String(e.correlation_id).slice(0, 8)}</td>
+                    </tr>
+                  ))}
+                  {events.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>No events recorded yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
