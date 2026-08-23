@@ -51,8 +51,8 @@ function assertSafe(value: string, label: string): string {
  */
 export async function withTenantContext<TResult>(
   explicitCtx: Partial<TenantCtx> | undefined,
-  fn: (tx: Prisma.TransactionClient) => TResult
-): Promise<Awaited<TResult>> {
+  fn: (tx: Prisma.TransactionClient) => Promise<TResult>
+): Promise<TResult> {
   const ambient = getTenantContext();
   const ctx: TenantCtx = {
     schoolId: explicitCtx?.schoolId ?? ambient?.schoolId ?? '',
