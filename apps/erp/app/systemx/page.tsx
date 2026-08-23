@@ -53,6 +53,10 @@ export default function SystemXPage() {
   const [editingRole, setEditingRole] = useState<any>(null);
   const [roleForm, setRoleForm] = useState({ label: '', description: '' });
   const [managingRole, setManagingRole] = useState<any>(null);
+  const [managingUserRoles, setManagingUserRoles] = useState<any>(null);
+  const [userRoleAssignments, setUserRoleAssignments] = useState<any[]>([]);
+  const [assignRoleForm, setAssignRoleForm] = useState({ roleId: '', expiresAt: '' });
+  const [assignRoleBusy, setAssignRoleBusy] = useState(false);
   const [rolePerms, setRolePerms] = useState<string[]>([]);
   const [secPolicyForm, setSecPolicyForm] = useState({ policyName: '', policyValue: '' });
   const [apiKeyForm, setApiKeyForm] = useState({ label: '', scopes: '' });
@@ -169,6 +173,31 @@ export default function SystemXPage() {
     loadAll(token);
   }
   function openRoleEdit(r: any) { setEditingRole(r); setRoleForm({ label: r.label, description: r.description || '' }); }
+
+  async function openUserRoles(u: any) {
+    setManagingUserRoles(u);
+    const res = await authedFetch(`/api/v1/system/users/${u.id}/role-assignments`, token);
+    setUserRoleAssignments(Array.isArray(res) ? res : []);
+  }
+  async function handleAssignRole(e: React.FormEvent) {
+    e.preventDefault();
+    setAssignRoleBusy(true);
+    const res = await authedFetch(`/api/v1/system/users/${managingUserRoles.id}/role-assignments`, token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roleId: assignRoleForm.roleId, expiresAt: assignRoleForm.expiresAt || undefined }),
+    });
+    setAssignRoleBusy(false);
+    if (res?.error) { alert(res.error); return; }
+    setAssignRoleForm({ roleId: '', expiresAt: '' });
+    openUserRoles(managingUserRoles);
+    loadAll(token);
+  }
+  async function handleRevokeRoleAssignment(assignmentId: string) {
+    if (!confirm('Revoke this role assignment? Takes effect on their very next request — no need for them to log out.')) return;
+    await authedFetch(`/api/v1/system/role-assignments/${assignmentId}/revoke`, token, { method: 'PATCH' });
+    openUserRoles(managingUserRoles);
+    loadAll(token);
+  }
   async function handleSaveRole(e: React.FormEvent) {
     e.preventDefault();
     const res = await authedFetch(`/api/v1/system/roles/${editingRole.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roleForm) });
@@ -455,6 +484,7 @@ export default function SystemXPage() {
                   <td style={{ fontSize: 11, color: 'var(--muted)' }}>{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never'}</td>
                   <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', display: 'flex', gap: 6 }}>
                     <button onClick={() => openEdit(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>
+                    <button onClick={() => openUserRoles(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600 }}>Roles</button>
                     {u.status === 'ACTIVE'
                       ? <button onClick={() => handleSuspend(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
                       : <button onClick={() => handleReinstate(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>}
@@ -821,6 +851,51 @@ export default function SystemXPage() {
             ))}
             {permissions.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 12 }}>No permissions defined in the system yet.</div>}
             <button onClick={() => setManagingRole(null)} style={{ marginTop: 16, width: '100%', background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Done</button>
+          </div>
+        </div>
+      )}
+
+      {managingUserRoles && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setManagingUserRoles(null)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 460, maxHeight: '80vh', overflowY: 'auto', boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 4 }}>Roles: {managingUserRoles.name}</h3>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>
+              A person can hold more than one role at once, permanently or with an expiry date. Changes take effect on their very next request — no need for them to log out.
+            </p>
+
+            <div style={{ marginBottom: 16 }}>
+              {userRoleAssignments.map(a => (
+                <div key={a.id} className="ri na">
+                  <div className="ri-b">
+                    <div className="ri-t">{a.roleLabel || a.roleName}</div>
+                    <div className="ri-s">
+                      {a.expires_at ? `Until ${new Date(a.expires_at).toLocaleDateString()}` : 'Permanent'}
+                      {a.assigned_by ? ` · assigned by ${String(a.assigned_by).slice(0, 8)}` : ''}
+                    </div>
+                  </div>
+                  <span className={`bdg ${a.status === 'ACTIVE' ? 'bok' : 'ber'}`}>{a.status}</span>
+                  {a.status === 'ACTIVE' && (
+                    <button onClick={() => handleRevokeRoleAssignment(a.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600, marginLeft: 8 }}>Revoke</button>
+                  )}
+                </div>
+              ))}
+              {userRoleAssignments.length === 0 && <div className="ri na"><div className="ri-s">No role assignments on record for this school.</div></div>}
+            </div>
+
+            <form onSubmit={handleAssignRole} style={{ borderTop: '1px solid var(--bd)', paddingTop: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', color: 'var(--muted)', marginBottom: 8 }}>ASSIGN A ROLE</div>
+              <select className="fi" value={assignRoleForm.roleId} onChange={e => setAssignRoleForm({ ...assignRoleForm, roleId: e.target.value })} required style={{ width: '100%', marginBottom: 8 }}>
+                <option value="">Select a role...</option>
+                {roles.map((r: any) => <option key={r.id} value={r.id}>{r.label}</option>)}
+              </select>
+              <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>Expires (optional — leave blank for permanent)</label>
+              <input className="fi" type="date" value={assignRoleForm.expiresAt} onChange={e => setAssignRoleForm({ ...assignRoleForm, expiresAt: e.target.value })} style={{ width: '100%', marginBottom: 12 }} />
+              <button type="submit" disabled={assignRoleBusy || !assignRoleForm.roleId} style={{ width: '100%', background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>
+                {assignRoleBusy ? 'Assigning…' : 'Assign Role'}
+              </button>
+            </form>
+
+            <button onClick={() => setManagingUserRoles(null)} style={{ marginTop: 16, width: '100%', background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
           </div>
         </div>
       )}

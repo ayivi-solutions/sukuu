@@ -95,11 +95,11 @@ begin
       create policy tenant_match on system.%I
       using (
         school_id = nullif(current_setting('app.current_school_id', true), '')
-        or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+        or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
       )
       with check (
         school_id = nullif(current_setting('app.current_school_id', true), '')
-        or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+        or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
       )
     $f$, tbl);
   end loop;
@@ -114,14 +114,14 @@ create policy role_access on system.system_role
 using (
   is_system = true
   or school_id = nullif(current_setting('app.current_school_id', true), '')
-  or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+  or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
 )
 with check (
   -- system roles are never created/edited through the app (updateRole
   -- already rejects is_system edits at the application layer) — writes
   -- here are always tenant-scoped, never to a null-school_id row.
   school_id = nullif(current_setting('app.current_school_id', true), '')
-  or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+  or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
 );
 
 -- ─── 3c. system_feature_flag — tenant match OR global (school_id null),
@@ -131,15 +131,17 @@ drop policy if exists feature_flag_read on system.system_feature_flag;
 create policy feature_flag_read on system.system_feature_flag for select using (
   school_id = nullif(current_setting('app.current_school_id', true), '')
   or school_id is null
-  or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+  or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
 );
+drop policy if exists feature_flag_write_tenant on system.system_feature_flag;
 create policy feature_flag_write_tenant on system.system_feature_flag for insert with check (
   school_id = nullif(current_setting('app.current_school_id', true), '')
-  or (school_id is null and nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster'))
+  or (school_id is null and nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster'))
 );
+drop policy if exists feature_flag_update on system.system_feature_flag;
 create policy feature_flag_update on system.system_feature_flag for update using (
   school_id = nullif(current_setting('app.current_school_id', true), '')
-  or (school_id is null and nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster'))
+  or (school_id is null and nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster'))
 );
 
 -- ─── 4. Category B — user_id present, no school_id (own record, or a
@@ -166,7 +168,7 @@ begin
       create policy own_or_colleague on system.%I
       using (
         user_id = nullif(current_setting('app.current_user_id', true), '')
-        or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+        or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
         or user_id in (
           select target_role.user_id
           from system.system_user_role as viewer_role
@@ -177,7 +179,7 @@ begin
       )
       with check (
         user_id = nullif(current_setting('app.current_user_id', true), '')
-        or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+        or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
       )
     $f$, tbl);
   end loop;
@@ -189,7 +191,7 @@ drop policy if exists system_user_access on system.system_user;
 create policy system_user_access on system.system_user
 using (
   id = nullif(current_setting('app.current_user_id', true), '')
-  or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+  or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
   or id in (
     select target_role.user_id
     from system.system_user_role as viewer_role
@@ -200,7 +202,7 @@ using (
 )
 with check (
   id = nullif(current_setting('app.current_user_id', true), '')
-  or nullif(current_setting('app.current_role', true), '') = 'superadmin'
+  or nullif(current_setting('app.actor_role', true), '') = 'superadmin'
 );
 
 -- ─── 6. Category C — remaining platform-global tables (no tenant concept;
@@ -220,8 +222,8 @@ begin
     execute format('drop policy if exists platform_admin_only on system.%I', tbl);
     execute format($f$
       create policy platform_admin_only on system.%I
-      using (nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster'))
-      with check (nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster'))
+      using (nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster'))
+      with check (nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster'))
     $f$, tbl);
   end loop;
 end $$;
@@ -231,15 +233,19 @@ end $$;
 -- authenticated request), but writable only by platform admins. Replace its
 -- policy from the loop above with a split read/write version.
 drop policy if exists platform_admin_only on system.system_permission;
+drop policy if exists permission_read_all on system.system_permission;
 create policy permission_read_all on system.system_permission for select using (true);
+drop policy if exists permission_write_admin_only on system.system_permission;
 create policy permission_write_admin_only on system.system_permission for insert with check (
-  nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster')
+  nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster')
 );
+drop policy if exists permission_update_admin_only on system.system_permission;
 create policy permission_update_admin_only on system.system_permission for update using (
-  nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster')
+  nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster')
 );
+drop policy if exists permission_delete_admin_only on system.system_permission;
 create policy permission_delete_admin_only on system.system_permission for delete using (
-  nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster')
+  nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster')
 );
 
 -- system_role_permission needs the SAME split treatment and for the SAME
@@ -251,12 +257,15 @@ create policy permission_delete_admin_only on system.system_permission for delet
 -- module would start failing authorization — not just SystemX. Reads must
 -- stay open; writes are already gated by assignPermission's maker-checker
 -- check at the application layer, so admin-only at the database layer too.
+drop policy if exists role_permission_read_all on system.system_role_permission;
 create policy role_permission_read_all on system.system_role_permission for select using (true);
+drop policy if exists role_permission_write_admin_only on system.system_role_permission;
 create policy role_permission_write_admin_only on system.system_role_permission for insert with check (
-  nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster')
+  nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster')
 );
+drop policy if exists role_permission_delete_admin_only on system.system_role_permission;
 create policy role_permission_delete_admin_only on system.system_role_permission for delete using (
-  nullif(current_setting('app.current_role', true), '') in ('superadmin','headmaster')
+  nullif(current_setting('app.actor_role', true), '') in ('superadmin','headmaster')
 );
 
 -- ─── 7. Outbox and command log — service-role only, no per-tenant read needed
@@ -290,9 +299,9 @@ select 'MIGRATION PART 2 COMPLETE — DO NOT SWITCH DATABASE_URL YET, RUN VERIFI
 -- set local app.current_school_id = '<a real school_id from system_role>';
 -- select count(*) from system.system_role;   -- expect > 0, only that school
 
--- V3. Set app.current_role = 'superadmin' with no school_id — should see
+-- V3. Set app.actor_role = 'superadmin' with no school_id — should see
 -- everything (superadmin bypass in every Category A/B policy).
--- set local app.current_role = 'superadmin';
+-- set local app.actor_role = 'superadmin';
 -- select count(*) from system.system_role;   -- expect the full table count
 
 -- V4. CRITICAL — confirm every seeded role is_system=true (superadmin and

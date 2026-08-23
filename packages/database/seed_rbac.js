@@ -1,96 +1,50 @@
+// This script now does ONE thing: bootstrap the very first superadmin
+// user + role, for a brand-new deployment that has no users at all yet.
+//
+// Everything this file used to do beyond that — the permission catalogue,
+// the role-to-permission grants, archiving out-of-scope roles — is now
+// handled automatically by apps/api/src/lib/rbacSync.ts, which runs on
+// every single API server boot. You no longer need to remember to run
+// this after a deploy; the running server keeps itself correct. This
+// file is kept only for the one thing that should NOT happen
+// automatically on every boot: creating a user with a known password.
+//
+// Safe to run more than once — it checks for an existing superadmin user
+// first and does nothing if one is already there.
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
 
-// Order: [system,school,academic,admission,student,staff,schedule,grading,transcript,finance,payroll,notification,communication,attendance,
-//         exam,learn,discipline,hostel,clinic,library,transport,inventory,workflow,analytics] -- 24 modules total, matching the ECD's 24-module ERP register.
-const MODULES = ['system','school','academic','admission','student','staff','schedule','grading','transcript','finance','payroll','notification','communication','attendance','exam','learn','discipline','hostel','clinic','library','transport','inventory','workflow','analytics'];
-
-// auditor and support_operator added per ESS-SYS-141: named authorized
-// SystemX actors alongside "Sukuu system administrator, school head,
-// delegated school administrator". Both get read-only ('R') access to
-// system for now — least privilege by default. Their reach into other
-// modules is a decision for each module's own turn, not assumed here.
-const MATRIX = {
-  superadmin:       ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  headmaster:       ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  school_admin:     ['N','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  bursar:           ['N','N','N','N','N','N','N','N','N','F','F','N','N','N', 'N','N','N','N','N','N','N','F','N','N'],
-  hod:              ['N','N','F','N','N','F','F','F','N','N','N','F','F','F', 'F','F','N','N','N','N','N','N','N','R'],
-  teacher:          ['N','N','F','N','R','N','F','F','N','N','N','F','F','F', 'F','F','R','N','N','R','N','N','N','N'],
-  registrar:        ['N','N','F','F','F','N','F','F','F','N','N','N','N','F', 'F','N','F','F','N','N','F','N','N','N'],
-  staff:            ['N','N','N','N','N','N','N','N','N','N','N','F','F','N', 'N','N','N','F','F','F','F','F','F','N'],
-  student:          ['N','N','N','N','R','N','N','N','R','N','N','N','F','R', 'R','R','N','N','N','R','R','N','N','N'],
-  parent:           ['N','N','N','N','R','N','N','N','N','N','N','N','F','R', 'R','R','N','N','N','N','R','N','N','N'],
-  auditor:          ['R','N','N','N','N','N','N','N','N','N','N','N','N','N', 'N','N','N','N','N','N','N','N','N','N'],
-  support_operator: ['R','N','N','N','N','N','N','N','N','N','N','N','N','N', 'N','N','N','N','N','N','N','N','N','N'],
-};
-
 async function main() {
   let superadminRole = await prisma.systemRole.findFirst({ where: { name: 'superadmin' } });
   if (!superadminRole) {
-    superadminRole = await prisma.systemRole.create({ data: { id: 'ROL-010', name: 'superadmin', label: 'Superadmin', description: 'School owner or proprietor - full system access', is_system: true, school_id: null } });
+    superadminRole = await prisma.systemRole.create({
+      data: { name: 'superadmin', label: 'Superadmin', description: 'School owner or proprietor - full system access', is_system: true, school_id: null },
+    });
     console.log('Created superadmin role');
-  } else console.log('superadmin role already exists');
-
-  let staffRole = await prisma.systemRole.findFirst({ where: { name: 'staff' } });
-  if (!staffRole) {
-    staffRole = await prisma.systemRole.create({ data: { id: 'ROL-011', name: 'staff', label: 'General Staff', description: 'Non-teaching support staff', is_system: true, school_id: null } });
-    console.log('Created staff role');
-  } else console.log('staff role already exists');
-
-  let auditorRole = await prisma.systemRole.findFirst({ where: { name: 'auditor' } });
-  if (!auditorRole) {
-    auditorRole = await prisma.systemRole.create({ data: { id: 'ROL-012', name: 'auditor', label: 'Auditor', description: 'Read-only review of system records, audit trail and security policy - named actor in ESS-SYS-141', is_system: true, school_id: null } });
-    console.log('Created auditor role');
-  } else console.log('auditor role already exists');
-
-  let supportOperatorRole = await prisma.systemRole.findFirst({ where: { name: 'support_operator' } });
-  if (!supportOperatorRole) {
-    supportOperatorRole = await prisma.systemRole.create({ data: { id: 'ROL-013', name: 'support_operator', label: 'Support Operator', description: 'Read-only support/diagnosis access - named actor in ESS-SYS-141', is_system: true, school_id: null } });
-    console.log('Created support_operator role');
-  } else console.log('support_operator role already exists');
-
-  const permMap = {};
-  for (const mod of MODULES) {
-    for (const level of ['full', 'read']) {
-      let perm = await prisma.systemPermission.findFirst({ where: { module: mod, action: level, resource: '*' } });
-      if (!perm) perm = await prisma.systemPermission.create({ data: { module: mod, action: level, resource: '*', label: `${mod} - ${level}`, description: null } });
-      permMap[`${mod}:${level}`] = perm.id;
-    }
+  } else {
+    console.log('superadmin role already exists');
   }
-  console.log('Permissions seeded:', Object.keys(permMap).length);
-
-  const allRoles = await prisma.systemRole.findMany();
-  let grantCount = 0;
-  for (const [roleName, levels] of Object.entries(MATRIX)) {
-    const role = allRoles.find(r => r.name === roleName);
-    if (!role) { console.log('SKIP - role not found:', roleName); continue; }
-    for (let i = 0; i < MODULES.length; i++) {
-      const level = levels[i];
-      if (level === 'N') continue;
-      const permKey = level === 'F' ? `${MODULES[i]}:full` : `${MODULES[i]}:read`;
-      const permId = permMap[permKey];
-      const existing = await prisma.systemRolePermission.findFirst({ where: { role_id: role.id, permission_id: permId } });
-      if (!existing) {
-        await prisma.systemRolePermission.create({ data: { role_id: role.id, permission_id: permId, granted_at: new Date() } });
-        grantCount++;
-      }
-    }
-  }
-  console.log('Grants created:', grantCount);
 
   const existingUser = await prisma.systemUser.findFirst({ where: { email: 'superadmin@presec.edu.gh' } });
-  if (!existingUser) {
-    const hash = await bcrypt.hash('Sukuu@Super2026!', 10);
-    // status + row_version are now required fields (SystemX state machine
-    // migration) — this bootstrap user is created ACTIVE directly rather
-    // than going through the INVITED->PENDING_VERIFICATION->ACTIVE flow,
-    // since it's a system seed, not a real onboarding.
-    const user = await prisma.systemUser.create({ data: { email: 'superadmin@presec.edu.gh', password_hash: hash, is_active: true, is_verified: true, must_reset_password: false, failed_login_count: 0, status: 'ACTIVE', row_version: 1 } });
-    await prisma.systemUserRole.create({ data: { user_id: user.id, role_id: superadminRole.id, school_id: 'SCH-001', assigned_at: new Date() } });
-    console.log('Created superadmin user: superadmin@presec.edu.gh / Sukuu@Super2026!');
-  } else console.log('Superadmin user already exists');
+  if (existingUser) {
+    console.log('Superadmin user already exists — nothing to do. Run the API server to reconcile permissions/roles automatically.');
+    return;
+  }
+
+  const hash = await bcrypt.hash('Sukuu@Super2026!', 10);
+  const user = await prisma.systemUser.create({
+    data: {
+      email: 'superadmin@presec.edu.gh', password_hash: hash,
+      is_active: true, is_verified: true, must_reset_password: false, failed_login_count: 0,
+      status: 'ACTIVE', row_version: 1,
+    },
+  });
+  await prisma.systemUserRole.create({
+    data: { user_id: user.id, role_id: superadminRole.id, school_id: 'SCH-001', assigned_at: new Date(), assigned_by: null },
+  });
+  console.log('Created superadmin user: superadmin@presec.edu.gh / Sukuu@Super2026!');
+  console.log('Start the API server to seed the permission catalogue and role grants automatically.');
 }
 
 main().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });

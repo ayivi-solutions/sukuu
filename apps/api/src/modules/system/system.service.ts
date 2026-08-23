@@ -171,7 +171,7 @@ export async function withIdempotency<T>(
 
 export async function listRoles(ctx: TenantCtx) {
   return withTenantContext(ctx, tx => tx.systemRole.findMany({
-    where: { OR: [{ school_id: ctx.schoolId }, { is_system: true }] },
+    where: { OR: [{ school_id: ctx.schoolId }, { is_system: true }], archived_at: null } as any,
     orderBy: { name: 'asc' },
   }));
 }
@@ -194,16 +194,18 @@ export async function listUsers(ctx: TenantCtx) {
     const staffIds = employments.map(e => e.staff_id);
     const roleIds = [...new Set(employments.map(e => e.role_id))];
 
-    const [staffRecords, roles] = await Promise.all([
-      prisma.staffStaff.findMany({ where: { id: { in: staffIds } } }),
-      tx.systemRole.findMany({ where: { id: { in: roleIds } } }),
-    ]);
+    // Sequential, not Promise.all: an interactive transaction is bound to a
+    // single database connection, so concurrent queries against the same
+    // `tx` don't actually run in parallel — they race on one connection,
+    // which Prisma explicitly warns can misbehave or error. The prisma.*
+    // calls (sukuux tables, no RLS yet) are safe to run concurrently with
+    // each other via the pool, but not interleaved with tx.* calls.
+    const staffRecords = await prisma.staffStaff.findMany({ where: { id: { in: staffIds } } });
+    const roles = await tx.systemRole.findMany({ where: { id: { in: roleIds } } });
 
     const userIds = staffRecords.map(s => s.user_id);
-    const [users, mfaRecords] = await Promise.all([
-      tx.systemUser.findMany({ where: { id: { in: userIds } } }),
-      tx.systemMfa.findMany({ where: { user_id: { in: userIds } } }),
-    ]);
+    const users = await tx.systemUser.findMany({ where: { id: { in: userIds } } });
+    const mfaRecords = await tx.systemMfa.findMany({ where: { user_id: { in: userIds } } });
 
     await logSensitiveView(ctx, 'system_user', 'LIST');
 
@@ -269,6 +271,15 @@ export async function createUser(ctx: TenantCtx, input: {
         employment_type: 'PERMANENT', start_date: new Date().toISOString().slice(0, 10),
         is_current: true,
       },
+    });
+
+    // Explicit grant record, not just the StaffEmployment fallback —
+    // matches EFS-COM-0024 (activation requires an approving authority)
+    // via assigned_by, and makes this user's access visible in the same
+    // place multi-role/temporary assignments live (system_user_role),
+    // rather than only inferable through their employment row.
+    await tx.systemUserRole.create({
+      data: { user_id: user.id, role_id: input.roleId, school_id: ctx.schoolId, assigned_at: new Date(), assigned_by: ctx.userId || null },
     });
 
     await tx.systemAuditEvent.create({
@@ -525,6 +536,86 @@ export async function createRole(ctx: TenantCtx, name: string, label: string, de
   }));
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// USER ROLE ASSIGNMENT (multi-role, temporary assignment — EFS-COM-0024,
+// EFS-COM-0025). SystemUserRole is now the primary grant mechanism;
+// requireModuleAccess checks it live via roleGrants.ts on every request.
+// ═══════════════════════════════════════════════════════════════════════
+
+export async function listUserRoleAssignments(ctx: TenantCtx, userId: string) {
+  return withTenantContext(ctx, async (tx) => {
+    const assignments = await tx.systemUserRole.findMany({
+      where: { user_id: userId, school_id: ctx.schoolId },
+      orderBy: { assigned_at: 'desc' },
+    });
+    const roleIds = [...new Set(assignments.map(a => a.role_id))];
+    const roles = await tx.systemRole.findMany({ where: { id: { in: roleIds } } });
+    const now = new Date();
+    return assignments.map(a => {
+      const role = roles.find(r => r.id === a.role_id);
+      const isExpired = !!(a.expires_at && a.expires_at <= now);
+      return { ...a, roleName: role?.name, roleLabel: role?.label, status: isExpired ? 'EXPIRED' : 'ACTIVE' };
+    });
+  });
+}
+
+export async function assignRoleToUser(ctx: TenantCtx, userId: string, roleId: string, expiresAt?: string) {
+  return withTenantContext(ctx, async (tx) => {
+    // Same self-approval guard as assignPermission: an actor cannot grant
+    // a privileged (is_system) role to themselves. Ordinary roles are
+    // unaffected — this specifically targets the ESS-named "self-approval"
+    // threat for the highest-impact case (elevating your own access).
+    const role = await tx.systemRole.findUnique({ where: { id: roleId } });
+    if (role?.is_system && userId === ctx.userId) {
+      throw new Error('Maker-checker: you cannot assign yourself a system role. Ask another administrator to approve this.');
+    }
+
+    const existing = await tx.systemUserRole.findFirst({ where: { user_id: userId, role_id: roleId, school_id: ctx.schoolId } });
+    if (existing) throw new Error('This role is already assigned to this user. Revoke the existing assignment first if you want to change its expiry.');
+
+    const assignment = await tx.systemUserRole.create({
+      data: {
+        user_id: userId, role_id: roleId, school_id: ctx.schoolId,
+        assigned_at: new Date(), assigned_by: ctx.userId || null,
+        expires_at: expiresAt ? new Date(expiresAt) : null,
+      },
+    });
+
+    await tx.systemAuditEvent.create({
+      data: { school_id: ctx.schoolId, user_id: ctx.userId, action: 'ASSIGN_ROLE', entity_type: 'system_user_role', entity_id: assignment.id, after_state: `user:${userId} role:${roleId}${expiresAt ? ` until:${expiresAt}` : ' (permanent)'}` },
+    });
+
+    await emitEvent(tx, {
+      aggregateType: 'SystemUser', aggregateId: userId, eventType: 'RoleGranted',
+      tenantId: ctx.schoolId, correlationId: randomUUID(),
+      payload: { roleId, assignedBy: ctx.userId, expiresAt: expiresAt || null },
+    });
+
+    return assignment;
+  });
+}
+
+/**
+ * Revocation is immediate expiry (expires_at = now), not a delete — this
+ * keeps the assignment's history intact (who granted it, when, to whom)
+ * while making it stop counting toward access on the very next request,
+ * consistent with the rest of SystemX's archive-don't-delete pattern.
+ */
+export async function revokeRoleAssignment(ctx: TenantCtx, assignmentId: string) {
+  return withTenantContext(ctx, async (tx) => {
+    const assignment = await tx.systemUserRole.findUnique({ where: { id: assignmentId } });
+    if (!assignment || assignment.school_id !== ctx.schoolId) throw new Error('Role assignment not found in this context');
+
+    const updated = await tx.systemUserRole.update({ where: { id: assignmentId }, data: { expires_at: new Date() } });
+
+    await tx.systemAuditEvent.create({
+      data: { school_id: ctx.schoolId, user_id: ctx.userId, action: 'REVOKE_ROLE', entity_type: 'system_user_role', entity_id: assignmentId, before_state: `user:${assignment.user_id} role:${assignment.role_id}` },
+    });
+
+    return updated;
+  });
+}
+
 export async function createFeatureFlag(ctx: TenantCtx, flagKey: string, description?: string) {
   return withTenantContext(ctx, tx => tx.systemFeatureFlag.create({
     data: { flag_key: flagKey, is_enabled: false, school_id: ctx.schoolId, description, row_version: 1 } as any,
@@ -541,24 +632,22 @@ export async function getSystemSummary(ctx: TenantCtx) {
 
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const [
-      usersTotal, usersActive, mfaEnabledCount, roles, flags, flagsEnabled,
-      auditLast24h, activeSessions, activeApiKeys, activeWebhooks, passwordPolicy,
-      pendingEvents,
-    ] = await Promise.all([
-      tx.systemUser.count({ where: { id: { in: userIds } } }),
-      tx.systemUser.count({ where: { id: { in: userIds }, status: 'ACTIVE' } as any }),
-      tx.systemMfa.count({ where: { user_id: { in: userIds }, is_enabled: true } }),
-      tx.systemRole.count({ where: { OR: [{ school_id: ctx.schoolId }, { is_system: true }] } }),
-      tx.systemFeatureFlag.count({ where: { OR: [{ school_id: ctx.schoolId }, { school_id: null }] } }),
-      tx.systemFeatureFlag.count({ where: { OR: [{ school_id: ctx.schoolId }, { school_id: null }], is_enabled: true } }),
-      tx.systemAuditEvent.count({ where: { school_id: ctx.schoolId, created_at: { gte: oneDayAgo } } }),
-      tx.systemSession.count({ where: { user_id: { in: userIds }, is_active: true } }),
-      tx.systemApiKey.count({ where: { school_id: ctx.schoolId, is_active: true } }),
-      tx.systemWebhook.count({ where: { school_id: ctx.schoolId, is_active: true } }),
-      tx.systemPasswordPolicy.findFirst({ where: { school_id: ctx.schoolId } }),
-      tx.systemDomainEvent.count({ where: { tenant_id: ctx.schoolId, status: 'PENDING' } }),
-    ]);
+    // Sequential — see the comment on listUsers above for why: these all
+    // share one transaction-bound connection, so Promise.all here was
+    // racing 12 queries against a single connection rather than genuinely
+    // parallelizing, which is exactly what broke this endpoint.
+    const usersTotal = await tx.systemUser.count({ where: { id: { in: userIds } } });
+    const usersActive = await tx.systemUser.count({ where: { id: { in: userIds }, status: 'ACTIVE' } as any });
+    const mfaEnabledCount = await tx.systemMfa.count({ where: { user_id: { in: userIds }, is_enabled: true } });
+    const roles = await tx.systemRole.count({ where: { OR: [{ school_id: ctx.schoolId }, { is_system: true }] } });
+    const flags = await tx.systemFeatureFlag.count({ where: { OR: [{ school_id: ctx.schoolId }, { school_id: null }] } });
+    const flagsEnabled = await tx.systemFeatureFlag.count({ where: { OR: [{ school_id: ctx.schoolId }, { school_id: null }], is_enabled: true } });
+    const auditLast24h = await tx.systemAuditEvent.count({ where: { school_id: ctx.schoolId, created_at: { gte: oneDayAgo } } });
+    const activeSessions = await tx.systemSession.count({ where: { user_id: { in: userIds }, is_active: true } });
+    const activeApiKeys = await tx.systemApiKey.count({ where: { school_id: ctx.schoolId, is_active: true } });
+    const activeWebhooks = await tx.systemWebhook.count({ where: { school_id: ctx.schoolId, is_active: true } });
+    const passwordPolicy = await tx.systemPasswordPolicy.findFirst({ where: { school_id: ctx.schoolId } });
+    const pendingEvents = await tx.systemDomainEvent.count({ where: { tenant_id: ctx.schoolId, status: 'PENDING' } });
 
     return {
       users: { total: usersTotal, active: usersActive, mfaEnabled: mfaEnabledCount },

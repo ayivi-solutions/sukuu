@@ -67,7 +67,17 @@ export async function withTenantContext<T>(
   return prisma.$transaction(async (tx) => {
     await tx.$executeRawUnsafe(`SET LOCAL app.current_school_id = '${schoolId}'`);
     await tx.$executeRawUnsafe(`SET LOCAL app.current_user_id = '${userId}'`);
-    await tx.$executeRawUnsafe(`SET LOCAL app.current_role = '${role}'`);
+    await tx.$executeRawUnsafe(`SET LOCAL app.actor_role = '${role}'`);
     return fn(tx);
+  }, {
+    // Prisma's default is 5000ms, which assumes low-latency access to the
+    // database. A typical SystemX write (createUser, for example) makes
+    // several sequential round trips inside one transaction — three SET
+    // LOCAL statements plus a handful of creates — and over a real network
+    // path that can add up past 5 seconds even though each individual
+    // query is fast. 15s/10s gives real headroom without masking a
+    // genuinely stuck transaction.
+    timeout: 15000,
+    maxWait: 10000,
   });
 }

@@ -18,6 +18,11 @@ systemRouter.delete('/roles/:roleId/permissions/:permissionId', ctrl.deleteRemov
 systemRouter.patch('/roles/:roleId', ctrl.patchRole);
 systemRouter.post('/roles', ctrl.postRole);
 
+// User role assignment — multi-role, temporary (expiresAt optional)
+systemRouter.get('/users/:userId/role-assignments', ctrl.getUserRoleAssignments);
+systemRouter.post('/users/:userId/role-assignments', ctrl.postUserRoleAssignment);
+systemRouter.patch('/role-assignments/:assignmentId/revoke', ctrl.patchRevokeRoleAssignment);
+
 systemRouter.get('/users', ctrl.getUsers);
 systemRouter.post('/users', ctrl.postUser);
 systemRouter.patch('/users/:userId', ctrl.patchUser);

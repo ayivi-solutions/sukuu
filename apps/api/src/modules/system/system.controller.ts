@@ -39,6 +39,10 @@ export const deleteRemovePermission = handle(req => svc.removePermission(ctxFrom
 export const patchRole = handle(req => svc.updateRole(ctxFrom(req), req.params.roleId, req.body));
 export const postRole = handleCreate(req => svc.createRole(ctxFrom(req), req.body.name, req.body.label, req.body.description));
 
+export const getUserRoleAssignments = handle(req => svc.listUserRoleAssignments(ctxFrom(req), req.params.userId));
+export const postUserRoleAssignment = handleCreate(req => svc.assignRoleToUser(ctxFrom(req), req.params.userId, req.body.roleId, req.body.expiresAt));
+export const patchRevokeRoleAssignment = handle(req => svc.revokeRoleAssignment(ctxFrom(req), req.params.assignmentId));
+
 // ── Users ──
 export const getUsers = handle(req => {
   if (!req.schoolId) throw new Error('No school associated with this user');

@@ -6,6 +6,7 @@ import cors from 'cors';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { rateLimiter } from './middleware/rateLimiter';
+import { syncRbac } from './lib/rbacSync';
 import { authRouter } from './modules/auth/auth.router';
 import { systemRouter } from './modules/system/system.router';
 import { schoolRouter } from './modules/school/school.router';
@@ -98,3 +99,11 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log('Sukuu API running on port ' + PORT + ' [' + (process.env.NODE_ENV || 'development') + ']');
 });
+
+// Runs after listen (not before) so the server is already accepting
+// traffic — a sync hiccup delays RBAC being fully current, not an entire
+// deploy. Every step inside syncRbac is idempotent, so this is safe to
+// run on every single boot, including ones where nothing changed.
+syncRbac()
+  .then(summary => console.log('[RBAC sync]', JSON.stringify(summary)))
+  .catch(err => console.error('[RBAC sync] failed — existing grants are unaffected, this only blocks new reconciliation:', err.message));

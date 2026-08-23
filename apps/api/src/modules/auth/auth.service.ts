@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../lib/prisma';
+import { getActiveRoleNames } from '../../lib/roleGrants';
 
 async function logAuthAttempt(userId: string | null, status: 'SUCCESS' | 'FAILED' | 'LOCKED') {
   await prisma.systemAuthenticationLog.create({
@@ -46,12 +47,29 @@ export async function loginUser(email: string, password: string) {
   const employment = staff
     ? await prisma.staffEmployment.findFirst({ where: { staff_id: staff.id, is_current: true } })
     : null;
-  const role = employment
+  const employmentRole = employment
     ? await prisma.systemRole.findFirst({ where: { id: employment.role_id } })
     : null;
 
   const schoolId = employment?.school_id || '';
-  const roleKey  = role?.name || 'school_admin';
+
+  // Full active role set (SystemUserRole grants + the employment fallback
+  // — see roleGrants.ts) — this is what requireModuleAccess actually
+  // checks, live, on every request. What goes into the JWT below is only
+  // a single "primary" role for RLS's superadmin-bypass check and for
+  // display; it is NOT the source of authorization truth anymore.
+  const activeRoleNames = schoolId ? await getActiveRoleNames(user.id, schoolId) : new Set<string>();
+  const primaryRoleKey = activeRoleNames.has('superadmin')
+    ? 'superadmin'
+    : (employmentRole?.name || [...activeRoleNames][0] || 'school_admin');
+  const roleKey = primaryRoleKey;
+  // Look up the role matching whatever primaryRoleKey actually resolved
+  // to — it may not be employmentRole (e.g. primary ends up 'superadmin'
+  // via a SystemUserRole grant while the employment record says
+  // 'teacher'), so employmentRole?.label would show the wrong thing.
+  const primaryRole = primaryRoleKey === employmentRole?.name
+    ? employmentRole
+    : await prisma.systemRole.findFirst({ where: { name: primaryRoleKey } });
 
   const accessToken = jwt.sign(
     { userId: user.id, schoolId, roleKey, staffId: staff?.id || null },
@@ -99,7 +117,8 @@ export async function loginUser(email: string, password: string) {
       lastName:  staff?.last_name   || null,
       staffId:   staff?.id          || null,
       roleKey,
-      roleLabel: role?.label || roleKey,
+      roleLabel: primaryRole?.label || roleKey,
+      roles:     [...activeRoleNames],
     },
     school: { id: schoolId },
   };
@@ -114,15 +133,24 @@ export async function refreshAccessToken(token: string) {
   const employment = staff
     ? await prisma.staffEmployment.findFirst({ where: { staff_id: staff.id, is_current: true } })
     : null;
-  const role = employment
+  const employmentRole = employment
     ? await prisma.systemRole.findFirst({ where: { id: employment.role_id } })
     : null;
+  const schoolId = employment?.school_id || '';
+
+  // Same resolution as loginUser — without this, a refreshed token (every
+  // 15 minutes, on every active session) would silently fall back to
+  // single-role behavior even for a user with an active multi-role grant.
+  const activeRoleNames = schoolId ? await getActiveRoleNames(user.id, schoolId) : new Set<string>();
+  const primaryRoleKey = activeRoleNames.has('superadmin')
+    ? 'superadmin'
+    : (employmentRole?.name || [...activeRoleNames][0] || 'school_admin');
 
   const accessToken = jwt.sign(
     {
       userId:   user.id,
-      schoolId: employment?.school_id || '',
-      roleKey:  role?.name || 'school_admin',
+      schoolId,
+      roleKey:  primaryRoleKey,
       staffId:  staff?.id || null,
     },
     process.env.JWT_SECRET!,

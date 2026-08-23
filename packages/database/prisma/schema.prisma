@@ -1059,6 +1059,7 @@ model SystemUserRole {
   assigned_by                    String?
   expires_at                     DateTime?
 
+  @@unique([user_id, role_id, school_id])
   @@schema("system")
   @@map("system_user_role")
 }
