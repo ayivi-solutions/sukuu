@@ -86,3 +86,42 @@ WHERE routine_schema = 'system'
     'auth_record_attempt'
   )
 ORDER BY routine_name, grantee;
+
+-- Current login identities must remain unique by normalized email.
+SELECT
+  lower(btrim(email)) AS normalized_email,
+  count(*) AS current_records
+FROM system.system_user
+WHERE archived_at IS NULL
+  AND status <> 'CLOSED'
+GROUP BY lower(btrim(email))
+HAVING count(*) > 1
+ORDER BY normalized_email;
+
+-- Expected: zero rows.
+
+
+-- Verify the native partial unique index exists and matches the login predicate.
+SELECT
+  schemaname,
+  tablename,
+  indexname,
+  indexdef
+FROM pg_indexes
+WHERE schemaname = 'system'
+  AND tablename = 'system_user'
+  AND indexname = 'uq_system_user_current_normalized_email';
+
+-- Expected: exactly one row containing:
+--   UNIQUE
+--   lower(btrim(email))
+--   archived_at IS NULL
+--   status <> 'CLOSED'
+
+
+-- Verify auth_lookup_user itself excludes historical closed/archived identities.
+SELECT
+  pg_get_functiondef(
+    'system.auth_lookup_user(text)'::regprocedure
+  ) AS auth_lookup_user_definition;
+

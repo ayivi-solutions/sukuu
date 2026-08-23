@@ -17,6 +17,16 @@
 --   - No table policy is weakened and no BYPASSRLS/login role is created.
 -- ============================================================================
 
+-- One current login identity per normalized email.
+--
+-- Historical CLOSED/archived identities remain preserved and may reuse the
+-- same email later. Only the current login-eligible identity set is unique.
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_system_user_current_normalized_email"
+ON system.system_user (lower(btrim(email)))
+WHERE archived_at IS NULL
+  AND status <> 'CLOSED';
+
+
 CREATE OR REPLACE FUNCTION system.auth_lookup_user(p_email text)
 RETURNS TABLE (
   id text,
@@ -47,8 +57,9 @@ AS $function$
     u.must_reset_password,
     u.status
   FROM system.system_user AS u
-  WHERE lower(btrim(u.email)) = lower(btrim(p_email))
-  ORDER BY u.created_at ASC, u.id ASC
+  WHERE u.archived_at IS NULL
+    AND u.status <> 'CLOSED'
+    AND lower(btrim(u.email)) = lower(btrim(p_email))
   LIMIT 1
 $function$;
 
