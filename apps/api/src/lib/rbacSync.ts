@@ -146,13 +146,13 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
   const employments = await prisma.staffEmployment.findMany({ where: { is_current: true } });
   for (const emp of employments) {
     const staff = await prisma.staffStaff.findUnique({ where: { id: emp.staff_id } });
-    if (!staff) continue;
+    if (!staff || !staff.user_id) continue; // roster entry with no login yet — nothing to grant
     const existing = await withTenantContext(PLATFORM_CTX, tx => tx.systemUserRole.findFirst({
-      where: { user_id: staff.user_id, role_id: emp.role_id, school_id: emp.school_id },
+      where: { user_id: staff.user_id!, role_id: emp.role_id, school_id: emp.school_id },
     }));
     if (!existing) {
       await withTenantContext(PLATFORM_CTX, tx => tx.systemUserRole.create({
-        data: { user_id: staff.user_id, role_id: emp.role_id, school_id: emp.school_id, assigned_at: new Date(), assigned_by: null },
+        data: { user_id: staff.user_id!, role_id: emp.role_id, school_id: emp.school_id, assigned_at: new Date(), assigned_by: null },
       }));
       summary.employmentGrantsBackfilled++;
     }

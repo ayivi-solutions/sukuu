@@ -49,26 +49,32 @@ export const getUsers = handle(req => {
   return svc.listUsers(ctxFrom(req));
 });
 
+// ── Staff roster (add a real person -> grant them access, two separate
+//    steps, matching EFS's own order: profile+role first, activation last) ──
+export const getUnlinkedStaff = handle(req => svc.listUnlinkedStaff(ctxFrom(req)));
+export const postRosterEntry = handleCreate(req => svc.addStaffRosterEntry(ctxFrom(req), req.body));
+
 export const postUser = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
-    const { firstName, lastName, email, phone, roleId } = req.body;
-    if (!firstName || !lastName || !email || !roleId) {
-      return res.status(400).json({ error: 'firstName, lastName, email, roleId are required' });
+    const { staffId, email, roleId } = req.body;
+    if (!staffId) {
+      return res.status(400).json({ error: 'staffId is required — select an existing roster entry to grant access to' });
     }
     const operationId = req.header('X-Operation-Id') || req.body.operationId;
-    if (!operationId) return res.status(400).json({ error: 'X-Operation-Id header (or operationId in body) is required for idempotent user creation' });
+    if (!operationId) return res.status(400).json({ error: 'X-Operation-Id header (or operationId in body) is required for idempotent access grants' });
 
-    const { result, replayed } = await svc.withIdempotency(ctxFrom(req), operationId, 'CreateUser', () =>
-      svc.createUser(ctxFrom(req), { firstName, lastName, email, phone, roleId }));
+    const { result, replayed } = await svc.withIdempotency(ctxFrom(req), operationId, 'GrantSystemAccess', () =>
+      svc.grantSystemAccess(ctxFrom(req), staffId, email, roleId));
 
     res.status(replayed ? 200 : 201).json({
       user: { id: result.user.id, email: result.user.email },
+      staffName: result.staffName,
       tempPassword: result.tempPassword,
       replayed,
     });
   } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Failed to create user' });
+    res.status(500).json({ error: err.message || 'Failed to grant system access' });
   }
 };
 

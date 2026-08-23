@@ -200,10 +200,16 @@ export async function listUsers(ctx: TenantCtx) {
     // which Prisma explicitly warns can misbehave or error. The prisma.*
     // calls (sukuux tables, no RLS yet) are safe to run concurrently with
     // each other via the pool, but not interleaved with tx.* calls.
-    const staffRecords = await prisma.staffStaff.findMany({ where: { id: { in: staffIds } } });
+    const allStaffRecords = await prisma.staffStaff.findMany({ where: { id: { in: staffIds } } });
+    // Roster entries with no linked login (user_id: null) are not system
+    // users — they belong on the roster list, not here. Filtering them
+    // out before the lookups below also avoids passing a null into
+    // Prisma's `in` filter, which id (a non-nullable String field) can't
+    // match against.
+    const staffRecords = allStaffRecords.filter(s => s.user_id);
     const roles = await tx.systemRole.findMany({ where: { id: { in: roleIds } } });
 
-    const userIds = staffRecords.map(s => s.user_id);
+    const userIds = staffRecords.map(s => s.user_id!);
     const users = await tx.systemUser.findMany({ where: { id: { in: userIds } } });
     const mfaRecords = await tx.systemMfa.findMany({ where: { user_id: { in: userIds } } });
 
@@ -234,65 +240,106 @@ export async function setUserActive(ctx: TenantCtx, userId: string, isActive: bo
   return transitionUserStatus(ctx, userId, isActive ? 'ACTIVE' : 'SUSPENDED', isActive ? 'Reinstated via setUserActive' : 'Suspended via setUserActive');
 }
 
-export async function createUser(ctx: TenantCtx, input: {
-  firstName: string; lastName: string; email: string; phone?: string; roleId: string;
+// ═══════════════════════════════════════════════════════════════════════
+// STAFF ROSTER — EFS's own primary workflow: create staff profile -> verify
+// -> approve appointment -> assign role and department -> activate
+// service. "Activate service" — granting a login — is explicitly the LAST
+// step, not simultaneous with creating the person. Split accordingly:
+// addStaffRosterEntry creates the person + their role/department with no
+// login at all; grantSystemAccess links an EXISTING, unlinked roster
+// entry to a brand new SystemUser. There is no path that lets someone who
+// isn't already a real staff record become a system user.
+// ═══════════════════════════════════════════════════════════════════════
+
+export async function listUnlinkedStaff(ctx: TenantCtx) {
+  return withTenantContext(ctx, tx => tx.staffStaff.findMany({
+    where: { school_id: ctx.schoolId, user_id: null },
+    orderBy: { first_name: 'asc' },
+  }));
+}
+
+export async function addStaffRosterEntry(ctx: TenantCtx, input: {
+  firstName: string; lastName: string; gender: string; dateOfBirth: string;
+  phone: string; email: string; roleId: string; departmentId?: string;
+  employmentType?: string;
 }) {
+  return withTenantContext(ctx, async (tx) => {
+    // Duplicate check belongs here now — this is the moment a person's
+    // identity is actually first established in the system, not at
+    // login-grant time (EFS-SYS-0017).
+    const existing = await tx.staffStaff.findFirst({ where: { school_id: ctx.schoolId, email: input.email } });
+    if (existing) throw new Error(`A staff record with email ${input.email} already exists on the roster (id: ${existing.id})`);
+
+    const staff = await tx.staffStaff.create({
+      data: {
+        school_id: ctx.schoolId, staff_id: `STF-${Date.now().toString(36).toUpperCase()}`,
+        user_id: null, first_name: input.firstName, last_name: input.lastName,
+        gender: input.gender as any, date_of_birth: input.dateOfBirth,
+        phone: input.phone, email: input.email, employment_status: 'ACTIVE',
+      } as any,
+    });
+
+    await tx.staffEmployment.create({
+      data: {
+        staff_id: staff.id, school_id: ctx.schoolId, role_id: input.roleId,
+        department_id: input.departmentId || null,
+        employment_type: (input.employmentType || 'PERMANENT') as any,
+        start_date: new Date().toISOString().slice(0, 10), is_current: true,
+      },
+    });
+
+    await tx.systemAuditEvent.create({
+      data: { school_id: ctx.schoolId, user_id: ctx.userId, action: 'ADD_TO_ROSTER', entity_type: 'staff_staff', entity_id: staff.id, after_state: 'ACTIVE, no login' },
+    });
+
+    return staff;
+  });
+}
+
+export async function grantSystemAccess(ctx: TenantCtx, staffId: string, overrideEmail?: string, overrideRoleId?: string) {
   const tempPassword = 'Sukuu@' + Math.random().toString(36).slice(2, 8) + '!';
   const hash = await bcrypt.hash(tempPassword, 12);
   const correlationId = randomUUID();
 
   const result = await withTenantContext(ctx, async (tx) => {
-    // EFS-SYS-0017: duplicate check by stable identifier (email) before creating
-    const existing = await tx.systemUser.findFirst({ where: { email: input.email } });
-    if (existing) throw new Error(`A user with email ${input.email} already exists (id: ${existing.id})`);
+    const staff = await tx.staffStaff.findUnique({ where: { id: staffId } });
+    if (!staff || staff.school_id !== ctx.schoolId) throw new Error('Staff record not found in this school');
+    if (staff.user_id) throw new Error(`This person already has system access (user id: ${staff.user_id})`);
+
+    const email = overrideEmail || staff.email;
+    const existingUser = await tx.systemUser.findFirst({ where: { email } });
+    if (existingUser) throw new Error(`A login already exists for ${email} (id: ${existingUser.id})`);
+
+    const employment = await tx.staffEmployment.findFirst({ where: { staff_id: staff.id, is_current: true } });
+    const roleId = overrideRoleId || employment?.role_id;
+    if (!roleId) throw new Error('This staff record has no current role/employment on file — set one before granting access');
 
     const user = await tx.systemUser.create({
       data: {
-        email: input.email, phone: input.phone, password_hash: hash,
+        email, phone: staff.phone, password_hash: hash,
         is_active: false, is_verified: false,
         failed_login_count: 0, must_reset_password: true,
         status: 'INVITED', row_version: 1,
       } as any,
     });
 
-    await tx.staffStaff.create({
-      data: {
-        id: user.id, school_id: ctx.schoolId, staff_id: user.id, user_id: user.id,
-        first_name: input.firstName, last_name: input.lastName,
-        gender: 'OTHER', date_of_birth: '2000-01-01',
-        phone: input.phone || '', email: input.email,
-        employment_status: 'ACTIVE',
-      },
-    });
+    await tx.staffStaff.update({ where: { id: staff.id }, data: { user_id: user.id, ...(overrideEmail && { email: overrideEmail }) } });
 
-    await tx.staffEmployment.create({
-      data: {
-        staff_id: user.id, school_id: ctx.schoolId, role_id: input.roleId,
-        employment_type: 'PERMANENT', start_date: new Date().toISOString().slice(0, 10),
-        is_current: true,
-      },
-    });
-
-    // Explicit grant record, not just the StaffEmployment fallback —
-    // matches EFS-COM-0024 (activation requires an approving authority)
-    // via assigned_by, and makes this user's access visible in the same
-    // place multi-role/temporary assignments live (system_user_role),
-    // rather than only inferable through their employment row.
     await tx.systemUserRole.create({
-      data: { user_id: user.id, role_id: input.roleId, school_id: ctx.schoolId, assigned_at: new Date(), assigned_by: ctx.userId || null },
+      data: { user_id: user.id, role_id: roleId, school_id: ctx.schoolId, assigned_at: new Date(), assigned_by: ctx.userId || null },
     });
 
     await tx.systemAuditEvent.create({
-      data: { school_id: ctx.schoolId, user_id: ctx.userId, action: 'CREATE', entity_type: 'system_user', entity_id: user.id, after_state: 'INVITED' },
+      data: { school_id: ctx.schoolId, user_id: ctx.userId, action: 'GRANT_ACCESS', entity_type: 'system_user', entity_id: user.id, before_state: `staff:${staff.id} (no login)`, after_state: 'INVITED' },
     });
 
     await emitEvent(tx, {
       aggregateType: 'SystemUser', aggregateId: user.id, eventType: 'UserInvited',
       tenantId: ctx.schoolId, correlationId,
-      payload: { email: input.email, roleId: input.roleId, invitedBy: ctx.userId },
+      payload: { email, staffId: staff.id, roleId, invitedBy: ctx.userId },
     });
 
-    return { user, tempPassword };
+    return { user, tempPassword, staffName: `${staff.first_name} ${staff.last_name}` };
   });
 
   return result;
@@ -490,8 +537,17 @@ export async function assignPermission(ctx: TenantCtx, roleId: string, permissio
     // and specifically cannot be the sole approver of their OWN elevation.
     // Concretely: reject if the actor granting the permission is the same
     // person who would be its only current holder through this role.
+    //
+    // staff_id here is StaffEmployment's FK to StaffStaff.id — NOT the
+    // linked login's user_id. Those used to always be equal by
+    // construction (the old createUser forced staff.id = user.id), but
+    // since staff records can now exist independently of a login (staff
+    // roster, decoupled from account creation), that's no longer
+    // guaranteed for anyone onboarded through the new flow. Resolve the
+    // real user_id explicitly rather than comparing staff_id directly.
     const holders = await prisma.staffEmployment.findMany({ where: { role_id: roleId, is_current: true }, select: { staff_id: true } });
-    const holderUserIds = holders.map(h => h.staff_id); // staff.id === user.id by construction in createUser
+    const holderStaff = await prisma.staffStaff.findMany({ where: { id: { in: holders.map(h => h.staff_id) } }, select: { user_id: true } });
+    const holderUserIds = holderStaff.map(s => s.user_id).filter((id): id is string => !!id);
     const permission = await tx.systemPermission.findUnique({ where: { id: permissionId } });
     const isPrivileged = permission?.action === 'full';
 
@@ -625,10 +681,17 @@ export async function createFeatureFlag(ctx: TenantCtx, flagKey: string, descrip
 export async function getSystemSummary(ctx: TenantCtx) {
   return withTenantContext(ctx, async (tx) => {
     const employments = await prisma.staffEmployment.findMany({ where: { school_id: ctx.schoolId, is_current: true } });
-    const userIds = (await prisma.staffStaff.findMany({
+    const rosterFilteredIds = (await prisma.staffStaff.findMany({
       where: { id: { in: employments.map(e => e.staff_id) } },
       select: { user_id: true },
-    })).map(s => s.user_id);
+    }));
+    // Roster entries can now have a current employment with no linked
+    // login yet (addStaffRosterEntry creates the employment immediately,
+    // per EFS's own order — role/department assigned before access is
+    // granted). Filter those out before building userIds, same reason as
+    // the equivalent fix in listUsers: a null in this array can't be
+    // matched against id (a non-nullable String field).
+    const userIds = rosterFilteredIds.map(s => s.user_id).filter((id): id is string => !!id);
 
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
@@ -683,8 +746,10 @@ export interface BulkUserRow {
   rowNumber: number;
   firstName: string;
   lastName: string;
+  gender: string;
+  dateOfBirth: string;
   email: string;
-  phone?: string;
+  phone: string;
   roleId: string;
 }
 
@@ -696,6 +761,7 @@ export interface BulkRowOutcome {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_GENDERS = new Set(['MALE', 'FEMALE', 'OTHER']);
 
 /** Validates every row without writing anything. Safe to call repeatedly. */
 export async function previewBulkUserImport(ctx: TenantCtx, rows: BulkUserRow[]): Promise<BulkRowOutcome[]> {
@@ -712,6 +778,10 @@ export async function previewBulkUserImport(ctx: TenantCtx, rows: BulkUserRow[])
       const errors: string[] = [];
       if (!row.firstName?.trim()) errors.push('First name is required');
       if (!row.lastName?.trim()) errors.push('Last name is required');
+      if (!row.gender?.trim()) errors.push('Gender is required');
+      else if (!VALID_GENDERS.has(row.gender.toUpperCase())) errors.push('Gender must be MALE, FEMALE, or OTHER');
+      if (!row.dateOfBirth?.trim()) errors.push('Date of birth is required');
+      if (!row.phone?.trim()) errors.push('Phone is required');
       if (!row.email?.trim()) errors.push('Email is required');
       else if (!EMAIL_RE.test(row.email)) errors.push('Email format is invalid');
       if (!row.roleId) errors.push('Role is required');
@@ -722,8 +792,10 @@ export async function previewBulkUserImport(ctx: TenantCtx, rows: BulkUserRow[])
         if (dupInFile) errors.push(`Duplicate email within this file (also row ${dupInFile})`);
         else emailsInFile.set(row.email.toLowerCase(), row.rowNumber);
 
-        const existing = await tx.systemUser.findFirst({ where: { email: row.email } });
-        if (existing) errors.push(`Email already exists in the system (user ${existing.id})`);
+        const existingUser = await tx.systemUser.findFirst({ where: { email: row.email } });
+        if (existingUser) errors.push(`A login already exists for this email (user ${existingUser.id})`);
+        const existingStaff = await tx.staffStaff.findFirst({ where: { school_id: ctx.schoolId, email: row.email } });
+        if (existingStaff) errors.push(`This email is already on the staff roster (id: ${existingStaff.id})`);
       }
 
       outcomes.push({ rowNumber: row.rowNumber, status: errors.length ? 'error' : 'valid', errors });
@@ -735,9 +807,13 @@ export async function previewBulkUserImport(ctx: TenantCtx, rows: BulkUserRow[])
 
 /**
  * Re-validates (state may have changed since preview — EFS-SYS-0016/0017)
- * and commits only rows that are still valid. Returns full row-level
- * outcome evidence for both created and skipped/failed rows — this is the
- * "error file" data the UI renders or offers as a download.
+ * and commits only rows that are still valid. Each row goes through the
+ * SAME two real steps as doing it by hand — add to the roster, then grant
+ * access — rather than a bulk-only shortcut that would recreate the exact
+ * "typed-in phantom person" problem this whole redesign exists to close,
+ * just via a different code path. Returns full row-level outcome evidence
+ * for both created and skipped/failed rows — this is the "error file"
+ * data the UI renders or offers as a download.
  */
 export async function commitBulkUserImport(ctx: TenantCtx, rows: BulkUserRow[]): Promise<BulkRowOutcome[]> {
   const preview = await previewBulkUserImport(ctx, rows);
@@ -752,7 +828,11 @@ export async function commitBulkUserImport(ctx: TenantCtx, rows: BulkUserRow[]):
       continue;
     }
     try {
-      const { user } = await createUser(ctx, row);
+      const staff = await addStaffRosterEntry(ctx, {
+        firstName: row.firstName, lastName: row.lastName, gender: row.gender.toUpperCase(),
+        dateOfBirth: row.dateOfBirth, phone: row.phone, email: row.email, roleId: row.roleId,
+      });
+      const { user } = await grantSystemAccess(ctx, staff.id);
       outcomes.push({ rowNumber: row.rowNumber, status: 'created', errors: [], userId: user.id });
     } catch (err: any) {
       outcomes.push({ rowNumber: row.rowNumber, status: 'failed', errors: [err.message] });
@@ -811,7 +891,10 @@ export async function reportActiveSessionRegister(ctx: TenantCtx) {
     const employments = await prisma.staffEmployment.findMany({ where: { school_id: ctx.schoolId, is_current: true } });
     const staffIds = employments.map(e => e.staff_id);
     const staff = await prisma.staffStaff.findMany({ where: { id: { in: staffIds } } });
-    const userIds = staff.map(s => s.user_id);
+    // Roster entries with no linked login yet have no sessions to report —
+    // filter before the query rather than pass a null into a non-nullable
+    // `in` filter (same fix as listUsers/getSystemSummary above).
+    const userIds = staff.map(s => s.user_id).filter((id): id is string => !!id);
     const sessions = await tx.systemSession.findMany({ where: { user_id: { in: userIds }, is_active: true }, orderBy: { last_activity_at: 'desc' } });
     return sessions.map(s => {
       const owner = staff.find(x => x.user_id === s.user_id);

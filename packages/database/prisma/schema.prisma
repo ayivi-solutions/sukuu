@@ -2267,7 +2267,7 @@ model StaffStaff {
   id                             String  @id @default(uuid())
   school_id                      String
   staff_id                       String
-  user_id                        String
+  user_id                        String?
   first_name                     String
   last_name                      String
   gender                         ApplicantGender
@@ -2282,6 +2282,7 @@ model StaffStaff {
   created_at                     DateTime  @default(now())
   updated_at                     DateTime  @updatedAt
 
+  @@unique([user_id])
   @@schema("sukuux")
   @@map("staff_staff")
 }

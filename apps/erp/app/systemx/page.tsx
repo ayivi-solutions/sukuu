@@ -45,9 +45,13 @@ export default function SystemXPage() {
   const [webhooks, setWebhooks] = useState<any[]>([]);
   const [ops, setOps] = useState<any>({ config: [], departments: [], integrations: [], backups: [], jobs: [], health: [], rateLimits: [], retention: [], errors: [], services: [] });
   const [error, setError] = useState('');
-  const [showCreate, setShowCreate] = useState(false);
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', roleId: '' });
-  const [createMsg, setCreateMsg] = useState('');
+  const [showAddRoster, setShowAddRoster] = useState(false);
+  const [rosterForm, setRosterForm] = useState({ firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', phone: '', email: '', roleId: '', employmentType: 'PERMANENT' });
+  const [rosterMsg, setRosterMsg] = useState('');
+  const [showGrantAccess, setShowGrantAccess] = useState(false);
+  const [unlinkedStaff, setUnlinkedStaff] = useState<any[]>([]);
+  const [grantForm, setGrantForm] = useState({ staffId: '', email: '', roleId: '' });
+  const [grantMsg, setGrantMsg] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', email: '', phone: '' });
   const [editingRole, setEditingRole] = useState<any>(null);
@@ -237,21 +241,37 @@ export default function SystemXPage() {
     loadAll(token);
   }
   async function handleRevokeSession(id: string) { await authedFetch(`/api/v1/system/sessions/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
-  async function handleCreateUser(e: React.FormEvent) {
+  async function handleAddRosterEntry(e: React.FormEvent) {
+    e.preventDefault();
+    const res = await authedFetch('/api/v1/system/staff-roster', token, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rosterForm),
+    });
+    if (res.error) { setRosterMsg(res.error); return; }
+    setRosterMsg(`Added ${rosterForm.firstName} ${rosterForm.lastName} to the roster. Grant them system access separately when they're ready to log in.`);
+    setRosterForm({ firstName: '', lastName: '', gender: 'MALE', dateOfBirth: '', phone: '', email: '', roleId: '', employmentType: 'PERMANENT' });
+    loadAll(token);
+  }
+  async function loadUnlinkedStaff() {
+    const res = await authedFetch('/api/v1/system/staff-roster/unlinked', token);
+    setUnlinkedStaff(Array.isArray(res) ? res : []);
+  }
+  async function handleGrantAccess(e: React.FormEvent) {
     e.preventDefault();
     // Client-generated operationId makes this safe to retry (double-tap,
-    // flaky connection, browser back) without creating a duplicate user —
+    // flaky connection, browser back) without granting access twice —
     // the API returns the original result instead of re-running the command.
     const operationId = crypto.randomUUID();
     const res = await authedFetch('/api/v1/system/users', token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Operation-Id': operationId },
-      body: JSON.stringify(form),
+      body: JSON.stringify(grantForm),
     });
-    if (res.error) { setCreateMsg(res.error); return; }
-    setCreateMsg(res.replayed
-      ? `Already created (this was a repeat submission). Temp password: ${res.tempPassword}`
-      : `Created. Temp password: ${res.tempPassword} — record this now, it will not be shown again.`);
+    if (res.error) { setGrantMsg(res.error); return; }
+    setGrantMsg(res.replayed
+      ? `Already granted (this was a repeat submission). Temp password: ${res.tempPassword}`
+      : `Access granted to ${res.staffName}. Temp password: ${res.tempPassword} — record this now, it will not be shown again.`);
+    setGrantForm({ staffId: '', email: '', roleId: '' });
+    loadUnlinkedStaff();
     loadAll(token);
   }
   async function handleSavePwdPolicy(e: React.FormEvent) {
@@ -401,7 +421,8 @@ export default function SystemXPage() {
             <div className="ph-title">⚙️ SystemX</div>
             <div className="ph-sub">Authentication · RBAC · Sessions · Audit · Feature Flags · Security · CRUAA enforced (no hard deletes)</div>
           </div>
-          <button onClick={() => setShowCreate(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Create User</button>
+          <button onClick={() => setShowAddRoster(true)} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Add to Roster</button>
+          <button onClick={() => { setShowGrantAccess(true); loadUnlinkedStaff(); }} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginLeft: 8 }}>+ Grant System Access</button>
         </div>
       </div>
 
@@ -771,24 +792,74 @@ export default function SystemXPage() {
         </div>
       )}
 
-      {showCreate && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowCreate(false)}>
-          <form onSubmit={handleCreateUser} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 360, boxShadow: 'var(--shL)' }}>
-            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 16 }}>Create User</h3>
-            {createMsg && <div className="alert al-ok" style={{ marginBottom: 12 }}>{createMsg}</div>}
-            <div className="fg"><label className="fl">FIRST NAME</label><input className="fi" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} required /></div>
-            <div className="fg"><label className="fl">LAST NAME</label><input className="fi" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} required /></div>
-            <div className="fg"><label className="fl">EMAIL</label><input className="fi" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></div>
-            <div className="fg"><label className="fl">PHONE</label><input className="fi" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
+      {showAddRoster && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowAddRoster(false)}>
+          <form onSubmit={handleAddRosterEntry} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, maxHeight: '85vh', overflowY: 'auto', boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 4 }}>Add to Staff Roster</h3>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>Adds a real person and their role/department to the roster. This does not grant them a login — that's a separate step, once they're ready.</p>
+            {rosterMsg && <div className="alert al-ok" style={{ marginBottom: 12 }}>{rosterMsg}</div>}
+            <div className="fg"><label className="fl">FIRST NAME</label><input className="fi" value={rosterForm.firstName} onChange={e => setRosterForm({ ...rosterForm, firstName: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">LAST NAME</label><input className="fi" value={rosterForm.lastName} onChange={e => setRosterForm({ ...rosterForm, lastName: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">GENDER</label>
+              <select className="fi" value={rosterForm.gender} onChange={e => setRosterForm({ ...rosterForm, gender: e.target.value })}><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></select>
+            </div>
+            <div className="fg"><label className="fl">DATE OF BIRTH</label><input className="fi" type="date" value={rosterForm.dateOfBirth} onChange={e => setRosterForm({ ...rosterForm, dateOfBirth: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">PHONE</label><input className="fi" value={rosterForm.phone} onChange={e => setRosterForm({ ...rosterForm, phone: e.target.value })} required /></div>
+            <div className="fg"><label className="fl">EMAIL</label><input className="fi" type="email" value={rosterForm.email} onChange={e => setRosterForm({ ...rosterForm, email: e.target.value })} required /></div>
             <div className="fg"><label className="fl">ROLE</label>
-              <select className="fi" value={form.roleId} onChange={e => setForm({ ...form, roleId: e.target.value })} required>
+              <select className="fi" value={rosterForm.roleId} onChange={e => setRosterForm({ ...rosterForm, roleId: e.target.value })} required>
                 <option value="">Select a role…</option>
                 {roles.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
               </select>
             </div>
+            <div className="fg"><label className="fl">EMPLOYMENT TYPE</label>
+              <select className="fi" value={rosterForm.employmentType} onChange={e => setRosterForm({ ...rosterForm, employmentType: e.target.value })}>
+                <option value="PERMANENT">Permanent</option><option value="CONTRACT">Contract</option><option value="PART_TIME">Part-time</option><option value="VOLUNTEER">Volunteer</option>
+              </select>
+            </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button type="submit" style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Create</button>
-              <button type="button" onClick={() => setShowCreate(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
+              <button type="submit" style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Add to Roster</button>
+              <button type="button" onClick={() => setShowAddRoster(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {showGrantAccess && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(4,13,52,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowGrantAccess(false)}>
+          <form onSubmit={handleGrantAccess} onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', padding: 24, borderRadius: 'var(--r)', width: 380, boxShadow: 'var(--shL)' }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 4 }}>Grant System Access</h3>
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 16 }}>Only people already on the staff roster can be selected here — type to search.</p>
+            {grantMsg && <div className="alert al-ok" style={{ marginBottom: 12 }}>{grantMsg}</div>}
+            <div className="fg">
+              <label className="fl">STAFF MEMBER</label>
+              <input
+                className="fi" list="unlinked-staff-options" placeholder="Type a name to search…"
+                onChange={e => {
+                  const match = unlinkedStaff.find(s => `${s.first_name} ${s.last_name} — ${s.staff_id}` === e.target.value);
+                  if (match) setGrantForm({ ...grantForm, staffId: match.id, email: match.email });
+                }}
+                required
+              />
+              <datalist id="unlinked-staff-options">
+                {unlinkedStaff.map(s => <option key={s.id} value={`${s.first_name} ${s.last_name} — ${s.staff_id}`} />)}
+              </datalist>
+              {unlinkedStaff.length === 0 && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Everyone on the roster already has access. Add someone new first.</div>}
+            </div>
+            {grantForm.staffId && (
+              <>
+                <div className="fg"><label className="fl">LOGIN EMAIL</label><input className="fi" type="email" value={grantForm.email} onChange={e => setGrantForm({ ...grantForm, email: e.target.value })} required /></div>
+                <div className="fg"><label className="fl">SYSTEM ROLE (optional override — defaults to their roster role)</label>
+                  <select className="fi" value={grantForm.roleId} onChange={e => setGrantForm({ ...grantForm, roleId: e.target.value })}>
+                    <option value="">Use their roster role</option>
+                    {roles.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button type="submit" disabled={!grantForm.staffId} style={{ flex: 1, background: 'var(--navy)', color: 'var(--gold)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Grant Access</button>
+              <button type="button" onClick={() => setShowGrantAccess(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Close</button>
             </div>
           </form>
         </div>

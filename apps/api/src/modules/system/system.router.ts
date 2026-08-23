@@ -25,6 +25,8 @@ systemRouter.patch('/role-assignments/:assignmentId/revoke', ctrl.patchRevokeRol
 
 systemRouter.get('/users', ctrl.getUsers);
 systemRouter.post('/users', ctrl.postUser);
+systemRouter.get('/staff-roster/unlinked', ctrl.getUnlinkedStaff);
+systemRouter.post('/staff-roster', ctrl.postRosterEntry);
 systemRouter.patch('/users/:userId', ctrl.patchUser);
 systemRouter.patch('/users/:userId/suspend', ctrl.patchSuspend);
 systemRouter.patch('/users/:userId/reinstate', ctrl.patchReinstate);
