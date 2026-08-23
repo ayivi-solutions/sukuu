@@ -10,7 +10,14 @@ async function logAuthAttempt(userId: string | null, status: 'SUCCESS' | 'FAILED
 }
 
 export async function loginUser(email: string, password: string) {
-  const user = await prisma.systemUser.findFirst({ where: { email, is_active: true } });
+  // Deliberately NOT filtering by is_active here. Every user granted
+  // access starts INVITED (is_active: false) — that's correct for the
+  // state machine, but it meant this lookup could never find a brand new
+  // user at all, so their very first login attempt failed before the
+  // password was ever checked. The temp password wasn't wrong; the
+  // account was simply invisible to this query. Status-based decisions
+  // now happen AFTER the password is verified, not before.
+  const user = await prisma.systemUser.findFirst({ where: { email } });
   if (!user) {
     await logAuthAttempt(null, 'FAILED');
     throw new Error('Invalid credentials');
@@ -35,6 +42,31 @@ export async function loginUser(email: string, password: string) {
     });
     await logAuthAttempt(user.id, 'FAILED');
     throw new Error('Invalid credentials');
+  }
+
+  // Password is now verified correct — safe to give a specific reason for
+  // any further block, since an unauthenticated caller who doesn't know
+  // the password never reaches this point (they got a generic "Invalid
+  // credentials" above, same as always — no account-existence leak).
+  const status = (user as any).status as string;
+  if (status === 'SUSPENDED') {
+    await logAuthAttempt(user.id, 'FAILED');
+    throw new Error('This account is suspended. Contact your administrator.');
+  }
+  if (status === 'CLOSED') {
+    await logAuthAttempt(user.id, 'FAILED');
+    throw new Error('This account has been closed. Contact your administrator.');
+  }
+  if (status === 'LOCKED') {
+    await logAuthAttempt(user.id, 'FAILED');
+    throw new Error('This account is locked. Contact your administrator.');
+  }
+  // INVITED / PENDING_VERIFICATION reaching here means the temp password
+  // was correct — that's effectively proof of receiving real credentials
+  // from a legitimate admin, so this login itself completes activation
+  // rather than requiring a separate step the user has no way to trigger.
+  if (status === 'INVITED' || status === 'PENDING_VERIFICATION') {
+    await prisma.systemUser.update({ where: { id: user.id }, data: { status: 'ACTIVE', is_active: true, is_verified: true, row_version: { increment: 1 } } as any });
   }
 
   await prisma.systemUser.update({
@@ -119,6 +151,7 @@ export async function loginUser(email: string, password: string) {
       roleKey,
       roleLabel: primaryRole?.label || roleKey,
       roles:     [...activeRoleNames],
+      mustResetPassword: !!user.must_reset_password,
     },
     school: { id: schoolId },
   };
@@ -158,4 +191,30 @@ export async function refreshAccessToken(token: string) {
   );
 
   return { accessToken };
+}
+
+/**
+ * Self-service — requires knowing the CURRENT password (whether that's
+ * the original admin-issued temp password or a password they'd already
+ * set), which is what actually completes the must_reset_password loop.
+ * Without this, someone told "you must reset your password" would have
+ * no way to do it and would be stuck on the admin-issued temp password
+ * indefinitely, which defeats the point of it being temporary.
+ */
+export async function changeOwnPassword(userId: string, currentPassword: string, newPassword: string) {
+  const user = await prisma.systemUser.findUnique({ where: { id: userId } });
+  if (!user) throw new Error('User not found');
+
+  const valid = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!valid) throw new Error('Current password is incorrect');
+
+  if (newPassword.length < 8) throw new Error('New password must be at least 8 characters');
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await prisma.systemUser.update({
+    where: { id: userId },
+    data: { password_hash: hash, must_reset_password: false, row_version: { increment: 1 } } as any,
+  });
+
+  return { success: true };
 }

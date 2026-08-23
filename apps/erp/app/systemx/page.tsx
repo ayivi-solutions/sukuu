@@ -271,6 +271,12 @@ export default function SystemXPage() {
     setSelectedStaffLabel('');
     setGrantForm({ staffId: '', email: '', roleId: '' });
   }
+  async function handleResetPassword(id: string, name: string) {
+    if (!confirm(`Reset ${name}'s password? Their current password stops working immediately.`)) return;
+    const res = await authedFetch(`/api/v1/system/users/${id}/reset-password`, token, { method: 'PATCH' });
+    if (res?.error) { alert(`Could not reset: ${res.error}`); return; }
+    alert(`New temporary password for ${name}: ${res.tempPassword}\n\nRecord this now — it will not be shown again.`);
+  }
   async function loadUnlinkedStaff() {
     const res = await authedFetch('/api/v1/system/staff-roster/unlinked', token);
     setUnlinkedStaff(Array.isArray(res) ? res : []);
@@ -527,6 +533,7 @@ export default function SystemXPage() {
                   <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', display: 'flex', gap: 6 }}>
                     <button onClick={() => openEdit(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>
                     <button onClick={() => openUserRoles(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600 }}>Roles</button>
+                    <button onClick={() => handleResetPassword(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Reset Password</button>
                     {u.status === 'ACTIVE'
                       ? <button onClick={() => handleSuspend(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
                       : <button onClick={() => handleReinstate(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>}

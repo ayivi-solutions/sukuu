@@ -32,6 +32,7 @@ systemRouter.patch('/users/:userId/suspend', ctrl.patchSuspend);
 systemRouter.patch('/users/:userId/reinstate', ctrl.patchReinstate);
 systemRouter.patch('/users/:userId/archive', ctrl.patchArchiveUser);
 systemRouter.patch('/users/:userId/status', ctrl.patchUserStatus);
+systemRouter.patch('/users/:userId/reset-password', ctrl.patchResetPassword);
 systemRouter.get('/users/:userId/identities', ctrl.getUserIdentities);
 systemRouter.post('/users/:userId/identities', ctrl.postUserIdentity);
 

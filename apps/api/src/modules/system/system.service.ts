@@ -672,6 +672,36 @@ export async function revokeRoleAssignment(ctx: TenantCtx, assignmentId: string)
   });
 }
 
+/**
+ * Admin-driven password reset — works regardless of the target's current
+ * status (an ACTIVE user forgetting their password is the normal case,
+ * but this also covers re-issuing credentials to someone stuck in
+ * INVITED if their original temp password was lost). Does not require
+ * the target to log in first or prove anything — that authority comes
+ * from the calling admin already having system:full access, checked by
+ * requireModuleAccess before this ever runs.
+ */
+export async function adminResetPassword(ctx: TenantCtx, userId: string) {
+  const newTempPassword = 'Sukuu@' + Math.random().toString(36).slice(2, 8) + '!';
+  const hash = await bcrypt.hash(newTempPassword, 12);
+
+  return withTenantContext(ctx, async (tx) => {
+    const user = await tx.systemUser.findUnique({ where: { id: userId } });
+    if (!user) throw new Error('User not found or not visible in current context');
+
+    await tx.systemUser.update({
+      where: { id: userId },
+      data: { password_hash: hash, must_reset_password: true, failed_login_count: 0, locked_until: null, row_version: { increment: 1 } } as any,
+    });
+
+    await tx.systemAuditEvent.create({
+      data: { school_id: ctx.schoolId, user_id: ctx.userId, action: 'ADMIN_RESET_PASSWORD', entity_type: 'system_user', entity_id: userId },
+    });
+
+    return { tempPassword: newTempPassword };
+  });
+}
+
 export async function createFeatureFlag(ctx: TenantCtx, flagKey: string, description?: string) {
   return withTenantContext(ctx, tx => tx.systemFeatureFlag.create({
     data: { flag_key: flagKey, is_enabled: false, school_id: ctx.schoolId, description, row_version: 1 } as any,

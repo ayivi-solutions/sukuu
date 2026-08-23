@@ -42,6 +42,7 @@ export const postRole = handleCreate(req => svc.createRole(ctxFrom(req), req.bod
 export const getUserRoleAssignments = handle(req => svc.listUserRoleAssignments(ctxFrom(req), req.params.userId));
 export const postUserRoleAssignment = handleCreate(req => svc.assignRoleToUser(ctxFrom(req), req.params.userId, req.body.roleId, req.body.expiresAt));
 export const patchRevokeRoleAssignment = handle(req => svc.revokeRoleAssignment(ctxFrom(req), req.params.assignmentId));
+export const patchResetPassword = handle(req => svc.adminResetPassword(ctxFrom(req), req.params.userId));
 
 // ── Users ──
 export const getUsers = handle(req => {

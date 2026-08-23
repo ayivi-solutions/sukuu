@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { loginUser, refreshAccessToken } from './auth.service';
+import { loginUser, refreshAccessToken, changeOwnPassword } from './auth.service';
 import { AuthRequest } from '../../middleware/authenticate';
 
 export async function login(req: Request, res: Response) {
@@ -37,4 +37,16 @@ export async function me(req: AuthRequest, res: Response) {
     roleKey:  req.roleKey,
     staffId:  req.staffId,
   });
+}
+
+export async function changePassword(req: AuthRequest, res: Response) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'currentPassword and newPassword required' });
+    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
+    const result = await changeOwnPassword(req.userId, currentPassword, newPassword);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Could not change password' });
+  }
 }
