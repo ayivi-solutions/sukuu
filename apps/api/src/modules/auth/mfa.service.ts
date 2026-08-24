@@ -458,7 +458,10 @@ export async function verifyTotpStepUp(
                 'STEP_UP',
                 counter
               )},
-              ${600}
+              CAST(
+                ${600}
+                AS integer
+              )
             )
             AS result
         `
