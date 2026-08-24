@@ -21,7 +21,7 @@ export interface MfaContext {
 
 
 
-function proofSecret(): Buffer {
+function proofSecret(): string {
 
   const raw =
     process.env.MFA_PROOF_SECRET;
@@ -36,7 +36,19 @@ function proofSecret(): Buffer {
   }
 
 
-  const secret =
+  /*
+   * Validate that the configured value represents exactly
+   * 256 bits of random secret material.
+   *
+   * IMPORTANT:
+   * The canonical base64 TEXT is deliberately used as the
+   * HMAC key rather than the decoded Buffer.
+   *
+   * PostgreSQL receives the same secret_value as text through
+   * system._hmac_sha256_hex(), so both runtimes must use the
+   * identical byte representation of the key.
+   */
+  const decoded =
     Buffer.from(
       raw,
       'base64'
@@ -44,7 +56,7 @@ function proofSecret(): Buffer {
 
 
   if (
-    secret.length !== 32
+    decoded.length !== 32
   ) {
 
     throw new Error(
@@ -54,7 +66,7 @@ function proofSecret(): Buffer {
   }
 
 
-  return secret;
+  return raw;
 
 }
 
