@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { authedFetch } from '../../lib/api';
+import { authedFetch as baseAuthedFetch, verifyFreshStepUp } from '../../lib/api';
 import AppShell from '../../components/AppShell';
 
 const TABS = [
@@ -70,6 +70,16 @@ export default function SystemXPage() {
   >(null);
   const [dialogReason, setDialogReason] = useState('');
   const [dialogCopied, setDialogCopied] = useState(false);
+  const [stepUpRequest, setStepUpRequest] = useState<
+    | null
+    | {
+        retry: () => Promise<any>;
+        resolve: (value: any) => void;
+      }
+  >(null);
+  const [stepUpCode, setStepUpCode] = useState('');
+  const [stepUpBusy, setStepUpBusy] = useState(false);
+  const [stepUpError, setStepUpError] = useState('');
   const [managingUserRoles, setManagingUserRoles] = useState<any>(null);
   const [userRoleAssignments, setUserRoleAssignments] = useState<any[]>([]);
   const [assignRoleForm, setAssignRoleForm] = useState({ roleId: '', expiresAt: '' });
@@ -109,6 +119,128 @@ export default function SystemXPage() {
   const [accessChecked, setAccessChecked] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
 
+  async function systemFetch(
+    path: string,
+    requestToken: string,
+    opts: RequestInit = {}
+  ) {
+    try {
+      return await baseAuthedFetch(
+        path,
+        requestToken,
+        opts
+      );
+    } catch (err: any) {
+      if (
+        err?.stepUpRequired !== true
+      ) {
+        throw err;
+      }
+
+      return await new Promise<any>(
+        resolve => {
+          setStepUpCode('');
+          setStepUpError('');
+
+          setStepUpRequest({
+            retry: () =>
+              baseAuthedFetch(
+                path,
+                requestToken,
+                opts
+              ),
+            resolve,
+          });
+        }
+      );
+    }
+  }
+
+  async function handleFreshStepUp(
+    e: React.FormEvent
+  ) {
+    e.preventDefault();
+
+    if (
+      !stepUpRequest ||
+      !/^\d{6}$/.test(
+        stepUpCode
+      )
+    ) {
+      return;
+    }
+
+    setStepUpBusy(true);
+    setStepUpError('');
+
+    const request =
+      stepUpRequest;
+
+    try {
+      await verifyFreshStepUp(
+        token,
+        stepUpCode
+      );
+
+      const result =
+        await request.retry();
+
+      request.resolve(
+        result
+      );
+
+      setStepUpRequest(
+        null
+      );
+
+      setStepUpCode(
+        ''
+      );
+
+    } catch (err: any) {
+
+      setStepUpError(
+        err?.message ||
+        'Fresh authentication failed.'
+      );
+
+      setStepUpCode(
+        ''
+      );
+
+    } finally {
+
+      setStepUpBusy(
+        false
+      );
+
+    }
+  }
+
+  function cancelFreshStepUp() {
+    const request =
+      stepUpRequest;
+
+    setStepUpRequest(
+      null
+    );
+
+    setStepUpCode(
+      ''
+    );
+
+    setStepUpError(
+      ''
+    );
+
+    request?.resolve({
+      error:
+        'Fresh authentication cancelled.',
+      stepUpRequired:
+        true,
+    });
+  }
+
   useEffect(() => {
     const t = localStorage.getItem('sukuu_token');
     const userStr = localStorage.getItem('sukuu_user');
@@ -133,21 +265,21 @@ export default function SystemXPage() {
   }, [router]);
 
   function loadAll(t: string) {
-    authedFetch('/api/v1/system/users', t).then(d => Array.isArray(d) ? setUsers(d) : setError(d.error));
-    authedFetch('/api/v1/system/roles', t).then(d => Array.isArray(d) && setRoles(d));
-    authedFetch('/api/v1/system/permissions', t).then(d => Array.isArray(d) && setPermissions(d));
-    authedFetch('/api/v1/system/flags', t).then(d => Array.isArray(d) && setFlags(d));
-    authedFetch('/api/v1/system/audit-log', t).then(d => Array.isArray(d) && setAudit(d));
-    authedFetch('/api/v1/system/sessions', t).then(d => Array.isArray(d) && setSessions(d));
-    authedFetch('/api/v1/system/auth-log', t).then(d => Array.isArray(d) && setAuthLog(d));
-    authedFetch('/api/v1/system/password-policy', t).then(d => d && !d.error && setPwdPolicy(d));
-    authedFetch('/api/v1/system/security-policies', t).then(d => Array.isArray(d) && setSecPolicies(d));
-    authedFetch('/api/v1/system/api-keys', t).then(d => Array.isArray(d) && setApiKeys(d));
-    authedFetch('/api/v1/system/webhooks', t).then(d => Array.isArray(d) && setWebhooks(d));
-    authedFetch('/api/v1/system/events', t).then(d => Array.isArray(d) && setEvents(d));
+    systemFetch('/api/v1/system/users', t).then(d => Array.isArray(d) ? setUsers(d) : setError(d.error));
+    systemFetch('/api/v1/system/roles', t).then(d => Array.isArray(d) && setRoles(d));
+    systemFetch('/api/v1/system/permissions', t).then(d => Array.isArray(d) && setPermissions(d));
+    systemFetch('/api/v1/system/flags', t).then(d => Array.isArray(d) && setFlags(d));
+    systemFetch('/api/v1/system/audit-log', t).then(d => Array.isArray(d) && setAudit(d));
+    systemFetch('/api/v1/system/sessions', t).then(d => Array.isArray(d) && setSessions(d));
+    systemFetch('/api/v1/system/auth-log', t).then(d => Array.isArray(d) && setAuthLog(d));
+    systemFetch('/api/v1/system/password-policy', t).then(d => d && !d.error && setPwdPolicy(d));
+    systemFetch('/api/v1/system/security-policies', t).then(d => Array.isArray(d) && setSecPolicies(d));
+    systemFetch('/api/v1/system/api-keys', t).then(d => Array.isArray(d) && setApiKeys(d));
+    systemFetch('/api/v1/system/webhooks', t).then(d => Array.isArray(d) && setWebhooks(d));
+    systemFetch('/api/v1/system/events', t).then(d => Array.isArray(d) && setEvents(d));
     loadOps(t);
     setSummaryLoading(true);
-    authedFetch('/api/v1/system/summary', t)
+    systemFetch('/api/v1/system/summary', t)
       .then(d => { if (d && !d.error) { setSummary(d); setSummaryError(''); } else { setSummaryError(d?.error || 'Failed to load summary'); } })
       .catch(() => setSummaryError('Failed to load summary'))
       .finally(() => setSummaryLoading(false));
@@ -155,16 +287,16 @@ export default function SystemXPage() {
 
   function loadOps(t: string) {
     Promise.all([
-      authedFetch('/api/v1/ops/config', t),
-      authedFetch('/api/v1/ops/departments', t),
-      authedFetch('/api/v1/ops/integrations', t),
-      authedFetch('/api/v1/ops/backups', t),
-      authedFetch('/api/v1/ops/jobs', t),
-      authedFetch('/api/v1/ops/health-checks', t),
-      authedFetch('/api/v1/ops/rate-limits', t),
-      authedFetch('/api/v1/ops/retention', t),
-      authedFetch('/api/v1/ops/errors', t),
-      authedFetch('/api/v1/ops/services', t),
+      systemFetch('/api/v1/ops/config', t),
+      systemFetch('/api/v1/ops/departments', t),
+      systemFetch('/api/v1/ops/integrations', t),
+      systemFetch('/api/v1/ops/backups', t),
+      systemFetch('/api/v1/ops/jobs', t),
+      systemFetch('/api/v1/ops/health-checks', t),
+      systemFetch('/api/v1/ops/rate-limits', t),
+      systemFetch('/api/v1/ops/retention', t),
+      systemFetch('/api/v1/ops/errors', t),
+      systemFetch('/api/v1/ops/services', t),
     ]).then(([config, departments, integrations, backups, jobs, health, rateLimits, retention, errors, services]) => {
       setOps({ config, departments, integrations, backups, jobs, health, rateLimits, retention, errors, services });
     });
@@ -176,7 +308,7 @@ export default function SystemXPage() {
       title: `Suspend ${name}?`,
       message: 'They will lose access immediately. This is reversible via Reinstate. The reason becomes part of the permanent audit record.',
       onConfirm: async (reason) => {
-        const res = await authedFetch(`/api/v1/system/users/${id}/suspend`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+        const res = await systemFetch(`/api/v1/system/users/${id}/suspend`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
         if (res?.error) { setDialog({ type: 'info', title: 'Could not suspend', message: res.error }); return; }
         setDialog({ type: 'info', title: 'Suspended', message: `${name} has been suspended. Reason recorded: "${reason}". Reversible via Reinstate.` });
         loadAll(token);
@@ -189,7 +321,7 @@ export default function SystemXPage() {
       title: `Reinstate ${name}?`,
       message: 'They will regain the access they had before being suspended. The reason becomes part of the permanent audit record.',
       onConfirm: async (reason) => {
-        const res = await authedFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+        const res = await systemFetch(`/api/v1/system/users/${id}/reinstate`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
         if (res?.error) { setDialog({ type: 'info', title: 'Could not reinstate', message: res.error }); return; }
         setDialog({ type: 'info', title: 'Reinstated', message: `${name} has been reinstated. Reason recorded: "${reason}".` });
         loadAll(token);
@@ -201,7 +333,7 @@ export default function SystemXPage() {
       type: 'confirm', danger: true, title: 'Archive this user?',
       message: 'They will be deactivated permanently but the record is retained (no hard deletes).',
       onConfirm: async () => {
-        await authedFetch(`/api/v1/system/users/${id}/archive`, token, { method: 'PATCH' });
+        await systemFetch(`/api/v1/system/users/${id}/archive`, token, { method: 'PATCH' });
         loadAll(token);
       },
     });
@@ -213,7 +345,7 @@ export default function SystemXPage() {
   }
   async function handleSaveEdit(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch(`/api/v1/system/users/${editingUser.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
+    await systemFetch(`/api/v1/system/users/${editingUser.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(editForm) });
     setEditingUser(null);
     loadAll(token);
   }
@@ -221,13 +353,13 @@ export default function SystemXPage() {
 
   async function openUserRoles(u: any) {
     setManagingUserRoles(u);
-    const res = await authedFetch(`/api/v1/system/users/${u.id}/role-assignments`, token);
+    const res = await systemFetch(`/api/v1/system/users/${u.id}/role-assignments`, token);
     setUserRoleAssignments(Array.isArray(res) ? res : []);
   }
   async function handleAssignRole(e: React.FormEvent) {
     e.preventDefault();
     setAssignRoleBusy(true);
-    const res = await authedFetch(`/api/v1/system/users/${managingUserRoles.id}/role-assignments`, token, {
+    const res = await systemFetch(`/api/v1/system/users/${managingUserRoles.id}/role-assignments`, token, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roleId: assignRoleForm.roleId, expiresAt: assignRoleForm.expiresAt || undefined }),
     });
@@ -242,7 +374,7 @@ export default function SystemXPage() {
       type: 'confirm', title: 'Revoke this role assignment?',
       message: 'Takes effect on their very next request — no need for them to log out.',
       onConfirm: async () => {
-        await authedFetch(`/api/v1/system/role-assignments/${assignmentId}/revoke`, token, { method: 'PATCH' });
+        await systemFetch(`/api/v1/system/role-assignments/${assignmentId}/revoke`, token, { method: 'PATCH' });
         openUserRoles(managingUserRoles);
         loadAll(token);
       },
@@ -250,50 +382,50 @@ export default function SystemXPage() {
   }
   async function handleSaveRole(e: React.FormEvent) {
     e.preventDefault();
-    const res = await authedFetch(`/api/v1/system/roles/${editingRole.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roleForm) });
+    const res = await systemFetch(`/api/v1/system/roles/${editingRole.id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(roleForm) });
     if (!res.error) setEditingRole(null);
     loadAll(token);
   }
   async function handleCreateRole(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/system/roles', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(createRoleForm) });
+    await systemFetch('/api/v1/system/roles', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(createRoleForm) });
     setShowCreateRole(false);
     setCreateRoleForm({ name: '', label: '', description: '' });
     loadAll(token);
   }
   async function openManagePerms(r: any) {
     setManagingRole(r);
-    const current = await authedFetch(`/api/v1/system/roles/${r.id}/permissions`, token);
+    const current = await systemFetch(`/api/v1/system/roles/${r.id}/permissions`, token);
     setRolePerms(Array.isArray(current) ? current.map((p: any) => p.id) : []);
   }
   async function togglePermission(permId: string, isGranted: boolean) {
     if (isGranted) {
-      await authedFetch(`/api/v1/system/roles/${managingRole.id}/permissions/${permId}`, token, { method: 'DELETE' });
+      await systemFetch(`/api/v1/system/roles/${managingRole.id}/permissions/${permId}`, token, { method: 'DELETE' });
       setRolePerms(rolePerms.filter(id => id !== permId));
     } else {
-      await authedFetch(`/api/v1/system/roles/${managingRole.id}/permissions`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permissionId: permId }) });
+      await systemFetch(`/api/v1/system/roles/${managingRole.id}/permissions`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permissionId: permId }) });
       setRolePerms([...rolePerms, permId]);
     }
     loadAll(token);
   }
   async function handleToggleFlag(flagId: string, current: boolean) {
-    await authedFetch(`/api/v1/system/flags/${flagId}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isEnabled: !current }) });
+    await systemFetch(`/api/v1/system/flags/${flagId}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isEnabled: !current }) });
     loadAll(token);
   }
   async function handleCreateFlag(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/system/flags', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(flagForm) });
+    await systemFetch('/api/v1/system/flags', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(flagForm) });
     setFlagForm({ flagKey: '', description: '' });
     loadAll(token);
   }
-  async function handleRevokeSession(id: string) { await authedFetch(`/api/v1/system/sessions/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
+  async function handleRevokeSession(id: string) { await systemFetch(`/api/v1/system/sessions/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
   const [justAdded, setJustAdded] = useState<any>(null);
   const [staffPickerOpen, setStaffPickerOpen] = useState(false);
   const [staffPickerQuery, setStaffPickerQuery] = useState('');
   const [selectedStaffLabel, setSelectedStaffLabel] = useState('');
   async function handleAddRosterEntry(e: React.FormEvent) {
     e.preventDefault();
-    const res = await authedFetch('/api/v1/system/staff-roster', token, {
+    const res = await systemFetch('/api/v1/system/staff-roster', token, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rosterForm),
     });
     if (res.error) { setRosterMsg(res.error); return; }
@@ -323,14 +455,14 @@ export default function SystemXPage() {
       message: 'Their current password stops working immediately.',
       confirmLabel: 'Reset Password',
       onConfirm: async () => {
-        const res = await authedFetch(`/api/v1/system/users/${id}/reset-password`, token, { method: 'PATCH' });
+        const res = await systemFetch(`/api/v1/system/users/${id}/reset-password`, token, { method: 'PATCH' });
         if (res?.error) { setDialog({ type: 'info', title: 'Could not reset', message: res.error }); return; }
         setDialog({ type: 'info', title: 'New Temporary Password', message: `For ${name}. Record this now — it will not be shown again.`, copyable: res.tempPassword });
       },
     });
   }
   async function loadUnlinkedStaff() {
-    const res = await authedFetch('/api/v1/system/staff-roster/unlinked', token);
+    const res = await systemFetch('/api/v1/system/staff-roster/unlinked', token);
     setUnlinkedStaff(Array.isArray(res) ? res : []);
   }
   async function handleGrantAccess(e: React.FormEvent) {
@@ -339,7 +471,7 @@ export default function SystemXPage() {
     // flaky connection, browser back) without granting access twice —
     // the API returns the original result instead of re-running the command.
     const operationId = crypto.randomUUID();
-    const res = await authedFetch('/api/v1/system/users', token, {
+    const res = await systemFetch('/api/v1/system/users', token, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Operation-Id': operationId },
       body: JSON.stringify(grantForm),
@@ -355,66 +487,66 @@ export default function SystemXPage() {
   }
   async function handleSavePwdPolicy(e: React.FormEvent) {
     e.preventDefault();
-    const r = await authedFetch('/api/v1/system/password-policy', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pwdPolicy) });
+    const r = await systemFetch('/api/v1/system/password-policy', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pwdPolicy) });
     setPwdPolicy(r);
     loadAll(token);
   }
   async function handleAddSecPolicy(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/system/security-policies', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(secPolicyForm) });
+    await systemFetch('/api/v1/system/security-policies', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(secPolicyForm) });
     setSecPolicyForm({ policyName: '', policyValue: '' });
     loadAll(token);
   }
   async function handleCreateApiKey(e: React.FormEvent) {
     e.preventDefault();
-    const r = await authedFetch('/api/v1/system/api-keys', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiKeyForm) });
+    const r = await systemFetch('/api/v1/system/api-keys', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiKeyForm) });
     setApiKeyResult(r.rawKey ? `Save this now — won't be shown again: ${r.rawKey}` : '');
     setApiKeyForm({ label: '', scopes: '' });
     loadAll(token);
   }
-  async function handleRevokeApiKey(id: string) { await authedFetch(`/api/v1/system/api-keys/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
+  async function handleRevokeApiKey(id: string) { await systemFetch(`/api/v1/system/api-keys/${id}/revoke`, token, { method: 'PATCH' }); loadAll(token); }
   async function handleCreateWebhook(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/system/webhooks', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(webhookForm) });
+    await systemFetch('/api/v1/system/webhooks', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(webhookForm) });
     setWebhookForm({ url: '', events: '' });
     loadAll(token);
   }
   async function handleToggleWebhook(id: string, current: boolean) {
-    await authedFetch(`/api/v1/system/webhooks/${id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !current }) });
+    await systemFetch(`/api/v1/system/webhooks/${id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !current }) });
     loadAll(token);
   }
-  async function handleRunHealthCheck() { await authedFetch('/api/v1/ops/health-check', token, { method: 'POST' }); loadOps(token); }
+  async function handleRunHealthCheck() { await systemFetch('/api/v1/ops/health-check', token, { method: 'POST' }); loadOps(token); }
   async function handleSaveConfig(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/ops/config', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configForm) });
+    await systemFetch('/api/v1/ops/config', token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(configForm) });
     setConfigForm({ key: '', value: '' });
     loadOps(token);
   }
   async function handleAddDept(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/ops/departments', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(deptForm) });
+    await systemFetch('/api/v1/ops/departments', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(deptForm) });
     setDeptForm({ name: '', description: '' });
     loadOps(token);
   }
   async function handleAddIntegration(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/ops/integrations', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(integrationForm) });
+    await systemFetch('/api/v1/ops/integrations', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(integrationForm) });
     setIntegrationForm({ name: '', type: '', config: '' });
     loadOps(token);
   }
   async function handleToggleIntegration(id: string, current: boolean) {
-    await authedFetch(`/api/v1/ops/integrations/${id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !current }) });
+    await systemFetch(`/api/v1/ops/integrations/${id}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive: !current }) });
     loadOps(token);
   }
   async function handleAddRateLimit(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/ops/rate-limits', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rateLimitForm) });
+    await systemFetch('/api/v1/ops/rate-limits', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rateLimitForm) });
     setRateLimitForm({ endpoint: '', maxRequests: 100, windowSeconds: 60 });
     loadOps(token);
   }
   async function handleAddRetention(e: React.FormEvent) {
     e.preventDefault();
-    await authedFetch('/api/v1/ops/retention', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(retentionForm) });
+    await systemFetch('/api/v1/ops/retention', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(retentionForm) });
     setRetentionForm({ policyName: '', retentionYears: 7, description: '' });
     loadOps(token);
   }
@@ -432,7 +564,7 @@ export default function SystemXPage() {
     setBulkBusy(true);
     setBulkResult(null);
     const rows = parseBulkCsv();
-    const res = await authedFetch('/api/v1/system/users/bulk/preview', token, {
+    const res = await systemFetch('/api/v1/system/users/bulk/preview', token, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
     });
     setBulkPreview(Array.isArray(res) ? res : []);
@@ -445,7 +577,7 @@ export default function SystemXPage() {
       onConfirm: async () => {
         setBulkBusy(true);
         const rows = parseBulkCsv();
-        const res = await authedFetch('/api/v1/system/users/bulk/commit', token, {
+        const res = await systemFetch('/api/v1/system/users/bulk/commit', token, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }),
         });
         setBulkResult(Array.isArray(res) ? res : []);
@@ -479,7 +611,7 @@ export default function SystemXPage() {
       if (auditExportFilters.toDate) params.set('toDate', auditExportFilters.toDate);
       url += `?${params.toString()}`;
     }
-    const res = await authedFetch(url, token);
+    const res = await systemFetch(url, token);
     setReportData(Array.isArray(res) ? res : (res?.error ? [] : res));
     setReportLoading(false);
   }
@@ -1255,6 +1387,152 @@ export default function SystemXPage() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {stepUpRequest && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(4,13,52,.62)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 220,
+        }}>
+          <form
+            onSubmit={handleFreshStepUp}
+            style={{
+              background: 'var(--white)',
+              padding: 24,
+              borderRadius: 'var(--r)',
+              width: 390,
+              boxShadow: 'var(--shL)',
+            }}
+          >
+            <div style={{
+              fontSize: 10,
+              fontWeight: 800,
+              letterSpacing: 1.4,
+              color: 'var(--gold)',
+              marginBottom: 8,
+            }}>
+              PRIVILEGED ACTION · FRESH AUTHENTICATION
+            </div>
+
+            <h3 style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 20,
+              marginBottom: 8,
+            }}>
+              Verify Fresh Access
+            </h3>
+
+            <p style={{
+              fontSize: 13,
+              color: 'var(--muted)',
+              lineHeight: 1.55,
+              marginBottom: 14,
+            }}>
+              This SystemX change requires a fresh authenticator check.
+              Verification authorizes protected administrative actions for
+              approximately 10 minutes. If you just signed in, wait for the
+              next authenticator code before verifying.
+            </p>
+
+            <label style={{
+              display: 'block',
+              fontSize: 11,
+              fontWeight: 700,
+              marginBottom: 6,
+            }}>
+              Authenticator Code
+            </label>
+
+            <input
+              className="fi"
+              type="text"
+              value={stepUpCode}
+              onChange={e =>
+                setStepUpCode(
+                  e.target.value
+                    .replace(/\D/g, '')
+                    .slice(0, 6)
+                )
+              }
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="6-digit code"
+              autoFocus
+              disabled={stepUpBusy}
+              style={{
+                width: '100%',
+                marginBottom: stepUpError ? 8 : 14,
+              }}
+            />
+
+            {stepUpError && (
+              <div style={{
+                color: 'var(--er)',
+                fontSize: 12,
+                lineHeight: 1.45,
+                marginBottom: 12,
+              }}>
+                {stepUpError}
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              gap: 8,
+            }}>
+              <button
+                type="submit"
+                disabled={
+                  stepUpBusy ||
+                  !/^\d{6}$/.test(
+                    stepUpCode
+                  )
+                }
+                style={{
+                  flex: 1,
+                  background: 'var(--navy)',
+                  color: 'white',
+                  padding: 11,
+                  borderRadius: 'var(--rS)',
+                  fontWeight: 700,
+                  opacity:
+                    stepUpBusy ||
+                    !/^\d{6}$/.test(
+                      stepUpCode
+                    )
+                      ? .55
+                      : 1,
+                }}
+              >
+                {stepUpBusy
+                  ? 'Verifying…'
+                  : 'Verify & Continue'}
+              </button>
+
+              <button
+                type="button"
+                onClick={cancelFreshStepUp}
+                disabled={stepUpBusy}
+                style={{
+                  flex: 1,
+                  background: 'var(--soft)',
+                  color: 'var(--ink)',
+                  padding: 11,
+                  borderRadius: 'var(--rS)',
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
