@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
+import { validateRuntimeEnvironment } from './lib/validateRuntimeEnv';
 import express from 'express';
 import cors from 'cors';
 import { errorHandler } from './middleware/errorHandler';
@@ -34,6 +35,8 @@ import { workflowRouter } from './modules/workflow/workflow.router';
 import { notificationRouter } from './modules/notification/notification.router';
 import { communicationRouter } from './modules/communication/communication.router';
 import { analyticsRouter } from './modules/analytics/analytics.router';
+
+validateRuntimeEnvironment();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
