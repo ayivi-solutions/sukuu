@@ -94,22 +94,29 @@ export async function getMyModuleAccess(
   const roleIds = roles.map(r => r.id);
   if (roleIds.length === 0) return {};
 
+  // PHASE_2E_TRUSTED_RBAC_READ
   const grants =
-    await prisma.systemRolePermission.findMany({
-      where: {
-        role_id: { in: roleIds },
-      },
-    });
+    await withTenantContext(
+      { schoolId, userId, role: '' },
+      tx => tx.systemRolePermission.findMany({
+        where: {
+          role_id: { in: roleIds },
+        },
+      })
+    );
 
   const permIds =
     [...new Set(grants.map(g => g.permission_id))];
 
   const perms =
-    await prisma.systemPermission.findMany({
-      where: {
-        id: { in: permIds },
-      },
-    });
+    await withTenantContext(
+      { schoolId, userId, role: '' },
+      tx => tx.systemPermission.findMany({
+        where: {
+          id: { in: permIds },
+        },
+      })
+    );
 
   const access:
     Record<string, 'read' | 'full'> = {};
@@ -162,12 +169,15 @@ export async function hasModuleGrant(
       : ['full'];
 
   const perms =
-    await prisma.systemPermission.findMany({
-      where: {
-        module,
-        action: { in: levelsToCheck },
-      },
-    });
+    await withTenantContext(
+      { schoolId, userId, role: '' },
+      tx => tx.systemPermission.findMany({
+        where: {
+          module,
+          action: { in: levelsToCheck },
+        },
+      })
+    );
 
   const permIds = perms.map(p => p.id);
 
@@ -176,12 +186,15 @@ export async function hasModuleGrant(
   }
 
   const grant =
-    await prisma.systemRolePermission.findFirst({
-      where: {
-        role_id: { in: roleIds },
-        permission_id: { in: permIds },
-      },
-    });
+    await withTenantContext(
+      { schoolId, userId, role: '' },
+      tx => tx.systemRolePermission.findFirst({
+        where: {
+          role_id: { in: roleIds },
+          permission_id: { in: permIds },
+        },
+      })
+    );
 
   if (!grant) {
     return { granted: false };

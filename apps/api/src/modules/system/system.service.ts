@@ -833,9 +833,25 @@ export async function getSystemSummary(ctx: TenantCtx) {
 // ═══════════════════════════════════════════════════════════════════════
 
 export async function logSensitiveView(ctx: TenantCtx, entityType: string, entityId: string) {
-  return prisma.systemAuditEvent.create({
-    data: { school_id: ctx.schoolId || null, user_id: ctx.userId || null, action: 'VIEW', entity_type: entityType, entity_id: entityId },
-  }).catch(err => { console.error('[Audit-on-view write failed]', err.message); return null; });
+  // PHASE_2E_TRUSTED_AUDIT_VIEW
+  return withTenantContext(
+    ctx,
+    tx => tx.systemAuditEvent.create({
+      data: {
+        school_id: ctx.schoolId || null,
+        user_id: ctx.userId || null,
+        action: 'VIEW',
+        entity_type: entityType,
+        entity_id: entityId,
+      },
+    })
+  ).catch(err => {
+    console.error(
+      '[Audit-on-view write failed]',
+      err.message
+    );
+    return null;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1062,9 +1078,15 @@ export async function listDomainEvents(ctx: TenantCtx, limit = 100) {
   // code after authorization already happened for the underlying action —
   // see 02_rls_and_role.sql section 7). We still scope by tenant_id at the
   // query level so a school only sees its own event history here.
-  return prisma.systemDomainEvent.findMany({
-    where: ctx.schoolId ? { tenant_id: ctx.schoolId } : {},
-    orderBy: { occurred_at: 'desc' },
-    take: limit,
-  });
+  // PHASE_2E_TRUSTED_EVENT_READ
+  return withTenantContext(
+    ctx,
+    tx => tx.systemDomainEvent.findMany({
+      where: ctx.schoolId
+        ? { tenant_id: ctx.schoolId }
+        : {},
+      orderBy: { occurred_at: 'desc' },
+      take: limit,
+    })
+  );
 }
