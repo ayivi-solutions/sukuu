@@ -2,6 +2,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { prisma } from '../../lib/prisma';
+import {
+  validateCredentialPassword,
+} from './credential.service';
 import { withTenantContext } from '../../lib/tenantContext';
 import {
   finalizeAuthSession,
@@ -134,6 +137,12 @@ export async function loginUser(
     !verified.roles?.length
   ) {
     throw verificationFailure(verified);
+  }
+
+  if (verified.mustResetPassword) {
+    throw new Error(
+      'Credential activation or reset is required for this account.'
+    );
   }
 
   const {
@@ -427,44 +436,9 @@ export async function changeOwnPassword(
     );
   }
 
-  const context = {
-    sessionId: currentSessionId,
-    schoolId: '',
-    userId,
-    role: '',
-  };
-
-  const user =
-    await withTenantContext(
-      context,
-      tx => tx.systemUser.findUnique({
-        where: { id: userId },
-      })
-    );
-
-  if (!user) {
-    throw new Error(
-      'User not found'
-    );
-  }
-
-  const valid =
-    await bcrypt.compare(
-      currentPassword,
-      user.password_hash
-    );
-
-  if (!valid) {
-    throw new Error(
-      'Current password is incorrect'
-    );
-  }
-
-  if (newPassword.length < 8) {
-    throw new Error(
-      'New password must be at least 8 characters'
-    );
-  }
+  validateCredentialPassword(
+    newPassword
+  );
 
   const hash =
     await bcrypt.hash(
@@ -472,42 +446,78 @@ export async function changeOwnPassword(
       12
     );
 
-  const now = new Date();
+  const context = {
+    sessionId:
+      currentSessionId,
+    schoolId: '',
+    userId,
+    role: '',
+  };
 
-  await withTenantContext(
-    context,
-    async tx => {
-      await tx.systemUser.update({
-        where: {
-          id: userId,
-        },
-        data: {
-          password_hash: hash,
-          must_reset_password: false,
-          row_version: {
-            increment: 1,
-          },
-        } as any,
-      });
+  const rows =
+    await withTenantContext(
+      context,
+      tx =>
+        tx.$queryRaw<
+          Array<{
+            result: {
+              ok: boolean;
+              reason?:
+                | 'INVALID_SESSION'
+                | 'ACCOUNT_BLOCKED'
+                | 'CURRENT_PASSWORD_INVALID'
+                | 'WEAK_PASSWORD'
+                | 'PASSWORD_REUSED';
+            };
+          }>
+        >`
+          SELECT
+            system.auth_change_own_password(
+              ${currentPassword},
+              ${newPassword},
+              ${hash}
+            ) AS result
+        `
+    );
 
-      await tx.systemSession.updateMany({
-        where: {
-          user_id: userId,
-          is_active: true,
-          id: {
-            not: currentSessionId,
-          },
-        },
-        data: {
-          is_active: false,
-          invalidated_at: now,
-          last_activity_at: now,
-        },
-      });
+  const result =
+    rows[0]?.result;
+
+  if (!result?.ok) {
+
+    switch (result?.reason) {
+
+      case 'CURRENT_PASSWORD_INVALID':
+        throw new Error(
+          'Current password is incorrect'
+        );
+
+      case 'WEAK_PASSWORD':
+        throw new Error(
+          'New password does not meet the credential policy'
+        );
+
+      case 'PASSWORD_REUSED':
+        throw new Error(
+          'Choose a password that has not previously been used for this account'
+        );
+
+      case 'ACCOUNT_BLOCKED':
+        throw new Error(
+          'This account cannot change credentials in its current state'
+        );
+
+      default:
+        throw new Error(
+          'Password change session is no longer valid'
+        );
+
     }
-  );
+
+  }
 
   return {
     success: true,
+    requiresLogin: true,
   };
 }

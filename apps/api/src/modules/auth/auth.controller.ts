@@ -6,6 +6,9 @@ import {
   changeOwnPassword,
 } from './auth.service';
 import { getMyModuleAccess } from '../../lib/roleGrants';
+import {
+  activateCredentialWithToken,
+} from './credential.service';
 import { AuthRequest } from '../../middleware/authenticate';
 
 export async function login(req: Request, res: Response) {
@@ -86,5 +89,45 @@ export async function myAccess(req: AuthRequest, res: Response) {
     res.json(access);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+}
+
+
+export async function activateCredential(
+  req: Request,
+  res: Response
+) {
+  try {
+    const {
+      activationToken,
+      newPassword,
+    } = req.body;
+
+    if (
+      !activationToken ||
+      !newPassword
+    ) {
+      return res.status(400).json({
+        error:
+          'activationToken and newPassword required',
+      });
+    }
+
+    const result =
+      await activateCredentialWithToken(
+        activationToken,
+        newPassword
+      );
+
+    res.json(result);
+
+  } catch (err: any) {
+
+    res.status(400).json({
+      error:
+        err.message ||
+        'Could not establish credential',
+    });
+
   }
 }

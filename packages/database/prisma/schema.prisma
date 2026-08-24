@@ -5435,3 +5435,25 @@ model SystemCommandLog {
   @@schema("system")
   @@map("system_command_log")
 }
+
+
+model SystemCredentialChallenge {
+  id            String    @id @default(uuid()) @db.Uuid
+  user_id       String
+  school_id     String
+  purpose       String
+  token_hash    String    @unique
+  issued_by     String?
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  expires_at    DateTime  @db.Timestamptz(6)
+  consumed_at   DateTime? @db.Timestamptz(6)
+  revoked_at    DateTime? @db.Timestamptz(6)
+  attempt_count Int       @default(0)
+  max_attempts  Int       @default(5)
+
+  @@index([user_id])
+  @@index([school_id])
+  @@index([expires_at])
+  @@map("system_credential_challenge")
+  @@schema("system")
+}

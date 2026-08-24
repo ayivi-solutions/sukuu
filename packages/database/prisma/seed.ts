@@ -4,6 +4,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 const SCHOOL_ID = 'SCH-001';
@@ -186,7 +187,7 @@ async function main() {
   const staffSeed = [
     {
       userId: 'USR-EA-001', staffId: 'STF-EA-001',
-      email: 'e.asante@presec.edu.gh', password: 'Sukuu@Head2026!',
+      email: 'e.asante@presec.edu.gh',
       firstName: 'Emmanuel', lastName: 'Asante', gender: 'MALE',
       dob: '1972-04-15', phone: '+233244001001',
       roleId: 'ROL-001', deptId: 'DEP-MGT', empType: 'PERMANENT',
@@ -194,7 +195,7 @@ async function main() {
     },
     {
       userId: 'USR-AO-002', staffId: 'STF-AO-002',
-      email: 'admin@presec.edu.gh', password: 'Sukuu@Admin2026!',
+      email: 'admin@presec.edu.gh',
       firstName: 'Abena', lastName: 'Owusu', gender: 'FEMALE',
       dob: '1985-07-22', phone: '+233244001002',
       roleId: 'ROL-002', deptId: 'DEP-ADM', empType: 'PERMANENT',
@@ -202,7 +203,7 @@ async function main() {
     },
     {
       userId: 'USR-KO-003', staffId: 'STF-KO-003',
-      email: 'k.owusu@presec.edu.gh', password: 'Sukuu@Teacher2026!',
+      email: 'k.owusu@presec.edu.gh',
       firstName: 'Kwame', lastName: 'Owusu-Acheampong', gender: 'MALE',
       dob: '1988-11-03', phone: '+233244001003',
       roleId: 'ROL-003', deptId: 'DEP-MAT', empType: 'PERMANENT',
@@ -210,7 +211,7 @@ async function main() {
     },
     {
       userId: 'USR-BT-007', staffId: 'STF-BT-006',
-      email: 'b.twum@presec.edu.gh', password: 'Sukuu@Bursar2026!',
+      email: 'b.twum@presec.edu.gh',
       firstName: 'Benjamin', lastName: 'Twum', gender: 'MALE',
       dob: '1987-09-14', phone: '+233244001007',
       roleId: 'ROL-004', deptId: 'DEP-ADM', empType: 'PERMANENT',
@@ -218,7 +219,7 @@ async function main() {
     },
     {
       userId: 'USR-EY-008', staffId: 'STF-EY-007',
-      email: 'e.yeboah@presec.edu.gh', password: 'Sukuu@Reg2026!',
+      email: 'e.yeboah@presec.edu.gh',
       firstName: 'Efua', lastName: 'Yeboah', gender: 'FEMALE',
       dob: '1992-12-01', phone: '+233244001008',
       roleId: 'ROL-005', deptId: 'DEP-ADM', empType: 'CONTRACT',
@@ -227,14 +228,23 @@ async function main() {
   ] as const;
 
   for (const s of staffSeed) {
-    const hash = await bcrypt.hash(s.password, 12);
+    const bootstrapSecret =
+      randomBytes(48)
+        .toString('base64url');
+
+    const hash =
+      await bcrypt.hash(
+        bootstrapSecret,
+        12
+      );
     await prisma.systemUser.upsert({
       where: { id: s.userId },
       update: {},
 create: {
         id: s.userId, email: s.email, phone: s.phone,
-        password_hash: hash, is_active: true, is_verified: true,
-        failed_login_count: 0, must_reset_password: false,
+        password_hash: hash, is_active: true, is_verified: false,
+        failed_login_count: 0, must_reset_password: true,
+        status: 'INVITED',
       },
     });
     await prisma.staffStaff.upsert({
