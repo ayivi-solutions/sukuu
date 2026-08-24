@@ -1,5 +1,17 @@
 import { Router } from 'express';
-import { login, refresh, logout, me, changePassword, myAccess, activateCredential } from './auth.controller';
+import {
+  login,
+  refresh,
+  logout,
+  me,
+  changePassword,
+  myAccess,
+  activateCredential,
+  mfaStatus,
+  mfaEnrollStart,
+  mfaEnrollVerify,
+  mfaStepUpVerify,
+} from './auth.controller';
 import { authenticate } from '../../middleware/authenticate';
 
 export const authRouter = Router();
@@ -11,3 +23,8 @@ authRouter.post('/logout',  authenticate, logout);
 authRouter.get('/me',       authenticate, me);
 authRouter.post('/change-password', authenticate, changePassword);
 authRouter.get('/my-access', authenticate, myAccess);
+
+authRouter.get('/mfa/status', authenticate, mfaStatus);
+authRouter.post('/mfa/enroll/start', authenticate, mfaEnrollStart);
+authRouter.post('/mfa/enroll/verify', authenticate, mfaEnrollVerify);
+authRouter.post('/mfa/step-up/verify', authenticate, mfaStepUpVerify);

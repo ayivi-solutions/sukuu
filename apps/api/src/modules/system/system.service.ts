@@ -254,7 +254,19 @@ export async function listUsers(ctx: TenantCtx) {
 
     const userIds = staffRecords.map(s => s.user_id!);
     const users = await tx.systemUser.findMany({ where: { id: { in: userIds } } });
-    const mfaRecords = await tx.systemMfa.findMany({ where: { user_id: { in: userIds } } });
+    const mfaRecords = await tx.$queryRaw<Array<{
+      user_id: string;
+      method: string;
+      is_enabled: boolean;
+      verified_at: Date | null;
+    }>>`
+      SELECT
+        user_id,
+        method,
+        is_enabled,
+        verified_at
+      FROM system.mfa_status_for_school()
+    `;
 
     await logSensitiveView(ctx, 'system_user', 'LIST');
 
@@ -774,7 +786,22 @@ export async function getSystemSummary(ctx: TenantCtx) {
     // parallelizing, which is exactly what broke this endpoint.
     const usersTotal = await tx.systemUser.count({ where: { id: { in: userIds } } });
     const usersActive = await tx.systemUser.count({ where: { id: { in: userIds }, status: 'ACTIVE' } as any });
-    const mfaEnabledCount = await tx.systemMfa.count({ where: { user_id: { in: userIds }, is_enabled: true } });
+    const mfaStatusRows = await tx.$queryRaw<Array<{
+      user_id: string;
+      is_enabled: boolean;
+    }>>`
+      SELECT
+        user_id,
+        is_enabled
+      FROM system.mfa_status_for_school()
+    `;
+
+    const mfaEnabledCount =
+      mfaStatusRows.filter(
+        row =>
+          userIds.includes(row.user_id) &&
+          row.is_enabled
+      ).length;
     const roles = await tx.systemRole.count({ where: { OR: [{ school_id: ctx.schoolId }, { is_system: true }] } });
     const flags = await tx.systemFeatureFlag.count({ where: { OR: [{ school_id: ctx.schoolId }, { school_id: null }] } });
     const flagsEnabled = await tx.systemFeatureFlag.count({ where: { OR: [{ school_id: ctx.schoolId }, { school_id: null }], is_enabled: true } });

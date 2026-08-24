@@ -10,6 +10,12 @@ import {
   activateCredentialWithToken,
 } from './credential.service';
 import { AuthRequest } from '../../middleware/authenticate';
+import {
+  getMfaStatus,
+  beginTotpEnrollment,
+  verifyTotpEnrollment,
+  verifyTotpStepUp,
+} from './mfa.service';
 
 export async function login(req: Request, res: Response) {
   try {
@@ -130,4 +136,206 @@ export async function activateCredential(
     });
 
   }
+}
+
+
+function mfaContext(
+  req: AuthRequest
+) {
+
+  if (
+    !req.userId ||
+    !req.schoolId ||
+    !req.sessionId ||
+    !req.roleKey
+  ) {
+
+    throw new Error(
+      'A valid authenticated session is required'
+    );
+
+  }
+
+
+  return {
+    userId:
+      req.userId,
+    schoolId:
+      req.schoolId,
+    sessionId:
+      req.sessionId,
+    role:
+      req.roleKey,
+  };
+
+}
+
+
+export async function mfaStatus(
+  req: AuthRequest,
+  res: Response
+) {
+
+  try {
+
+    const result =
+      await getMfaStatus(
+        mfaContext(req)
+      );
+
+
+    res.json(
+      result
+    );
+
+  } catch (err: any) {
+
+    res.status(400).json({
+      error:
+        err.message ||
+        'Could not determine MFA status',
+    });
+
+  }
+
+}
+
+
+export async function mfaEnrollStart(
+  req: AuthRequest,
+  res: Response
+) {
+
+  try {
+
+    const result =
+      await beginTotpEnrollment(
+        mfaContext(req)
+      );
+
+
+    res.json(
+      result
+    );
+
+  } catch (err: any) {
+
+    res.status(400).json({
+      error:
+        err.message ||
+        'Could not begin MFA enrollment',
+    });
+
+  }
+
+}
+
+
+export async function mfaEnrollVerify(
+  req: AuthRequest,
+  res: Response
+) {
+
+  try {
+
+    const code =
+      String(
+        req.body?.code ||
+        ''
+      )
+        .trim();
+
+
+    if (
+      !/^\d{6}$/.test(
+        code
+      )
+    ) {
+
+      return res
+        .status(400)
+        .json({
+          error:
+            'A six-digit authenticator code is required',
+        });
+
+    }
+
+
+    const result =
+      await verifyTotpEnrollment(
+        mfaContext(req),
+        code
+      );
+
+
+    res.json(
+      result
+    );
+
+  } catch (err: any) {
+
+    res.status(400).json({
+      error:
+        err.message ||
+        'Could not verify MFA enrollment',
+    });
+
+  }
+
+}
+
+
+export async function mfaStepUpVerify(
+  req: AuthRequest,
+  res: Response
+) {
+
+  try {
+
+    const code =
+      String(
+        req.body?.code ||
+        ''
+      )
+        .trim();
+
+
+    if (
+      !/^\d{6}$/.test(
+        code
+      )
+    ) {
+
+      return res
+        .status(400)
+        .json({
+          error:
+            'A six-digit authenticator code is required',
+        });
+
+    }
+
+
+    const result =
+      await verifyTotpStepUp(
+        mfaContext(req),
+        code
+      );
+
+
+    res.json(
+      result
+    );
+
+  } catch (err: any) {
+
+    res.status(400).json({
+      error:
+        err.message ||
+        'Step-up authentication failed',
+    });
+
+  }
+
 }

@@ -10,6 +10,10 @@ export interface AuthRequest extends Request {
   staffId?: string;
   sessionId?: string;
   mustResetPassword?: boolean;
+  authAssurance?: string;
+  mfaVerifiedAt?: Date | null;
+  stepUpVerifiedAt?: Date | null;
+  stepUpExpiresAt?: Date | null;
 }
 
 export async function authenticate(
@@ -74,6 +78,10 @@ export async function authenticate(
     req.staffId = decoded.staffId || undefined;
     req.sessionId = session.session_id;
     req.mustResetPassword = !!session.must_reset_password;
+    req.authAssurance = session.auth_assurance;
+    req.mfaVerifiedAt = session.mfa_verified_at;
+    req.stepUpVerifiedAt = session.step_up_verified_at;
+    req.stepUpExpiresAt = session.step_up_expires_at;
 
     if (
       req.mustResetPassword &&

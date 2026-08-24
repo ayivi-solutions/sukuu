@@ -1079,6 +1079,12 @@ model SystemSession {
   last_activity_at               DateTime
   invalidated_at                 DateTime?
 
+
+  auth_assurance                 String    @default("PASSWORD")
+  mfa_verified_at                DateTime?
+  step_up_verified_at            DateTime?
+  step_up_expires_at             DateTime?
+
   @@schema("system")
   @@map("system_session")
 }
@@ -1168,14 +1174,20 @@ model SystemPasswordHistory {
 
 /// Multi-factor authentication configuration per user
 model SystemMfa {
-  id                             String  @id @default(uuid())
-  user_id                        String
-  method                         MfaMethod
-  secret                         String?
-  is_enabled                     Boolean
-  backup_codes                   String
-  verified_at                    DateTime?
+  id                    String    @id @default(uuid())
+  user_id               String
+  method                MfaMethod
+  secret                String?
+  is_enabled            Boolean
+  backup_codes          String    @default("[]")
+  verified_at           DateTime?
+  failed_attempt_count  Int       @default(0)
+  locked_until          DateTime?
+  last_verified_counter BigInt?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
 
+  @@unique([user_id, method])
   @@schema("system")
   @@map("system_mfa")
 }

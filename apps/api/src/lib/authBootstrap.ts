@@ -28,6 +28,10 @@ export interface AuthBootstrapSession {
   user_is_active: boolean;
   user_status: string;
   must_reset_password: boolean;
+  auth_assurance: string;
+  mfa_verified_at: Date | null;
+  step_up_verified_at: Date | null;
+  step_up_expires_at: Date | null;
 }
 
 export interface AuthVerifiedRole {
