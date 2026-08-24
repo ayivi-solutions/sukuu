@@ -16,7 +16,7 @@ type Level = 'F' | 'R' | 'N';
 
 const MATRIX: Record<string, Level[]> = {
   superadmin:       ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
-  headmaster:       ['F','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
+  headmaster:       ['R','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
   school_admin:     ['N','F','F','F','F','F','F','F','F','F','F','F','F','F', 'F','F','F','F','F','F','F','F','F','F'],
   bursar:           ['N','N','N','N','N','N','N','N','N','F','F','N','N','N', 'N','N','N','N','N','N','N','F','N','N'],
   hod:              ['N','N','F','N','N','F','F','F','N','N','N','F','F','F', 'F','F','N','N','N','N','N','N','N','R'],
@@ -28,23 +28,29 @@ const MATRIX: Record<string, Level[]> = {
 };
 
 const SELF_CREATED_ROLES: { name: string; label: string; description: string }[] = [
-  { name: 'superadmin', label: 'Superadmin', description: 'School owner or proprietor - full system access' },
+  { name: 'superadmin', label: 'Superadmin', description: 'Tenant owner, proprietor, governing authority or formally delegated authority - highest governance authority within one tenant' },
   { name: 'staff', label: 'General Staff', description: 'Non-teaching support staff' },
   { name: 'auditor', label: 'Auditor', description: 'Read-only review of system records, audit trail and security policy - named actor in ESS-SYS-141' },
   { name: 'support_operator', label: 'Support Operator', description: 'Read-only support/diagnosis access - named actor in ESS-SYS-141' },
 ];
 
 /**
- * This job is inherently platform-level, not tenant-scoped — it reconciles
- * roles/permissions/grants across every school in one pass, and creates
- * global (school_id: null) is_system roles that don't belong to any single
- * tenant. There is no real "acting as this user in this school" identity
- * to give it. role: 'superadmin' is what every RLS policy on system.*
- * checks as its unconditional-bypass branch (see 02_rls_and_role.sql), so
- * this represents "trusted platform process" the same way a real
- * superadmin user's session would — it's the correct, not a workaround.
+ * Transitional Stage 3B bootstrap context only.
+ *
+ * IMPORTANT:
+ *   - superadmin is the highest authority WITHIN one tenant.
+ *   - superadmin is NOT an Ayivi/provider platform identity.
+ *   - this context must not be treated as platform authority.
+ *
+ * The legacy reconciliation routine is disabled by default below.
+ * Phase 2C/2D introduces the dedicated privileged platform identity
+ * and Phase 2E removes legacy actor-role RLS authority completely.
  */
-const PLATFORM_CTX = { schoolId: '', userId: '', role: 'superadmin' };
+const TRANSITIONAL_TENANT_ADMIN_CTX = {
+  schoolId: '',
+  userId: '',
+  role: 'superadmin',
+};
 
 export interface RbacSyncSummary {
   rolesCreated: number;
@@ -70,6 +76,12 @@ export interface RbacSyncSummary {
  * automatically with a known password on every server start.
  */
 export async function syncRbac(): Promise<RbacSyncSummary> {
+  if (process.env.ALLOW_TRANSITIONAL_RBAC_SYNC !== 'true') {
+    throw new Error(
+      'Legacy RBAC reconciliation is disabled during Stage 3B privileged-authority remediation.'
+    );
+  }
+
   const summary: RbacSyncSummary = {
     rolesCreated: 0, rolesMissing: [], permissionsSeeded: 0, grantsCreated: 0,
     rolesArchived: 0, grantsRevokedForArchivedRoles: 0, employmentGrantsBackfilled: 0,
@@ -77,9 +89,9 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
 
   // 1. Self-created system roles
   for (const r of SELF_CREATED_ROLES) {
-    const existing = await withTenantContext(PLATFORM_CTX, tx => tx.systemRole.findFirst({ where: { name: r.name } }));
+    const existing = await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemRole.findFirst({ where: { name: r.name } }));
     if (!existing) {
-      await withTenantContext(PLATFORM_CTX, tx => tx.systemRole.create({
+      await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemRole.create({
         data: { name: r.name, label: r.label, description: r.description, is_system: true, school_id: null } as any,
       }));
       summary.rolesCreated++;
@@ -94,7 +106,7 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
     for (const level of ['full', 'read']) {
       let perm = await prisma.systemPermission.findFirst({ where: { module: mod, action: level, resource: '*' } });
       if (!perm) {
-        perm = await withTenantContext(PLATFORM_CTX, tx => tx.systemPermission.create({
+        perm = await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemPermission.create({
           data: { module: mod, action: level, resource: '*', label: `${mod} - ${level}`, description: null },
         }));
         summary.permissionsSeeded++;
@@ -105,7 +117,7 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
 
   // 3. Grants from MATRIX (system_role_permission: same read-open,
   //    write-admin-only shape as system_permission)
-  const allRoles = await withTenantContext(PLATFORM_CTX, tx => tx.systemRole.findMany());
+  const allRoles = await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemRole.findMany());
   for (const [roleName, levels] of Object.entries(MATRIX)) {
     const role = allRoles.find(r => r.name === roleName);
     if (!role) { summary.rolesMissing.push(roleName); continue; }
@@ -116,7 +128,7 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
       const permId = permMap[permKey];
       const existing = await prisma.systemRolePermission.findFirst({ where: { role_id: role.id, permission_id: permId } });
       if (!existing) {
-        await withTenantContext(PLATFORM_CTX, tx => tx.systemRolePermission.create({
+        await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemRolePermission.create({
           data: { role_id: role.id, permission_id: permId, granted_at: new Date() },
         }));
         summary.grantsCreated++;
@@ -130,9 +142,9 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
   for (const roleName of OUT_OF_SCOPE_ROLES) {
     const role = allRoles.find(r => r.name === roleName);
     if (!role || (role as any).archived_at) continue;
-    await withTenantContext(PLATFORM_CTX, tx => tx.systemRole.update({ where: { id: role.id }, data: { archived_at: new Date() } as any }));
+    await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemRole.update({ where: { id: role.id }, data: { archived_at: new Date() } as any }));
     summary.rolesArchived++;
-    const revoked = await withTenantContext(PLATFORM_CTX, tx => tx.systemRolePermission.deleteMany({ where: { role_id: role.id } }));
+    const revoked = await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemRolePermission.deleteMany({ where: { role_id: role.id } }));
     summary.grantsRevokedForArchivedRoles += revoked.count;
   }
 
@@ -147,11 +159,11 @@ export async function syncRbac(): Promise<RbacSyncSummary> {
   for (const emp of employments) {
     const staff = await prisma.staffStaff.findUnique({ where: { id: emp.staff_id } });
     if (!staff || !staff.user_id) continue; // roster entry with no login yet — nothing to grant
-    const existing = await withTenantContext(PLATFORM_CTX, tx => tx.systemUserRole.findFirst({
+    const existing = await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemUserRole.findFirst({
       where: { user_id: staff.user_id!, role_id: emp.role_id, school_id: emp.school_id },
     }));
     if (!existing) {
-      await withTenantContext(PLATFORM_CTX, tx => tx.systemUserRole.create({
+      await withTenantContext(TRANSITIONAL_TENANT_ADMIN_CTX, tx => tx.systemUserRole.create({
         data: { user_id: staff.user_id!, role_id: emp.role_id, school_id: emp.school_id, assigned_at: new Date(), assigned_by: null },
       }));
       summary.employmentGrantsBackfilled++;
