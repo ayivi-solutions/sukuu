@@ -15,6 +15,8 @@ import {
   beginTotpEnrollment,
   verifyTotpEnrollment,
   verifyTotpStepUp,
+  beginMfaRecovery,
+  verifyMfaRecovery,
 } from './mfa.service';
 
 export async function login(req: Request, res: Response) {
@@ -334,6 +336,142 @@ export async function mfaStepUpVerify(
       error:
         err.message ||
         'Step-up authentication failed',
+    });
+
+  }
+
+}
+
+
+export async function mfaRecoveryStart(
+  req: Request,
+  res: Response
+) {
+
+  try {
+
+    const email =
+      String(
+        req.body?.email ||
+        ''
+      ).trim();
+
+    const password =
+      String(
+        req.body?.password ||
+        ''
+      );
+
+    const recoveryToken =
+      String(
+        req.body?.recoveryToken ||
+        ''
+      ).trim();
+
+
+    if (
+      !email ||
+      !password ||
+      recoveryToken.length < 32 ||
+      recoveryToken.length > 256
+    ) {
+
+      return res
+        .status(400)
+        .json({
+          error:
+            'MFA recovery authorization failed',
+        });
+
+    }
+
+
+    const result =
+      await beginMfaRecovery(
+        email,
+        password,
+        recoveryToken
+      );
+
+
+    res.json(
+      result
+    );
+
+  } catch {
+
+    res.status(400).json({
+      error:
+        'MFA recovery authorization failed',
+    });
+
+  }
+
+}
+
+
+export async function mfaRecoveryVerify(
+  req: Request,
+  res: Response
+) {
+
+  try {
+
+    const email =
+      String(
+        req.body?.email ||
+        ''
+      ).trim();
+
+    const recoveryToken =
+      String(
+        req.body?.recoveryToken ||
+        ''
+      ).trim();
+
+    const code =
+      String(
+        req.body?.code ||
+        ''
+      ).trim();
+
+
+    if (
+      !email ||
+      recoveryToken.length < 32 ||
+      recoveryToken.length > 256 ||
+      !/^\d{6}$/.test(
+        code
+      )
+    ) {
+
+      return res
+        .status(400)
+        .json({
+          error:
+            'MFA recovery verification failed',
+        });
+
+    }
+
+
+    const result =
+      await verifyMfaRecovery(
+        email,
+        recoveryToken,
+        code
+      );
+
+
+    res.json(
+      result
+    );
+
+  } catch {
+
+    res.status(400).json({
+      error:
+        'MFA recovery verification failed',
     });
 
   }

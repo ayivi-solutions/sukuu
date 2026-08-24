@@ -11,12 +11,16 @@ import {
   mfaEnrollStart,
   mfaEnrollVerify,
   mfaStepUpVerify,
+  mfaRecoveryStart,
+  mfaRecoveryVerify,
 } from './auth.controller';
 import { authenticate } from '../../middleware/authenticate';
 
 export const authRouter = Router();
 
 authRouter.post('/activate-credential', activateCredential);
+authRouter.post('/mfa/recovery/start', mfaRecoveryStart);
+authRouter.post('/mfa/recovery/verify', mfaRecoveryVerify);
 authRouter.post('/login',   login);
 authRouter.post('/refresh', refresh);
 authRouter.post('/logout',  authenticate, logout);

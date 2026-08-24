@@ -1,4 +1,4 @@
-import { createHmac } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 import {
   buildOtpAuthUri,
   decryptTotpSecret,
@@ -10,6 +10,7 @@ import {
 import {
   withTenantContext,
 } from '../../lib/tenantContext';
+import { prisma } from '../../lib/prisma';
 
 
 export interface MfaContext {
@@ -484,6 +485,316 @@ export async function verifyTotpStepUp(
     stepUpExpiresAt:
       result.stepUpExpiresAt ||
       null,
+  };
+
+}
+
+
+interface MfaRecoveryMaterial {
+  ok: boolean;
+  reason?: string;
+  userId?: string;
+  schoolId?: string;
+  secretEnvelope?: string;
+}
+
+
+function recoveryTokenHash(
+  token: string
+): string {
+
+  const normalized =
+    String(
+      token ||
+      ''
+    ).trim();
+
+
+  if (
+    normalized.length < 32 ||
+    normalized.length > 256
+  ) {
+
+    throw new Error(
+      'MFA recovery authorization failed'
+    );
+
+  }
+
+
+  return createHash(
+    'sha256'
+  )
+    .update(
+      normalized,
+      'utf8'
+    )
+    .digest(
+      'hex'
+    );
+
+}
+
+
+function recoveryVerificationProof(
+  tokenHash: string,
+  userId: string,
+  schoolId: string,
+  counter: number
+): string {
+
+  const message =
+    [
+      'RECOVERY',
+      tokenHash,
+      userId,
+      schoolId,
+      String(counter),
+    ].join(':');
+
+
+  return createHmac(
+    'sha256',
+    proofSecret()
+  )
+    .update(
+      message,
+      'utf8'
+    )
+    .digest(
+      'hex'
+    );
+
+}
+
+
+export async function beginMfaRecovery(
+  email: string,
+  password: string,
+  recoveryToken: string
+) {
+
+  const normalizedEmail =
+    String(
+      email ||
+      ''
+    ).trim();
+
+
+  const normalizedPassword =
+    String(
+      password ||
+      ''
+    );
+
+
+  if (
+    !normalizedEmail ||
+    !normalizedPassword
+  ) {
+
+    throw new Error(
+      'MFA recovery authorization failed'
+    );
+
+  }
+
+
+  const tokenHash =
+    recoveryTokenHash(
+      recoveryToken
+    );
+
+
+  const secret =
+    generateTotpSecret();
+
+
+  const envelope =
+    encryptTotpSecret(
+      secret
+    );
+
+
+  const rows =
+    await prisma.$queryRaw<
+      Array<{
+        result: {
+          ok: boolean;
+          reason?: string;
+        };
+      }>
+    >`
+      SELECT
+        system.auth_mfa_recovery_authorize(
+          ${tokenHash},
+          ${normalizedEmail},
+          ${normalizedPassword},
+          ${envelope}
+        ) AS result
+    `;
+
+
+  const result =
+    rows[0]?.result;
+
+
+  if (!result?.ok) {
+
+    throw new Error(
+      'MFA recovery authorization failed'
+    );
+
+  }
+
+
+  return {
+    success: true,
+    method: 'TOTP',
+    secret,
+    otpAuthUri:
+      buildOtpAuthUri(
+        normalizedEmail,
+        secret
+      ),
+  };
+
+}
+
+
+export async function verifyMfaRecovery(
+  email: string,
+  recoveryToken: string,
+  code: string
+) {
+
+  const normalizedEmail =
+    String(
+      email ||
+      ''
+    ).trim();
+
+
+  const tokenHash =
+    recoveryTokenHash(
+      recoveryToken
+    );
+
+
+  const materialRows =
+    await prisma.$queryRaw<
+      Array<{
+        result:
+          MfaRecoveryMaterial;
+      }>
+    >`
+      SELECT
+        system.auth_mfa_recovery_material(
+          ${tokenHash},
+          ${normalizedEmail}
+        ) AS result
+    `;
+
+
+  const material =
+    materialRows[0]?.result;
+
+
+  if (
+    !material?.ok ||
+    !material.userId ||
+    !material.schoolId ||
+    !material.secretEnvelope
+  ) {
+
+    throw new Error(
+      'MFA recovery verification failed'
+    );
+
+  }
+
+
+  const secret =
+    decryptTotpSecret(
+      material.secretEnvelope
+    );
+
+
+  const counter =
+    verifyTotp(
+      secret,
+      code
+    );
+
+
+  if (counter === null) {
+
+    await prisma.$queryRaw`
+      SELECT
+        system.auth_mfa_recovery_record_failure(
+          ${tokenHash},
+          ${normalizedEmail}
+        )
+    `;
+
+
+    throw new Error(
+      'MFA recovery verification failed'
+    );
+
+  }
+
+
+  const proof =
+    recoveryVerificationProof(
+      tokenHash,
+      material.userId,
+      material.schoolId,
+      counter
+    );
+
+
+  const completeRows =
+    await prisma.$queryRaw<
+      Array<{
+        result: {
+          ok: boolean;
+          success?: boolean;
+          method?: string;
+        };
+      }>
+    >`
+      SELECT
+        system.auth_mfa_recovery_complete(
+          ${tokenHash},
+          ${normalizedEmail},
+          ${BigInt(counter)},
+          ${proof}
+        ) AS result
+    `;
+
+
+  const completed =
+    completeRows[0]?.result;
+
+
+  if (
+    !completed?.ok ||
+    completed.success !== true
+  ) {
+
+    throw new Error(
+      'MFA recovery verification failed'
+    );
+
+  }
+
+
+  return {
+    success: true,
+    method: 'TOTP',
+    message:
+      'MFA recovery completed. Sign in again using the replacement authenticator.',
   };
 
 }
