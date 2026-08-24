@@ -31,15 +31,10 @@ ALTER TABLE system.system_session
 CREATE INDEX IF NOT EXISTS "ix_system_session_school_id"
   ON system.system_session (school_id);
 
-UPDATE system.system_session
-SET
-  is_active = false,
-  invalidated_at = COALESCE(
-    invalidated_at,
-    CURRENT_TIMESTAMP::timestamp(3) without time zone
-  )
-WHERE is_active = true
-  AND expires_at <= CURRENT_TIMESTAMP;
+-- Historical expired sessions are intentionally left untouched in Phase 1.
+-- expires_at already records why those sessions are unusable. Rewriting
+-- invalidated_at during a migration would falsely imply an explicit
+-- revocation event.
 
 WITH unique_active_grant AS (
   SELECT sur.user_id, MIN(sur.school_id) AS school_id
@@ -76,12 +71,14 @@ BEGIN
 END
 $active_session_guard$;
 
-ALTER TABLE system.system_session
-  DROP CONSTRAINT IF EXISTS "ck_system_session_active_requires_school";
-
-ALTER TABLE system.system_session
-  ADD CONSTRAINT "ck_system_session_active_requires_school"
-  CHECK (is_active IS NOT TRUE OR school_id IS NOT NULL);
+-- Do not enforce school_id as a CHECK constraint during Phase 1.
+-- The currently-running Stage 3A API does not yet write school_id when
+-- creating new sessions. Enforcing this invariant before the application
+-- cutover would create a login outage window.
+--
+-- Phase 2 will enforce the invariant after the Stage 3B API path has been
+-- deployed, verified and any sessions created during the cutover window
+-- have been reconciled.
 
 -- --------------------------------------------------------------------------
 -- 2. Protected context secret. No runtime table policy is created.
