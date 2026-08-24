@@ -7,7 +7,12 @@ import {
 } from './credential.service';
 import { withTenantContext } from '../../lib/tenantContext';
 import {
+  beginPrivilegedLoginMfa,
+  verifyPrivilegedLoginMfa,
+} from './mfa.service';
+import {
   finalizeAuthSession,
+  finalizeMfaAuthSession,
   lookupAuthSession,
   verifyAuthCredentials,
   type AuthVerifiedRole,
@@ -118,7 +123,8 @@ async function resolveLoginPresentation(
 export async function loginUser(
   email: string,
   password: string,
-  meta: AuthMeta = {}
+  meta: AuthMeta = {},
+  mfaCode?: string | null
 ) {
   const verified =
     await verifyAuthCredentials(
@@ -145,6 +151,53 @@ export async function loginUser(
     );
   }
 
+  const requiresPrivilegedMfa =
+    verified.roles.some(
+      role =>
+        role.name === 'superadmin' ||
+        role.name === 'headmaster'
+    );
+
+  if (
+    requiresPrivilegedMfa &&
+    !mfaCode
+  ) {
+    return beginPrivilegedLoginMfa(
+      verified.ticketId
+    );
+  }
+
+  let privilegedMfa:
+    | {
+        counter: number;
+        proof: string;
+      }
+    | null = null;
+
+  if (requiresPrivilegedMfa) {
+    const normalizedMfaCode =
+      String(
+        mfaCode || ''
+      ).trim();
+
+    if (
+      !/^\d{6}$/.test(
+        normalizedMfaCode
+      )
+    ) {
+      throw new Error(
+        'A six-digit authenticator code is required.'
+      );
+    }
+
+    privilegedMfa =
+      await verifyPrivilegedLoginMfa(
+        verified.ticketId,
+        normalizedMfaCode,
+        meta
+      );
+  }
+
   const {
     staff,
     activeRoleNames,
@@ -155,43 +208,57 @@ export async function loginUser(
     verified.roles
   );
 
-  const sessionId = randomUUID();
+  const sessionId =
+    randomUUID();
 
-  const accessToken = jwt.sign(
-    {
-      userId: verified.userId,
-      schoolId: verified.schoolId,
-      roleKey: primaryRoleKey,
-      staffId: staff?.id || null,
-      sessionId,
-      mustResetPassword:
-        !!verified.mustResetPassword,
-    },
-    process.env.JWT_SECRET!,
-    {
-      expiresIn:
-        (process.env.JWT_EXPIRES_IN ||
-          '15m') as any,
-    }
-  );
+  const accessToken =
+    jwt.sign(
+      {
+        userId:
+          verified.userId,
+        schoolId:
+          verified.schoolId,
+        roleKey:
+          primaryRoleKey,
+        staffId:
+          staff?.id || null,
+        sessionId,
+        mustResetPassword:
+          !!verified.mustResetPassword,
+      },
+      process.env.JWT_SECRET!,
+      {
+        expiresIn:
+          (
+            process.env.JWT_EXPIRES_IN ||
+            '15m'
+          ) as any,
+      }
+    );
 
-  const refreshToken = jwt.sign(
-    {
-      userId: verified.userId,
-      sessionId,
-    },
-    process.env.JWT_REFRESH_SECRET!,
-    {
-      expiresIn:
-        (process.env.JWT_REFRESH_EXPIRES_IN ||
-          '7d') as any,
-    }
-  );
+  const refreshToken =
+    jwt.sign(
+      {
+        userId:
+          verified.userId,
+        sessionId,
+      },
+      process.env.JWT_REFRESH_SECRET!,
+      {
+        expiresIn:
+          (
+            process.env.JWT_REFRESH_EXPIRES_IN ||
+            '7d'
+          ) as any,
+      }
+    );
 
   const refreshClaims =
     jwt.decode(
       refreshToken
-    ) as jwt.JwtPayload | null;
+    ) as
+      | jwt.JwtPayload
+      | null;
 
   if (!refreshClaims?.exp) {
     throw new Error(
@@ -205,63 +272,134 @@ export async function loginUser(
       10
     );
 
-  await finalizeAuthSession(
-    verified.ticketId,
-    sessionId,
-    refreshTokenHash,
-    meta.ipAddress ?? null,
-    meta.userAgent ?? null,
-    new Date(refreshClaims.exp * 1000)
-  );
+  const expiresAt =
+    new Date(
+      refreshClaims.exp *
+      1000
+    );
+
+  if (
+    requiresPrivilegedMfa
+  ) {
+    if (!privilegedMfa) {
+      throw new Error(
+        'Privileged MFA verification is required.'
+      );
+    }
+
+    const finalized =
+      await finalizeMfaAuthSession(
+        verified.ticketId,
+        sessionId,
+        refreshTokenHash,
+        meta.ipAddress ?? null,
+        meta.userAgent ?? null,
+        expiresAt,
+        BigInt(
+          privilegedMfa.counter
+        ),
+        privilegedMfa.proof
+      );
+
+    if (
+      !finalized.ok ||
+      finalized.assurance !==
+        'MFA'
+    ) {
+      throw new Error(
+        'Privileged MFA session finalization failed.'
+      );
+    }
+
+  } else {
+
+    await finalizeAuthSession(
+      verified.ticketId,
+      sessionId,
+      refreshTokenHash,
+      meta.ipAddress ?? null,
+      meta.userAgent ?? null,
+      expiresAt
+    );
+
+  }
 
   await withTenantContext(
     {
       sessionId,
-      schoolId: verified.schoolId,
-      userId: verified.userId,
-      role: primaryRoleKey,
+      schoolId:
+        verified.schoolId,
+      userId:
+        verified.userId,
+      role:
+        primaryRoleKey,
     },
-    tx => tx.systemLog.create({
-      data: {
-        event_type: 'LOGIN',
-        entity_type: 'system_user',
-        entity_id: verified.userId,
-        user_id: verified.userId,
-        school_id: verified.schoolId,
-        ip_address:
-          meta.ipAddress ?? '',
-        payload: JSON.stringify({
-          email: verified.email,
-          roleKey: primaryRoleKey,
-          sessionId,
-        }),
-      },
-    })
+    tx =>
+      tx.systemLog.create({
+        data: {
+          event_type:
+            'LOGIN',
+          entity_type:
+            'system_user',
+          entity_id:
+            verified.userId,
+          user_id:
+            verified.userId,
+          school_id:
+            verified.schoolId,
+          ip_address:
+            meta.ipAddress ?? '',
+          payload:
+            JSON.stringify({
+              email:
+                verified.email,
+              roleKey:
+                primaryRoleKey,
+              sessionId,
+              authAssurance:
+                requiresPrivilegedMfa
+                  ? 'MFA'
+                  : 'PASSWORD',
+            }),
+        },
+      })
   );
 
   return {
     accessToken,
     refreshToken,
+    authAssurance:
+      requiresPrivilegedMfa
+        ? 'MFA'
+        : 'PASSWORD',
     user: {
-      id: verified.userId,
-      email: verified.email,
+      id:
+        verified.userId,
+      email:
+        verified.email,
       firstName:
-        staff?.first_name || null,
+        staff?.first_name ||
+        null,
       lastName:
-        staff?.last_name || null,
+        staff?.last_name ||
+        null,
       staffId:
-        staff?.id || null,
+        staff?.id ||
+        null,
       roleKey:
         primaryRoleKey,
       roleLabel:
         primaryRoleLabel,
       roles:
-        [...activeRoleNames],
+        [
+          ...activeRoleNames,
+        ],
       mustResetPassword:
         !!verified.mustResetPassword,
     },
     school: {
-      id: verified.schoolId,
+      id:
+        verified.schoolId,
     },
   };
 }

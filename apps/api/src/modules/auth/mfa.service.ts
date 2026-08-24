@@ -11,6 +11,11 @@ import {
   withTenantContext,
 } from '../../lib/tenantContext';
 import { prisma } from '../../lib/prisma';
+import {
+  lookupPrivilegedMfaLoginMaterial,
+  recordPrivilegedMfaLoginFailure,
+  requirePrivilegedMfaLogin,
+} from '../../lib/authBootstrap';
 
 
 export interface MfaContext {
@@ -797,4 +802,152 @@ export async function verifyMfaRecovery(
       'MFA recovery completed. Sign in again using the replacement authenticator.',
   };
 
+}
+
+export async function beginPrivilegedLoginMfa(
+  ticketId: string
+) {
+  const result =
+    await requirePrivilegedMfaLogin(
+      ticketId
+    );
+
+  if (
+    !result.ok ||
+    result.required !== true ||
+    result.method !== 'TOTP'
+  ) {
+    if (
+      result.reason ===
+      'TEMP_LOCK'
+    ) {
+      throw new Error(
+        'Authenticator temporarily locked. Try again later or use controlled recovery.'
+      );
+    }
+
+    throw new Error(
+      'Privileged MFA is required for this account.'
+    );
+  }
+
+  return {
+    mfaRequired: true,
+    method: 'TOTP',
+    message:
+      'Enter the six-digit code from your authenticator.',
+  };
+}
+
+
+function loginVerificationProof(
+  ticketId: string,
+  userId: string,
+  schoolId: string,
+  counter: number
+): string {
+  const message =
+    [
+      'LOGIN',
+      ticketId,
+      userId,
+      schoolId,
+      String(counter),
+    ].join(':');
+
+  return createHmac(
+    'sha256',
+    proofSecret()
+  )
+    .update(
+      message,
+      'utf8'
+    )
+    .digest(
+      'hex'
+    );
+}
+
+
+export async function verifyPrivilegedLoginMfa(
+  ticketId: string,
+  code: string,
+  meta: {
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  } = {}
+) {
+  const material =
+    await lookupPrivilegedMfaLoginMaterial(
+      ticketId
+    );
+
+  if (
+    !material.ok ||
+    material.required !== true ||
+    material.method !== 'TOTP' ||
+    !material.userId ||
+    !material.schoolId ||
+    !material.secretEnvelope
+  ) {
+    if (
+      material.reason ===
+      'TEMP_LOCK'
+    ) {
+      throw new Error(
+        'Authenticator temporarily locked. Try again later or use controlled recovery.'
+      );
+    }
+
+    throw new Error(
+      'Privileged MFA verification failed.'
+    );
+  }
+
+  const secret =
+    decryptTotpSecret(
+      material.secretEnvelope
+    );
+
+  const counter =
+    verifyTotp(
+      secret,
+      code
+    );
+
+  const lastCounter =
+    material.lastVerifiedCounter ===
+      null ||
+    material.lastVerifiedCounter ===
+      undefined
+      ? -1
+      : Number(
+          material.lastVerifiedCounter
+        );
+
+  if (
+    counter === null ||
+    counter <= lastCounter
+  ) {
+    await recordPrivilegedMfaLoginFailure(
+      ticketId,
+      meta.ipAddress ?? null,
+      meta.userAgent ?? null
+    );
+
+    throw new Error(
+      'Invalid or already-used authenticator code.'
+    );
+  }
+
+  return {
+    counter,
+    proof:
+      loginVerificationProof(
+        ticketId,
+        material.userId,
+        material.schoolId,
+        counter
+      ),
+  };
 }

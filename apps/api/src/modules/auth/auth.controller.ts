@@ -19,21 +19,56 @@ import {
   verifyMfaRecovery,
 } from './mfa.service';
 
-export async function login(req: Request, res: Response) {
+export async function login(
+  req: Request,
+  res: Response
+) {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password required' });
+    const {
+      email,
+      password,
+      mfaCode,
+    } = req.body;
+
+    if (
+      !email ||
+      !password
+    ) {
+      return res
+        .status(400)
+        .json({
+          error:
+            'Email and password required',
+        });
     }
 
-    const result = await loginUser(email, password, {
-      ipAddress: req.ip || null,
-      userAgent: req.get('user-agent') || null,
+    const result =
+      await loginUser(
+        email,
+        password,
+        {
+          ipAddress:
+            req.ip || null,
+          userAgent:
+            req.get(
+              'user-agent'
+            ) || null,
+        },
+        mfaCode
+      );
+
+    res.json(
+      result
+    );
+
+  } catch (err: any) {
+
+    res.status(401).json({
+      error:
+        err.message ||
+        'Login failed',
     });
 
-    res.json(result);
-  } catch (err: any) {
-    res.status(401).json({ error: err.message || 'Login failed' });
   }
 }
 

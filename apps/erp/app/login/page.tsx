@@ -29,6 +29,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
 
   // Set once a temp-password login succeeds — holds what's needed to
   // complete the change-password step without asking the person to
@@ -43,22 +45,71 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
+
     try {
-      const data = await login(email, password);
-      if (data.user?.mustResetPassword) {
-        // Don't store tokens or proceed into the app yet — this token
-        // can only reach /api/v1/auth/* until the password is actually
-        // changed (enforced server-side, not just skipped here).
-        setPendingReset({ accessToken: data.accessToken, email, tempPassword: password });
+      const data =
+        await login(
+          email,
+          password,
+          mfaRequired
+            ? mfaCode
+            : undefined
+        );
+
+      if (
+        data.mfaRequired ===
+        true
+      ) {
+        setMfaRequired(true);
+        setMfaCode('');
         return;
       }
-      localStorage.setItem('sukuu_token', data.accessToken);
-      localStorage.setItem('sukuu_user', JSON.stringify(data.user));
-      router.push('/dashboard');
+
+      if (
+        data.user?.mustResetPassword
+      ) {
+        setPendingReset({
+          accessToken:
+            data.accessToken,
+          email,
+          tempPassword:
+            password,
+        });
+
+        return;
+      }
+
+      localStorage.setItem(
+        'sukuu_token',
+        data.accessToken
+      );
+
+      localStorage.setItem(
+        'sukuu_user',
+        JSON.stringify(
+          data.user
+        )
+      );
+
+      router.push(
+        '/dashboard'
+      );
+
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+
+      setError(
+        err.message ||
+        'Login failed'
+      );
+
+      if (mfaRequired) {
+        setMfaCode('');
+      }
+
     } finally {
+
       setLoading(false);
+
     }
   }
 
@@ -82,10 +133,62 @@ export default function LoginPage() {
       // Log in again with the new password — the freshest, simplest way
       // to get a fully-authorized token (mustResetPassword now false)
       // rather than duplicating token-issuance logic here.
-      const fresh = await login(pendingReset.email, newPassword);
-      localStorage.setItem('sukuu_token', fresh.accessToken);
-      localStorage.setItem('sukuu_user', JSON.stringify(fresh.user));
-      router.push('/dashboard');
+      const fresh =
+        await login(
+          pendingReset.email,
+          newPassword
+        );
+
+      if (
+        fresh.mfaRequired ===
+        true
+      ) {
+        setEmail(
+          pendingReset.email
+        );
+
+        setPassword(
+          newPassword
+        );
+
+        setPendingReset(
+          null
+        );
+
+        setMfaRequired(
+          true
+        );
+
+        setMfaCode(
+          ''
+        );
+
+        setNewPassword(
+          ''
+        );
+
+        setConfirmPassword(
+          ''
+        );
+
+        return;
+      }
+
+      localStorage.setItem(
+        'sukuu_token',
+        fresh.accessToken
+      );
+
+      localStorage.setItem(
+        'sukuu_user',
+        JSON.stringify(
+          fresh.user
+        )
+      );
+
+      router.push(
+        '/dashboard'
+      );
     } catch (err: any) {
       setResetError(err.message || 'Could not set new password');
     } finally {
@@ -126,7 +229,7 @@ export default function LoginPage() {
             <div style={{
               fontSize: 14, fontWeight: 700, color: 'rgba(242,230,201,.6)',
               letterSpacing: '.07em', textTransform: 'uppercase', marginBottom: 16, textAlign: 'center',
-            }}>Sign in to your workspace</div>
+            }}>{mfaRequired ? 'Verify privileged sign-in' : 'Sign in to your workspace'}</div>
 
             {error && (
               <div style={{
@@ -152,11 +255,41 @@ export default function LoginPage() {
               />
             </div>
 
+            {mfaRequired && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>Authenticator Code</label>
+                <input
+                  type="text"
+                  value={mfaCode}
+                  onChange={e =>
+                    setMfaCode(
+                      e.target.value
+                        .replace(/\D/g, '')
+                        .slice(0, 6)
+                    )
+                  }
+                  required
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  placeholder="6-digit code"
+                  style={inputStyle}
+                />
+                <div style={{
+                  fontSize: 11,
+                  color: 'rgba(242,230,201,.45)',
+                  marginTop: 5,
+                }}>
+                  Enter the current code from your Sukuu authenticator.
+                </div>
+              </div>
+            )}
+
             <button type="submit" disabled={loading} style={{
               width: '100%', padding: 13, marginTop: 4, background: 'var(--gold)', color: 'var(--navy)',
               border: 'none', borderRadius: 'var(--rS)', fontSize: 14, fontWeight: 700, letterSpacing: '.02em',
             }}>
-              {loading ? 'Signing in…' : 'Sign In'}
+              {loading ? (mfaRequired ? 'Verifying…' : 'Signing in…') : (mfaRequired ? 'Verify & Sign In' : 'Sign In')}
             </button>
           </form>
         ) : (

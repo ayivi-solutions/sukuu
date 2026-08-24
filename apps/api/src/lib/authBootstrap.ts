@@ -125,6 +125,135 @@ export async function finalizeAuthSession(
   `;
 }
 
+export interface AuthMfaLoginMaterial {
+  ok: boolean;
+  reason?: string;
+  required?: boolean;
+  method?: string;
+  userId?: string;
+  schoolId?: string;
+  email?: string;
+  secretEnvelope?: string;
+  lastVerifiedCounter?: number | null;
+  lockedUntil?: string | null;
+}
+
+export async function requirePrivilegedMfaLogin(
+  ticketId: string
+) {
+  const rows =
+    await prisma.$queryRaw<
+      Array<{
+        result: {
+          ok: boolean;
+          reason?: string;
+          required?: boolean;
+          method?: string;
+        };
+      }>
+    >`
+      SELECT
+        system.auth_mfa_login_requirement(
+          ${ticketId}
+        ) AS result
+    `;
+
+  return rows[0]?.result ?? {
+    ok: false,
+    reason: 'NO_RESULT',
+  };
+}
+
+export async function lookupPrivilegedMfaLoginMaterial(
+  ticketId: string
+): Promise<AuthMfaLoginMaterial> {
+  const rows =
+    await prisma.$queryRaw<
+      Array<{
+        result: AuthMfaLoginMaterial;
+      }>
+    >`
+      SELECT
+        system.auth_mfa_login_material(
+          ${ticketId}
+        ) AS result
+    `;
+
+  return rows[0]?.result ?? {
+    ok: false,
+    reason: 'NO_RESULT',
+  };
+}
+
+export async function recordPrivilegedMfaLoginFailure(
+  ticketId: string,
+  ipAddress: string | null,
+  userAgent: string | null
+) {
+  const rows =
+    await prisma.$queryRaw<
+      Array<{
+        result: {
+          ok: boolean;
+          reason?: string;
+          failedAttempts?: number;
+          lockedUntil?: string | null;
+        };
+      }>
+    >`
+      SELECT
+        system.auth_mfa_login_record_failure(
+          ${ticketId},
+          ${ipAddress},
+          ${userAgent}
+        ) AS result
+    `;
+
+  return rows[0]?.result ?? {
+    ok: false,
+    reason: 'NO_RESULT',
+  };
+}
+
+export async function finalizeMfaAuthSession(
+  ticketId: string,
+  sessionId: string,
+  refreshTokenHash: string,
+  ipAddress: string | null,
+  userAgent: string | null,
+  expiresAt: Date,
+  counter: bigint,
+  proof: string
+) {
+  const rows =
+    await prisma.$queryRaw<
+      Array<{
+        result: {
+          ok: boolean;
+          reason?: string;
+          assurance?: string;
+        };
+      }>
+    >`
+      SELECT
+        system.auth_finalize_mfa_session(
+          ${ticketId},
+          ${sessionId},
+          ${refreshTokenHash},
+          ${ipAddress},
+          ${userAgent},
+          ${expiresAt},
+          ${counter},
+          ${proof}
+        ) AS result
+    `;
+
+  return rows[0]?.result ?? {
+    ok: false,
+    reason: 'NO_RESULT',
+  };
+}
+
 /**
  * Stage 3A compatibility helper. The new Stage 3B login path does not call it.
  */
