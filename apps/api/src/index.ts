@@ -6,7 +6,6 @@ import cors from 'cors';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
 import { rateLimiter } from './middleware/rateLimiter';
-import { syncRbac } from './lib/rbacSync';
 import { authRouter } from './modules/auth/auth.router';
 import { systemRouter } from './modules/system/system.router';
 import { schoolRouter } from './modules/school/school.router';
@@ -42,9 +41,19 @@ const PORT = process.env.PORT || 3001;
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    const allowed = (process.env.CORS_ORIGINS || '').split(',').map(o => o.trim());
-    if (allowed.includes(origin)) return callback(null, true);
-    callback(new Error('CORS: origin not allowed'));
+
+    const allowed =
+      (process.env.CORS_ORIGINS || '')
+        .split(',')
+        .map(o => o.trim());
+
+    if (allowed.includes(origin)) {
+      return callback(null, true);
+    }
+
+    callback(
+      new Error('CORS: origin not allowed')
+    );
   },
   credentials: true,
 }));
@@ -56,13 +65,20 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'sukuu-api',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString(),
+    environment:
+      process.env.NODE_ENV ||
+      'development',
+    timestamp:
+      new Date().toISOString(),
   });
 });
 
 app.get('/', (_req, res) => {
-  res.json({ service: 'sukuu-api', status: 'ok', docs: 'https://sukuux.com' });
+  res.json({
+    service: 'sukuu-api',
+    status: 'ok',
+    docs: 'https://sukuux.com',
+  });
 });
 
 app.use('/api/v1/auth', authRouter);
@@ -93,17 +109,22 @@ app.use('/api/v1/workflow', workflowRouter);
 app.use('/api/v1/notification', notificationRouter);
 app.use('/api/v1/communication', communicationRouter);
 app.use('/api/v1/analytics', analyticsRouter);
+
 app.use(notFound);
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log('Sukuu API running on port ' + PORT + ' [' + (process.env.NODE_ENV || 'development') + ']');
+  console.log(
+    'Sukuu API running on port ' +
+      PORT +
+      ' [' +
+      (process.env.NODE_ENV ||
+        'development') +
+      ']'
+  );
 });
 
-// Runs after listen (not before) so the server is already accepting
-// traffic — a sync hiccup delays RBAC being fully current, not an entire
-// deploy. Every step inside syncRbac is idempotent, so this is safe to
-// run on every single boot, including ones where nothing changed.
-syncRbac()
-  .then(summary => console.log('[RBAC sync]', JSON.stringify(summary)))
-  .catch(err => console.error('[RBAC sync] failed — existing grants are unaffected, this only blocks new reconciliation:', err.message));
+// Stage 3B:
+// RBAC catalogue reconciliation is no longer impersonated by the tenant
+// runtime process at server boot. Catalogue/bootstrap reconciliation must be
+// executed through a controlled deployment or administrative path.

@@ -4,7 +4,12 @@ import { TenantCtx } from '../../lib/tenantContext';
 import * as svc from './system.service';
 
 function ctxFrom(req: AuthRequest): TenantCtx {
-  return { schoolId: req.schoolId || '', userId: req.userId || '', role: req.roleKey || '' };
+  return {
+    sessionId: req.sessionId,
+    schoolId: req.schoolId || '',
+    userId: req.userId || '',
+    role: req.roleKey || '',
+  };
 }
 
 function handle(fn: (req: AuthRequest) => Promise<any>) {

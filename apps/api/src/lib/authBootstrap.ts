@@ -18,6 +18,8 @@ export interface AuthBootstrapUser {
 export interface AuthBootstrapSession {
   session_id: string;
   user_id: string;
+  school_id: string | null;
+  role_key: string | null;
   refresh_token_hash: string;
   is_active: boolean;
   expires_at: Date;
@@ -28,31 +30,43 @@ export interface AuthBootstrapSession {
   must_reset_password: boolean;
 }
 
-/**
- * Narrow pre-authentication lookup.
- *
- * system.system_user is protected by FORCE RLS, so a future non-bypass
- * application role cannot query a user by email before it knows the user's
- * identity. The database migration creates SECURITY DEFINER functions with
- * a fixed search_path and only the minimum fields needed by authentication.
- *
- * Do not replace these with a second privileged PrismaClient. Keeping the
- * bypass inside narrowly-scoped database functions avoids putting a broad
- * owner/BYPASSRLS credential in the API process.
- */
-export async function lookupAuthUserByEmail(email: string): Promise<AuthBootstrapUser | null> {
-  const normalizedEmail = email.trim().toLowerCase();
-  const rows = await prisma.$queryRaw<AuthBootstrapUser[]>`
-    SELECT * FROM system.auth_lookup_user(${normalizedEmail})
-  `;
-  return rows[0] ?? null;
+export interface AuthVerifiedRole {
+  id: string;
+  name: string;
+  label: string;
+}
+
+export interface AuthVerifyResult {
+  ok: boolean;
+  reason?: 'INVALID' | 'TEMP_LOCK' | 'SUSPENDED' | 'CLOSED' | 'LOCKED' | 'NO_CONTEXT';
+  retrySeconds?: number;
+  ticketId?: string;
+  userId?: string;
+  email?: string;
+  isVerified?: boolean;
+  mustResetPassword?: boolean;
+  status?: string;
+  schoolId?: string;
+  roles?: AuthVerifiedRole[];
 }
 
 /**
- * Session lookup is bound to BOTH the signed JWT's session id and user id.
- * This prevents a caller from using one valid claim with another user's
- * session identifier.
+ * Legacy Stage 3A bootstrap lookup. Kept temporarily so the additive database
+ * migration remains backward-compatible with an already-running Stage 3A API.
+ * New Stage 3B login code does not use this password-hash-returning path.
  */
+export async function lookupAuthUserByEmail(
+  email: string
+): Promise<AuthBootstrapUser | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const rows = await prisma.$queryRaw<AuthBootstrapUser[]>`
+    SELECT * FROM system.auth_lookup_user(${normalizedEmail})
+  `;
+
+  return rows[0] ?? null;
+}
+
 export async function lookupAuthSession(
   sessionId: string,
   userId: string
@@ -60,13 +74,55 @@ export async function lookupAuthSession(
   const rows = await prisma.$queryRaw<AuthBootstrapSession[]>`
     SELECT * FROM system.auth_lookup_session(${sessionId}, ${userId})
   `;
+
   return rows[0] ?? null;
 }
 
+export async function verifyAuthCredentials(
+  email: string,
+  password: string,
+  ipAddress: string | null,
+  userAgent: string | null
+): Promise<AuthVerifyResult> {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const rows = await prisma.$queryRaw<Array<{ result: AuthVerifyResult }>>`
+    SELECT system.auth_verify_credentials(
+      ${normalizedEmail},
+      ${password},
+      ${ipAddress},
+      ${userAgent}
+    ) AS result
+  `;
+
+  return rows[0]?.result ?? {
+    ok: false,
+    reason: 'INVALID',
+  };
+}
+
+export async function finalizeAuthSession(
+  ticketId: string,
+  sessionId: string,
+  refreshTokenHash: string,
+  ipAddress: string | null,
+  userAgent: string | null,
+  expiresAt: Date
+): Promise<void> {
+  await prisma.$executeRaw`
+    SELECT system.auth_finalize_session(
+      ${ticketId},
+      ${sessionId},
+      ${refreshTokenHash},
+      ${ipAddress},
+      ${userAgent},
+      ${expiresAt}
+    )
+  `;
+}
+
 /**
- * Authentication attempts must also be recordable before an RLS identity
- * context exists (including unknown-email failures where user_id is NULL).
- * The SQL function validates the status and owns the insert.
+ * Stage 3A compatibility helper. The new Stage 3B login path does not call it.
  */
 export async function recordAuthAttempt(
   userId: string | null,
@@ -75,6 +131,11 @@ export async function recordAuthAttempt(
   userAgent: string | null
 ): Promise<void> {
   await prisma.$executeRaw`
-    SELECT system.auth_record_attempt(${userId}, ${status}, ${ipAddress}, ${userAgent})
+    SELECT system.auth_record_attempt(
+      ${userId},
+      ${status},
+      ${ipAddress},
+      ${userAgent}
+    )
   `;
 }

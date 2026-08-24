@@ -137,30 +137,73 @@ export async function withIdempotency<T>(
   commandType: string,
   fn: () => Promise<T>,
 ): Promise<{ result: T; replayed: boolean }> {
-  const existing = await prisma.systemCommandLog.findUnique({ where: { operation_id: operationId } });
+  const existing = await withTenantContext(
+    ctx,
+    tx => tx.systemCommandLog.findUnique({
+      where: { operation_id: operationId },
+    })
+  );
+
   if (existing && existing.completed_at) {
-    return { result: existing.result_body as any as T, replayed: true };
-  }
-  if (existing && !existing.completed_at) {
-    throw new Error('This operation is already in progress — please wait before retrying.');
+    return {
+      result: existing.result_body as any as T,
+      replayed: true,
+    };
   }
 
-  await prisma.systemCommandLog.create({
-    data: { operation_id: operationId, tenant_id: ctx.schoolId || null, actor_id: ctx.userId || null, command_type: commandType },
-  });
+  if (existing && !existing.completed_at) {
+    throw new Error(
+      'This operation is already in progress - please wait before retrying.'
+    );
+  }
+
+  await withTenantContext(
+    ctx,
+    tx => tx.systemCommandLog.create({
+      data: {
+        operation_id: operationId,
+        tenant_id: ctx.schoolId || null,
+        actor_id: ctx.userId || null,
+        command_type: commandType,
+      },
+    })
+  );
 
   try {
     const result = await fn();
-    await prisma.systemCommandLog.update({
-      where: { operation_id: operationId },
-      data: { completed_at: new Date(), result_status: 200, result_body: result as any },
-    });
-    return { result, replayed: false };
+
+    await withTenantContext(
+      ctx,
+      tx => tx.systemCommandLog.update({
+        where: { operation_id: operationId },
+        data: {
+          completed_at: new Date(),
+          result_status: 200,
+          result_body: result as any,
+        },
+      })
+    );
+
+    return {
+      result,
+      replayed: false,
+    };
+
   } catch (err: any) {
-    await prisma.systemCommandLog.update({
-      where: { operation_id: operationId },
-      data: { completed_at: new Date(), result_status: 500, result_body: { error: err.message } },
-    });
+    await withTenantContext(
+      ctx,
+      tx => tx.systemCommandLog.update({
+        where: { operation_id: operationId },
+        data: {
+          completed_at: new Date(),
+          result_status: 500,
+          result_body: {
+            error: err.message,
+          },
+        },
+      })
+    );
+
     throw err;
   }
 }

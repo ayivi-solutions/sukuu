@@ -1,17 +1,33 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './authenticate';
-import { runWithTenantContext } from '../lib/tenantContext';
+import {
+  getTenantContext,
+  runWithTenantContext,
+} from '../lib/tenantContext';
 
 /**
- * Must run AFTER authenticate (needs req.schoolId/userId/roleKey already
- * populated). Wraps the rest of the request in AsyncLocalStorage so every
- * withTenantContext() call downstream — in any service function, without
- * needing the context threaded through every function signature — picks up
- * the correct actor automatically.
+ * Compatibility middleware for routers that already use it explicitly.
+ * authenticate() now establishes the ambient request scope globally.
  */
-export function attachTenantContext(req: AuthRequest, res: Response, next: NextFunction) {
+export function attachTenantContext(
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+) {
+  if (getTenantContext()) {
+    next();
+    return;
+  }
+
   runWithTenantContext(
-    { schoolId: req.schoolId || '', userId: req.userId || '', role: req.roleKey || '' },
-    async () => next()
+    {
+      sessionId: req.sessionId,
+      schoolId: req.schoolId || '',
+      userId: req.userId || '',
+      role: req.roleKey || '',
+    },
+    async () => {
+      next();
+    }
   ).catch(next);
 }

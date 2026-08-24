@@ -1068,6 +1068,7 @@ model SystemUserRole {
 model SystemSession {
   id                             String  @id @default(uuid())
   user_id                        String
+  school_id                      String?
   refresh_token_hash             String
   ip_address                     String?
   user_agent                     String?
@@ -1080,6 +1081,32 @@ model SystemSession {
 
   @@schema("system")
   @@map("system_session")
+}
+
+
+/// Internal one-time proof that credentials were verified before a session is finalized
+model SystemAuthTicket {
+  id                             String  @id
+  user_id                        String
+  school_id                      String
+  created_at                     DateTime  @default(now())
+  expires_at                     DateTime
+  used_at                        DateTime?
+
+  @@index([expires_at], map: "ix_system_auth_ticket_expiry")
+  @@schema("system")
+  @@map("system_auth_ticket")
+}
+
+/// Protected shared secret used to authenticate request-context HMAC proofs
+model SystemContextSecret {
+  id                             String  @id
+  secret_value                   String
+  created_at                     DateTime  @default(now())
+  rotated_at                     DateTime?
+
+  @@schema("system")
+  @@map("system_context_secret")
 }
 
 /// Trusted device registry for remember-me functionality
