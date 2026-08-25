@@ -30,15 +30,9 @@ BEGIN
     RAISE EXCEPTION 'Phase 2F aborted: refresh rotation already exists';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1
-    FROM system.system_user u
-    WHERE u.archived_at IS NULL
-      AND u.status <> 'CLOSED'
-      AND u.password_hash IS NOT NULL
-  ) THEN
-    RAISE EXCEPTION 'Phase 2F aborted: no current password hash is available for timing normalization';
-  END IF;
+  -- Unknown-identity timing normalization is deliberately independent of
+  -- live credential-row visibility. The hardened wrapper below uses a
+  -- dedicated, non-secret bcrypt cost-12 dummy hash instead.
 END
 $preflight$;
 
@@ -75,7 +69,6 @@ SET search_path = pg_catalog, system, sukuux
 AS $function$
 DECLARE
   v_candidate record;
-  v_dummy_hash text;
 BEGIN
   SELECT u.password_hash, u.locked_until
     INTO v_candidate
@@ -86,18 +79,11 @@ BEGIN
   LIMIT 1;
 
   IF NOT FOUND THEN
-    SELECT u.password_hash
-      INTO v_dummy_hash
-    FROM system.system_user u
-    WHERE u.archived_at IS NULL
-      AND u.status <> 'CLOSED'
-      AND u.password_hash IS NOT NULL
-    ORDER BY u.id
-    LIMIT 1;
-
+    -- Dedicated timing-only bcrypt material. This is intentionally not a
+    -- credential and does not depend on visibility of system_user rows.
     PERFORM system._auth_password_matches(
       p_password,
-      v_dummy_hash
+      '$2y$12$0Ejd/5eeWlHUJF2a99.E.OH63syr3h1SsMd64O6FKzVLVMEkmbXOS'
     );
 
     INSERT INTO system.system_authentication_log

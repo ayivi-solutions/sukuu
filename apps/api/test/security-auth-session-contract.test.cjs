@@ -170,6 +170,22 @@ test(
 
     assert.match(
       migration,
+      /\$2y\$12\$/
+    );
+
+    assert.doesNotMatch(
+      migration,
+      /no current password hash is available for timing normalization/
+    );
+
+    assert.doesNotMatch(
+      migration,
+      /INTO v_dummy_hash/
+    );
+
+
+    assert.match(
+      migration,
       /REFRESH_TOKEN_REPLAY_DETECTED/
     );
 
