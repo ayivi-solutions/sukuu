@@ -1,5 +1,3 @@
-BEGIN;
-
 -- ============================================================================
 -- SUKUU STAGE 3B PHASE 2E
 -- Trusted SystemX RLS Cutover
@@ -1377,6 +1375,3 @@ BEGIN
 
 END
 $postflight$;
-
-
-COMMIT;
