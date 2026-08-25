@@ -61,25 +61,58 @@ export async function login(
       result
     );
 
-  } catch (err: any) {
+  } catch {
 
     res.status(401).json({
       error:
-        err.message ||
-        'Login failed',
+        'Authentication failed',
     });
 
   }
 }
 
-export async function refresh(req: Request, res: Response) {
+export async function refresh(
+  req: Request,
+  res: Response
+) {
   try {
-    const { refreshToken } = req.body;
-    if (!refreshToken) return res.status(400).json({ error: 'refreshToken required' });
-    const result = await refreshAccessToken(refreshToken);
-    res.json(result);
-  } catch (err: any) {
-    res.status(401).json({ error: err.message || 'Token refresh failed' });
+    const {
+      refreshToken,
+    } = req.body;
+
+    if (!refreshToken) {
+      return res
+        .status(400)
+        .json({
+          error:
+            'refreshToken required',
+        });
+    }
+
+    const result =
+      await refreshAccessToken(
+        refreshToken,
+        {
+          ipAddress:
+            req.ip || null,
+          userAgent:
+            req.get(
+              'user-agent'
+            ) || null,
+        }
+      );
+
+    res.json(
+      result
+    );
+
+  } catch {
+
+    res.status(401).json({
+      error:
+        'Refresh authentication failed',
+    });
+
   }
 }
 

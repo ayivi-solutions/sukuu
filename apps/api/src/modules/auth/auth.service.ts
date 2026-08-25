@@ -13,7 +13,7 @@ import {
 import {
   finalizeAuthSession,
   finalizeMfaAuthSession,
-  lookupAuthSession,
+  rotateAuthRefreshSession,
   verifyAuthCredentials,
   type AuthVerifiedRole,
 } from '../../lib/authBootstrap';
@@ -21,16 +21,6 @@ import {
 export interface AuthMeta {
   ipAddress?: string | null;
   userAgent?: string | null;
-}
-
-function isBlockedAccountStatus(
-  status: string
-): boolean {
-  return (
-    status === 'SUSPENDED' ||
-    status === 'CLOSED' ||
-    status === 'LOCKED'
-  );
 }
 
 function verificationFailure(result: {
@@ -242,6 +232,8 @@ export async function loginUser(
         userId:
           verified.userId,
         sessionId,
+        jti:
+          randomUUID(),
       },
       process.env.JWT_REFRESH_SECRET!,
       {
@@ -405,122 +397,116 @@ export async function loginUser(
 }
 
 export async function refreshAccessToken(
-  token: string
+  token: string,
+  meta: AuthMeta = {}
 ) {
-  const decoded = jwt.verify(
-    token,
-    process.env.JWT_REFRESH_SECRET!
-  ) as jwt.JwtPayload & {
-    userId?: string;
-    sessionId?: string;
-  };
+  const decoded =
+    jwt.verify(
+      token,
+      process.env.JWT_REFRESH_SECRET!
+    ) as jwt.JwtPayload & {
+      userId?: string;
+      sessionId?: string;
+    };
 
   if (
     !decoded.userId ||
-    !decoded.sessionId
+    !decoded.sessionId ||
+    !decoded.exp ||
+    decoded.exp * 1000 <= Date.now()
   ) {
     throw new Error(
-      'Refresh session is not valid. Please sign in again.'
+      'Refresh authentication failed'
     );
   }
 
-  const session =
-    await lookupAuthSession(
+  const rotatedRefreshToken =
+    jwt.sign(
+      {
+        userId:
+          decoded.userId,
+        sessionId:
+          decoded.sessionId,
+        jti:
+          randomUUID(),
+        exp:
+          decoded.exp,
+      },
+      process.env.JWT_REFRESH_SECRET!
+    );
+
+  if (
+    rotatedRefreshToken === token
+  ) {
+    throw new Error(
+      'Refresh rotation did not produce a unique token'
+    );
+  }
+
+  const rotatedRefreshHash =
+    await bcrypt.hash(
+      rotatedRefreshToken,
+      10
+    );
+
+  const rotation =
+    await rotateAuthRefreshSession(
       decoded.sessionId,
-      decoded.userId
-    );
-
-  if (
-    !session ||
-    session.user_id !== decoded.userId ||
-    !session.is_active ||
-    session.invalidated_at ||
-    session.expires_at <= new Date() ||
-    !session.school_id ||
-    !session.role_key
-  ) {
-    throw new Error(
-      'Session is no longer active'
-    );
-  }
-
-  if (
-    !session.user_is_active ||
-    isBlockedAccountStatus(
-      session.user_status
-    )
-  ) {
-    throw new Error(
-      'User not found or inactive'
-    );
-  }
-
-  const tokenMatchesSession =
-    await bcrypt.compare(
+      decoded.userId,
       token,
-      session.refresh_token_hash
+      rotatedRefreshHash,
+      meta.ipAddress ?? null,
+      meta.userAgent ?? null
     );
 
-  if (!tokenMatchesSession) {
+  if (
+    !rotation.ok ||
+    !rotation.schoolId ||
+    !rotation.roleKey
+  ) {
     throw new Error(
-      'Refresh token does not match the active session'
+      'Refresh authentication failed'
     );
   }
 
   const staff =
     await prisma.staffStaff.findFirst({
       where: {
-        user_id: decoded.userId,
+        user_id:
+          decoded.userId,
       },
     });
 
-  await withTenantContext(
-    {
-      sessionId:
-        session.session_id,
-      schoolId:
-        session.school_id,
-      userId:
-        decoded.userId,
-      role:
-        session.role_key,
-    },
-    tx => tx.systemSession.update({
-      where: {
-        id: session.session_id,
+  const accessToken =
+    jwt.sign(
+      {
+        userId:
+          decoded.userId,
+        schoolId:
+          rotation.schoolId,
+        roleKey:
+          rotation.roleKey,
+        staffId:
+          staff?.id || null,
+        sessionId:
+          decoded.sessionId,
+        mustResetPassword:
+          !!rotation.mustResetPassword,
       },
-      data: {
-        last_activity_at:
-          new Date(),
-      },
-    })
-  );
-
-  const accessToken = jwt.sign(
-    {
-      userId:
-        decoded.userId,
-      schoolId:
-        session.school_id,
-      roleKey:
-        session.role_key,
-      staffId:
-        staff?.id || null,
-      sessionId:
-        session.session_id,
-      mustResetPassword:
-        !!session.must_reset_password,
-    },
-    process.env.JWT_SECRET!,
-    {
-      expiresIn:
-        (process.env.JWT_EXPIRES_IN ||
-          '15m') as any,
-    }
-  );
+      process.env.JWT_SECRET!,
+      {
+        expiresIn:
+          (
+            process.env.JWT_EXPIRES_IN ||
+            '15m'
+          ) as any,
+      }
+    );
 
   return {
     accessToken,
+    refreshToken:
+      rotatedRefreshToken,
   };
 }
 

@@ -105,6 +105,51 @@ export async function verifyAuthCredentials(
   };
 }
 
+export interface AuthRefreshRotationResult {
+  ok: boolean;
+  reason?:
+    | 'INVALID'
+    | 'REPLAY'
+    | 'NO_RESULT';
+  schoolId?: string;
+  roleKey?: string;
+  mustResetPassword?: boolean;
+  expiresAt?: string;
+  authAssurance?: string;
+}
+
+export async function rotateAuthRefreshSession(
+  sessionId: string,
+  userId: string,
+  presentedRefreshToken: string,
+  newRefreshTokenHash: string,
+  ipAddress: string | null,
+  userAgent: string | null
+): Promise<AuthRefreshRotationResult> {
+  const rows =
+    await prisma.$queryRaw<
+      Array<{
+        result:
+          AuthRefreshRotationResult;
+      }>
+    >`
+      SELECT
+        system.auth_rotate_refresh_session(
+          ${sessionId},
+          ${userId},
+          ${presentedRefreshToken},
+          ${newRefreshTokenHash},
+          ${ipAddress},
+          ${userAgent}
+        ) AS result
+    `;
+
+  return rows[0]?.result ?? {
+    ok: false,
+    reason: 'NO_RESULT',
+  };
+}
+
 export async function finalizeAuthSession(
   ticketId: string,
   sessionId: string,
