@@ -1,0 +1,35 @@
+name: Security Regression
+
+on:
+  push:
+    branches:
+      - develop
+      - stage3/auth-rls-tenant-foundation
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  api-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install workspace dependencies
+        run: npm ci
+
+      - name: Build API
+        run: npm --prefix apps/api run build
+
+      - name: Run security regression contracts
+        run: npm --prefix apps/api run test:security
