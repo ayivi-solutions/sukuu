@@ -42,9 +42,9 @@ function buildSessionProof(sessionId: string, userId: string): string {
  * Stage 3B trusted context.
  *
  * Ambient authenticated identity always wins over explicit service arguments.
- * Phase 1 also sets the legacy app.current_* values so the additive candidate
- * can be tested before the RLS policy cutover. Phase 2 will ignore those
- * legacy values completely.
+ * Database authority is established only through the session-bound identity
+ * and HMAC proof consumed by system.ctx_* helpers. Caller-settable legacy
+ * compatibility GUC authority was retired after the trusted RLS cutover.
  */
 export async function withTenantContext<TResult>(
   explicitCtx: Partial<TenantCtx> | undefined,
@@ -70,17 +70,6 @@ export async function withTenantContext<TResult>(
     `;
     await tx.$queryRaw`
       SELECT set_config('app.session_proof', ${proof}, true)
-    `;
-
-    // Transitional compatibility only.
-    await tx.$queryRaw`
-      SELECT set_config('app.current_school_id', ${ctx.schoolId}, true)
-    `;
-    await tx.$queryRaw`
-      SELECT set_config('app.current_user_id', ${ctx.userId}, true)
-    `;
-    await tx.$queryRaw`
-      SELECT set_config('app.actor_role', ${ctx.role}, true)
     `;
 
     return await fn(tx);
