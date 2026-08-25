@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
+import { digestRefreshToken } from '../../lib/refreshTokenDigest';
 import { prisma } from '../../lib/prisma';
 import {
   validateCredentialPassword,
@@ -258,10 +259,9 @@ export async function loginUser(
     );
   }
 
-  const refreshTokenHash =
-    await bcrypt.hash(
-      refreshToken,
-      10
+  const refreshTokenDigest =
+    digestRefreshToken(
+      refreshToken
     );
 
   const expiresAt =
@@ -283,7 +283,7 @@ export async function loginUser(
       await finalizeMfaAuthSession(
         verified.ticketId,
         sessionId,
-        refreshTokenHash,
+        refreshTokenDigest,
         meta.ipAddress ?? null,
         meta.userAgent ?? null,
         expiresAt,
@@ -308,7 +308,7 @@ export async function loginUser(
     await finalizeAuthSession(
       verified.ticketId,
       sessionId,
-      refreshTokenHash,
+      refreshTokenDigest,
       meta.ipAddress ?? null,
       meta.userAgent ?? null,
       expiresAt
@@ -443,18 +443,17 @@ export async function refreshAccessToken(
     );
   }
 
-  const rotatedRefreshHash =
-    await bcrypt.hash(
-      rotatedRefreshToken,
-      10
+  const rotatedRefreshDigest =
+    digestRefreshToken(
+      rotatedRefreshToken
     );
 
   const rotation =
     await rotateAuthRefreshSession(
       decoded.sessionId,
       decoded.userId,
-      token,
-      rotatedRefreshHash,
+      digestRefreshToken(token),
+      rotatedRefreshDigest,
       meta.ipAddress ?? null,
       meta.userAgent ?? null
     );

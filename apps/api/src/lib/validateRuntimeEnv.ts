@@ -22,6 +22,9 @@ export function validateRuntimeEnvironment(): void {
   const jwtRefreshSecret =
     requireValue('JWT_REFRESH_SECRET');
 
+  const refreshTokenDigestSecret =
+    requireValue('REFRESH_TOKEN_DIGEST_SECRET');
+
   const rlsContextSecret =
     requireValue('RLS_CONTEXT_SECRET');
 
@@ -42,6 +45,45 @@ export function validateRuntimeEnvironment(): void {
   if (jwtRefreshSecret.length < 32) {
     throw new Error(
       'JWT_REFRESH_SECRET must contain at least 32 characters'
+    );
+  }
+
+
+  let refreshTokenDigestSecretBytes: Buffer;
+
+  try {
+    refreshTokenDigestSecretBytes =
+      Buffer.from(
+        refreshTokenDigestSecret,
+        'base64'
+      );
+  } catch {
+    throw new Error(
+      'REFRESH_TOKEN_DIGEST_SECRET must be a valid base64 value'
+    );
+  }
+
+
+  if (
+    refreshTokenDigestSecretBytes.length !== 32 ||
+    refreshTokenDigestSecretBytes
+      .toString('base64')
+      .replace(/=+$/, '') !==
+      refreshTokenDigestSecret
+        .replace(/=+$/, '')
+  ) {
+    throw new Error(
+      'REFRESH_TOKEN_DIGEST_SECRET must decode to exactly 32 bytes'
+    );
+  }
+
+
+  if (
+    refreshTokenDigestSecret ===
+    jwtRefreshSecret
+  ) {
+    throw new Error(
+      'REFRESH_TOKEN_DIGEST_SECRET must be distinct from JWT_REFRESH_SECRET'
     );
   }
 

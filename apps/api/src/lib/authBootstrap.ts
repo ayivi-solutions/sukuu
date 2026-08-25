@@ -121,8 +121,8 @@ export interface AuthRefreshRotationResult {
 export async function rotateAuthRefreshSession(
   sessionId: string,
   userId: string,
-  presentedRefreshToken: string,
-  newRefreshTokenHash: string,
+  presentedRefreshDigest: string,
+  newRefreshTokenDigest: string,
   ipAddress: string | null,
   userAgent: string | null
 ): Promise<AuthRefreshRotationResult> {
@@ -137,8 +137,8 @@ export async function rotateAuthRefreshSession(
         system.auth_rotate_refresh_session(
           ${sessionId},
           ${userId},
-          ${presentedRefreshToken},
-          ${newRefreshTokenHash},
+          ${presentedRefreshDigest},
+          ${newRefreshTokenDigest},
           ${ipAddress},
           ${userAgent}
         ) AS result
@@ -153,7 +153,7 @@ export async function rotateAuthRefreshSession(
 export async function finalizeAuthSession(
   ticketId: string,
   sessionId: string,
-  refreshTokenHash: string,
+  refreshTokenDigest: string,
   ipAddress: string | null,
   userAgent: string | null,
   expiresAt: Date
@@ -162,7 +162,7 @@ export async function finalizeAuthSession(
     SELECT system.auth_finalize_session(
       ${ticketId},
       ${sessionId},
-      ${refreshTokenHash},
+      ${refreshTokenDigest},
       ${ipAddress},
       ${userAgent},
       ${expiresAt}
@@ -263,7 +263,7 @@ export async function recordPrivilegedMfaLoginFailure(
 export async function finalizeMfaAuthSession(
   ticketId: string,
   sessionId: string,
-  refreshTokenHash: string,
+  refreshTokenDigest: string,
   ipAddress: string | null,
   userAgent: string | null,
   expiresAt: Date,
@@ -284,7 +284,7 @@ export async function finalizeMfaAuthSession(
         system.auth_finalize_mfa_session(
           ${ticketId},
           ${sessionId},
-          ${refreshTokenHash},
+          ${refreshTokenDigest},
           ${ipAddress},
           ${userAgent},
           ${expiresAt},
