@@ -5,6 +5,7 @@ import {
   Response,
 } from 'express';
 import { createHash } from 'crypto';
+import { readRefreshTokenCookie } from '../lib/browserAuthTransport';
 
 interface RateLimitEntry {
   count: number;
@@ -365,11 +366,18 @@ export const authRefreshTokenLimiter =
       'auth-refresh-token',
     windowMs: 5 * 60_000,
     max: 20,
-    key: req =>
-      tokenOrIp(
-        req,
-        'refreshToken'
-      ),
+    key: req => {
+      const token =
+        normalizedBodyValue(
+          req,
+          'refreshToken'
+        ) ||
+        readRefreshTokenCookie(req);
+
+      return token
+        ? `token:${token}`
+        : `anonymous-ip:${clientIp(req)}`;
+    },
   });
 
 export const authMfaActionLimiter =

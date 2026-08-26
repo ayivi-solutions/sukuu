@@ -75,8 +75,8 @@ export default function AcademicXPage() {
   const [subjectEditForm, setSubjectEditForm] = useState({ name: '', code: '', subjectType: 'CORE', creditHours: 4 });
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    const userStr = localStorage.getItem('sukuu_user');
+    const t = 'cookie';
+    const userStr = sessionStorage.getItem('sukuu_user');
     if (!t) { router.push('/login'); return; }
     setToken(t);
     setUser(userStr ? JSON.parse(userStr) : null);

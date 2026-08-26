@@ -547,6 +547,54 @@ export async function logoutSession(
   };
 }
 
+export async function getCurrentSessionPresentation(
+  userId: string,
+  schoolId: string,
+  roleKey: string,
+  sessionId: string
+) {
+  return withTenantContext(
+    {
+      sessionId,
+      schoolId,
+      userId,
+      role: roleKey,
+    },
+    async tx => {
+      const staff =
+        await tx.staffStaff.findFirst({
+          where: { user_id: userId },
+        });
+
+      const role =
+        await tx.systemRole.findFirst({
+          where: {
+            name: roleKey,
+            OR: [
+              { school_id: schoolId },
+              { is_system: true },
+            ],
+          },
+        });
+
+      return {
+        user: {
+          firstName:
+            staff?.first_name || null,
+          lastName:
+            staff?.last_name || null,
+          roleKey,
+          roleLabel:
+            role?.label || roleKey,
+        },
+        school: {
+          id: schoolId,
+        },
+      };
+    }
+  );
+}
+
 export async function changeOwnPassword(
   userId: string,
   currentPassword: string,

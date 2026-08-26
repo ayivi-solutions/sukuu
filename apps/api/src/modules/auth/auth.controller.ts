@@ -3,6 +3,7 @@ import {
   loginUser,
   refreshAccessToken,
   logoutSession,
+  getCurrentSessionPresentation,
   changeOwnPassword,
 } from './auth.service';
 import { getMyModuleAccess } from '../../lib/roleGrants';
@@ -10,6 +11,13 @@ import {
   activateCredentialWithToken,
 } from './credential.service';
 import { AuthRequest } from '../../middleware/authenticate';
+import {
+  clearBrowserAuthCookies,
+  isTrustedBrowserRequest,
+  readRefreshTokenCookie,
+  wantsBrowserAuthTransport,
+  writeBrowserAuthCookies,
+} from '../../lib/browserAuthTransport';
 import {
   getMfaStatus,
   beginTotpEnrollment,
@@ -23,6 +31,19 @@ export async function login(
   req: Request,
   res: Response
 ) {
+  const browserTransport =
+    wantsBrowserAuthTransport(req);
+
+  if (
+    browserTransport &&
+    !isTrustedBrowserRequest(req)
+  ) {
+    return res.status(403).json({
+      error:
+        'Authentication request verification failed',
+    });
+  }
+
   try {
     const {
       email,
@@ -30,19 +51,14 @@ export async function login(
       mfaCode,
     } = req.body;
 
-    if (
-      !email ||
-      !password
-    ) {
-      return res
-        .status(400)
-        .json({
-          error:
-            'Email and password required',
-        });
+    if (!email || !password) {
+      return res.status(400).json({
+        error:
+          'Email and password required',
+      });
     }
 
-    const result =
+    const result: any =
       await loginUser(
         email,
         password,
@@ -50,24 +66,43 @@ export async function login(
           ipAddress:
             req.ip || null,
           userAgent:
-            req.get(
-              'user-agent'
-            ) || null,
+            req.get('user-agent') || null,
         },
         mfaCode
       );
 
-    res.json(
-      result
-    );
+    if (
+      browserTransport &&
+      result.accessToken &&
+      result.refreshToken
+    ) {
+      writeBrowserAuthCookies(
+        res,
+        result.accessToken,
+        result.refreshToken
+      );
 
+      const {
+        accessToken: _accessToken,
+        refreshToken: _refreshToken,
+        ...browserResult
+      } = result;
+
+      return res.json(
+        browserResult
+      );
+    }
+
+    return res.json(result);
   } catch {
+    if (browserTransport) {
+      clearBrowserAuthCookies(res);
+    }
 
-    res.status(401).json({
+    return res.status(401).json({
       error:
         'Authentication failed',
     });
-
   }
 }
 
@@ -75,18 +110,30 @@ export async function refresh(
   req: Request,
   res: Response
 ) {
+  const browserTransport =
+    wantsBrowserAuthTransport(req);
+
+  if (
+    browserTransport &&
+    !isTrustedBrowserRequest(req)
+  ) {
+    return res.status(403).json({
+      error:
+        'Refresh request verification failed',
+    });
+  }
+
   try {
-    const {
-      refreshToken,
-    } = req.body;
+    const refreshToken =
+      browserTransport
+        ? readRefreshTokenCookie(req)
+        : req.body?.refreshToken;
 
     if (!refreshToken) {
-      return res
-        .status(400)
-        .json({
-          error:
-            'refreshToken required',
-        });
+      return res.status(400).json({
+        error:
+          'refreshToken required',
+      });
     }
 
     const result =
@@ -96,44 +143,108 @@ export async function refresh(
           ipAddress:
             req.ip || null,
           userAgent:
-            req.get(
-              'user-agent'
-            ) || null,
+            req.get('user-agent') || null,
         }
       );
 
-    res.json(
-      result
-    );
+    if (browserTransport) {
+      writeBrowserAuthCookies(
+        res,
+        result.accessToken,
+        result.refreshToken
+      );
 
+      const {
+        accessToken: _accessToken,
+        refreshToken: _refreshToken,
+        ...browserResult
+      } = result;
+
+      return res.json({
+        ...browserResult,
+        refreshed: true,
+      });
+    }
+
+    return res.json(result);
   } catch {
+    if (browserTransport) {
+      clearBrowserAuthCookies(res);
+    }
 
-    res.status(401).json({
+    return res.status(401).json({
       error:
         'Refresh authentication failed',
     });
-
   }
 }
 
-export async function logout(req: AuthRequest, res: Response) {
+export async function logout(
+  req: AuthRequest,
+  res: Response
+) {
   try {
-    if (!req.userId) return res.status(401).json({ error: 'Not authenticated' });
-    await logoutSession(req.userId, req.sessionId);
-    res.json({ success: true, message: 'Logged out' });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Logout failed' });
+    if (!req.userId) {
+      return res.status(401).json({
+        error: 'Not authenticated',
+      });
+    }
+
+    await logoutSession(
+      req.userId,
+      req.sessionId
+    );
+
+    if (req.authTransport === 'cookie') {
+      clearBrowserAuthCookies(res);
+    }
+
+    return res.json({
+      success: true,
+      message: 'Logged out',
+    });
+  } catch {
+    if (req.authTransport === 'cookie') {
+      clearBrowserAuthCookies(res);
+    }
+
+    return res.status(500).json({
+      error: 'Logout failed',
+    });
   }
 }
 
-export async function me(req: AuthRequest, res: Response) {
-  res.json({
-    userId: req.userId,
-    schoolId: req.schoolId,
-    roleKey: req.roleKey,
-    staffId: req.staffId,
-    sessionId: req.sessionId,
-  });
+export async function me(
+  req: AuthRequest,
+  res: Response
+) {
+  try {
+    if (
+      !req.userId ||
+      !req.schoolId ||
+      !req.roleKey ||
+      !req.sessionId
+    ) {
+      return res.status(401).json({
+        error: 'Not authenticated',
+      });
+    }
+
+    const presentation =
+      await getCurrentSessionPresentation(
+        req.userId,
+        req.schoolId,
+        req.roleKey,
+        req.sessionId
+      );
+
+    return res.json(presentation);
+  } catch {
+    return res.status(500).json({
+      error:
+        'Could not determine the current session',
+    });
+  }
 }
 
 export async function changePassword(req: AuthRequest, res: Response) {

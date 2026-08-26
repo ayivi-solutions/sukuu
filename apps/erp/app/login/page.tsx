@@ -1,9 +1,12 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { login } from '../../lib/api';
+import {
+  authedFetch,
+  establishBrowserSession,
+  login,
+} from '../../lib/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 function ExpiredBanner({ onExpired }: { onExpired: () => void }) {
   const searchParams = useSearchParams();
@@ -35,7 +38,7 @@ export default function LoginPage() {
   // Set once a temp-password login succeeds — holds what's needed to
   // complete the change-password step without asking the person to
   // re-type their temp password a second time.
-  const [pendingReset, setPendingReset] = useState<{ accessToken: string; email: string; tempPassword: string } | null>(null);
+  const [pendingReset, setPendingReset] = useState<{ email: string; tempPassword: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetError, setResetError] = useState('');
@@ -69,8 +72,6 @@ export default function LoginPage() {
         data.user?.mustResetPassword
       ) {
         setPendingReset({
-          accessToken:
-            data.accessToken,
           email,
           tempPassword:
             password,
@@ -79,16 +80,8 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem(
-        'sukuu_token',
-        data.accessToken
-      );
-
-      localStorage.setItem(
-        'sukuu_user',
-        JSON.stringify(
-          data.user
-        )
+      establishBrowserSession(
+        data.user
       );
 
       router.push(
@@ -122,13 +115,29 @@ export default function LoginPage() {
 
     setResetLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/auth/change-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${pendingReset.accessToken}` },
-        body: JSON.stringify({ currentPassword: pendingReset.tempPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not set new password');
+      const data = await authedFetch(
+        '/api/v1/auth/change-password',
+        'cookie',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body:
+            JSON.stringify({
+              currentPassword:
+                pendingReset.tempPassword,
+              newPassword,
+            }),
+        }
+      );
+
+      if (!data?.success) {
+        throw new Error(
+          'Could not set new password'
+        );
+      }
 
       // Log in again with the new password — the freshest, simplest way
       // to get a fully-authorized token (mustResetPassword now false)
@@ -174,16 +183,8 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem(
-        'sukuu_token',
-        fresh.accessToken
-      );
-
-      localStorage.setItem(
-        'sukuu_user',
-        JSON.stringify(
-          fresh.user
-        )
+      establishBrowserSession(
+        fresh.user
       );
 
       router.push(

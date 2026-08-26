@@ -242,8 +242,8 @@ export default function SystemXPage() {
   }
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    const userStr = localStorage.getItem('sukuu_user');
+    const t = 'cookie';
+    const userStr = sessionStorage.getItem('sukuu_user');
     if (!t) { router.push('/login'); return; }
     setToken(t);
     setUser(userStr ? JSON.parse(userStr) : null);
@@ -251,8 +251,10 @@ export default function SystemXPage() {
     // One lightweight check before the page's ~15 data requests fire —
     // if this role has no system access, say so once, cleanly, instead
     // of letting every one of those requests fail independently.
-    fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api/v1/auth/my-access', { headers: { Authorization: `Bearer ${t}` } })
-      .then(r => r.json())
+    baseAuthedFetch(
+      '/api/v1/auth/my-access',
+      t
+    )
       .then(access => {
         setAccessChecked(true);
         if (!access || typeof access !== 'object' || !('system' in access)) {

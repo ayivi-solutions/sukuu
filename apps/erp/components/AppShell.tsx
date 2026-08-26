@@ -1,6 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import {
+  authedFetch,
+  endBrowserSession,
+  establishBrowserSession,
+  subscribeToAuthEvents,
+} from '../lib/api';
 
 const NAV_SECTIONS = [
   { sec: 'PLATFORM', items: [
@@ -154,15 +160,48 @@ export default function AppShell({ children, user, schoolName }: {
   const router = useRouter();
   const pathname = usePathname();
   const [access, setAccess] = useState<Record<string, 'read' | 'full'> | null>(null);
+  const [currentUser, setCurrentUser] = useState(user);
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    if (!t) return;
-    fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/v1/auth/my-access', { headers: { Authorization: `Bearer ${t}` } })
-      .then(r => r.json())
-      .then(a => setAccess(a && typeof a === 'object' ? a : {}))
+    authedFetch(
+      '/api/v1/auth/me',
+      'cookie'
+    )
+      .then(session => {
+        if (session?.user) {
+          setCurrentUser(session.user);
+          establishBrowserSession(
+            session.user
+          );
+        }
+      })
+      .catch(() => {});
+
+    authedFetch(
+      '/api/v1/auth/my-access',
+      'cookie'
+    )
+      .then(a =>
+        setAccess(
+          a && typeof a === 'object'
+            ? a
+            : {}
+        )
+      )
       .catch(() => setAccess({}));
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      setCurrentUser(user);
+    }
+  }, [user]);
+
+  useEffect(() =>
+    subscribeToAuthEvents(() => {
+      router.replace('/login');
+    }),
+  [router]);
 
   useEffect(() => {
     let ro: ResizeObserver | null = null;
@@ -186,10 +225,10 @@ export default function AppShell({ children, user, schoolName }: {
   }, [pathname]);
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    if (!t) return;
-    fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/v1/school/branding', { headers: { Authorization: `Bearer ${t}` } })
-      .then(r => r.json())
+    authedFetch(
+      '/api/v1/school/branding',
+      'cookie'
+    )
       .then(b => {
         if (b?.primary_color) document.documentElement.style.setProperty('--navy', b.primary_color);
         if (b?.secondary_color) document.documentElement.style.setProperty('--gold', b.secondary_color);
@@ -200,20 +239,30 @@ export default function AppShell({ children, user, schoolName }: {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const [crestUrl, setCrestUrl] = useState('');
 
-  function logout() {
-    localStorage.removeItem('sukuu_token');
-    localStorage.removeItem('sukuu_user');
-    router.push('/login');
+  async function logout() {
+    setLogoutError('');
+
+    try {
+      await endBrowserSession();
+      setShowLogoutConfirm(false);
+      router.replace('/login');
+    } catch (error: any) {
+      setLogoutError(
+        error?.message ||
+        'Secure sign-out could not be confirmed. Try again.'
+      );
+    }
   }
   function navigate(href: string) {
     setDrawerOpen(false);
     router.push(href);
   }
 
-  const initials = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}` : '';
-  const roleKey = user?.roleKey || '';
+  const initials = currentUser ? `${currentUser.firstName?.[0] || ''}${currentUser.lastName?.[0] || ''}` : '';
+  const roleKey = currentUser?.roleKey || '';
   const bnavItems = (BOTTOM_NAV[roleKey] || DEFAULT_BNAV).filter(item => hrefIsAccessible(item.href, access));
   const canAccessSchool = hrefIsAccessible('/schoolx', access);
   const canAccessSystem = hrefIsAccessible('/systemx', access);
@@ -232,7 +281,7 @@ export default function AppShell({ children, user, schoolName }: {
           <div className="sd-sav">{crestUrl ? <img src={crestUrl} alt="Crest" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit' }} /> : (schoolName?.[0] || 'S')}</div>
           <div className="sd-sinf">
             <div className="sd-sname">{schoolName || 'School'}</div>
-            <div className="sd-srole">{user?.roleLabel}</div>
+            <div className="sd-srole">{currentUser?.roleLabel}</div>
           </div>
           {canAccessSchool && <span style={{ color: 'rgba(242,230,201,.3)', fontSize: 12 }}>⌄</span>}
         </div>
@@ -292,6 +341,11 @@ export default function AppShell({ children, user, schoolName }: {
             <div style={{ fontSize: 32, marginBottom: 12 }}>🚪</div>
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, marginBottom: 8 }}>Sign out of Sukuu ERP?</h3>
             <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 20 }}>You'll need to sign in again to access your workspace.</p>
+            {logoutError && (
+              <div role="alert" style={{ marginBottom: 16, padding: 10, borderRadius: 'var(--rS)', background: 'var(--erB)', color: 'var(--er)', fontSize: 12 }}>
+                {logoutError}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setShowLogoutConfirm(false)} style={{ flex: 1, background: 'var(--soft)', color: 'var(--ink)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Cancel</button>
               <button onClick={logout} style={{ flex: 1, background: 'var(--erB)', color: 'var(--er)', padding: 11, borderRadius: 'var(--rS)', fontWeight: 600 }}>Sign Out</button>

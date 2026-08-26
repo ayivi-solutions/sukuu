@@ -49,8 +49,8 @@ export default function SchoolXPage() {
   const [editAccredForm, setEditAccredForm] = useState({ authority: '', accreditationNumber: '', issueDate: '', expiryDate: '' });
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    const userStr = localStorage.getItem('sukuu_user');
+    const t = 'cookie';
+    const userStr = sessionStorage.getItem('sukuu_user');
     if (!t) { router.push('/login'); return; }
     setToken(t);
     setUser(userStr ? JSON.parse(userStr) : null);
@@ -145,10 +145,14 @@ export default function SchoolXPage() {
     if (!file) return;
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/v1/upload', {
-      method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData,
-    });
-    const data = await res.json();
+    const data = await authedFetch(
+      '/api/v1/upload',
+      token,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
     if (data.url) {
       setBranding((b: any) => ({ ...b, crest_url: data.url }));
       extractColorsFromImage(data.url);

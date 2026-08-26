@@ -6,7 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test:security": "node --test test/security-rate-limiter.test.cjs test/security-auth-session-contract.test.cjs test/security-refresh-digest-contract.test.cjs"
+    "test:security": "node --test test/security-rate-limiter.test.cjs test/security-auth-session-contract.test.cjs test/security-refresh-digest-contract.test.cjs test/security-browser-session-transport.test.cjs"
   },
   "dependencies": {
     "@prisma/client": "^5.14.0",

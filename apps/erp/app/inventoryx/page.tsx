@@ -40,8 +40,8 @@ export default function InventoryXPage() {
   const stockOnHand = (itemId: string) => stockEntries.filter(e => e.item_id === itemId).reduce((s, e) => s + e.quantity, 0) - stockIssues.filter(i => i.item_id === itemId).reduce((s, i) => s + i.quantity, 0);
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    const userStr = localStorage.getItem('sukuu_user');
+    const t = 'cookie';
+    const userStr = sessionStorage.getItem('sukuu_user');
     if (!t) { router.push('/login'); return; }
     setToken(t); setUser(userStr ? JSON.parse(userStr) : null);
     loadAll(t);

@@ -1,7 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
+import {
+  Request,
+  Response,
+  NextFunction,
+} from 'express';
 import jwt from 'jsonwebtoken';
 import { lookupAuthSession } from '../lib/authBootstrap';
 import { runWithTenantContext } from '../lib/tenantContext';
+import {
+  isTrustedBrowserRequest,
+  isUnsafeMethod,
+  readAccessTokenCookie,
+} from '../lib/browserAuthTransport';
 
 export interface AuthRequest extends Request {
   userId?: string;
@@ -14,6 +23,7 @@ export interface AuthRequest extends Request {
   mfaVerifiedAt?: Date | null;
   stepUpVerifiedAt?: Date | null;
   stepUpExpiresAt?: Date | null;
+  authTransport?: 'bearer' | 'cookie';
 }
 
 export async function authenticate(
@@ -21,17 +31,39 @@ export async function authenticate(
   res: Response,
   next: NextFunction
 ) {
-  const auth = req.headers.authorization;
+  const authorization =
+    req.headers.authorization;
 
-  if (!auth?.startsWith('Bearer ')) {
+  const bearerToken =
+    authorization?.startsWith('Bearer ')
+      ? authorization.slice(7)
+      : null;
+
+  const cookieToken =
+    bearerToken
+      ? null
+      : readAccessTokenCookie(req);
+
+  const token =
+    bearerToken || cookieToken;
+
+  if (!token) {
     return res.status(401).json({
       error: 'No token provided',
     });
   }
 
-  try {
-    const token = auth.slice(7);
+  if (
+    cookieToken &&
+    isUnsafeMethod(req.method) &&
+    !isTrustedBrowserRequest(req)
+  ) {
+    return res.status(403).json({
+      error: 'Request origin verification failed',
+    });
+  }
 
+  try {
     const decoded = jwt.verify(
       token,
       process.env.JWT_SECRET!
@@ -44,16 +76,21 @@ export async function authenticate(
       mustResetPassword?: boolean;
     };
 
-    if (!decoded.userId || !decoded.sessionId) {
+    if (
+      !decoded.userId ||
+      !decoded.sessionId
+    ) {
       return res.status(401).json({
-        error: 'A valid session-bound token is required',
+        error:
+          'A valid session-bound token is required',
       });
     }
 
-    const session = await lookupAuthSession(
-      decoded.sessionId,
-      decoded.userId
-    );
+    const session =
+      await lookupAuthSession(
+        decoded.sessionId,
+        decoded.userId
+      );
 
     if (
       !session ||
@@ -63,38 +100,55 @@ export async function authenticate(
       !session.user_is_active ||
       !session.school_id ||
       !session.role_key ||
-      ['LOCKED', 'SUSPENDED', 'CLOSED'].includes(session.user_status)
+      [
+        'LOCKED',
+        'SUSPENDED',
+        'CLOSED',
+      ].includes(session.user_status)
     ) {
       return res.status(401).json({
-        error: 'Session is no longer active',
+        error:
+          'Session is no longer active',
       });
     }
 
-    // The JWT's schoolId/roleKey are compatibility claims only.
-    // Authority is reconstructed from the server-side session and live roles.
+    req.authTransport =
+      cookieToken
+        ? 'cookie'
+        : 'bearer';
+
+    // JWT context claims are compatibility data only. Authority is rebuilt
+    // from the live server-side session and its current role relationship.
     req.userId = session.user_id;
     req.schoolId = session.school_id;
     req.roleKey = session.role_key;
-    req.staffId = decoded.staffId || undefined;
+    req.staffId =
+      decoded.staffId || undefined;
     req.sessionId = session.session_id;
-    req.mustResetPassword = !!session.must_reset_password;
-    req.authAssurance = session.auth_assurance;
-    req.mfaVerifiedAt = session.mfa_verified_at;
-    req.stepUpVerifiedAt = session.step_up_verified_at;
-    req.stepUpExpiresAt = session.step_up_expires_at;
+    req.mustResetPassword =
+      !!session.must_reset_password;
+    req.authAssurance =
+      session.auth_assurance;
+    req.mfaVerifiedAt =
+      session.mfa_verified_at;
+    req.stepUpVerifiedAt =
+      session.step_up_verified_at;
+    req.stepUpExpiresAt =
+      session.step_up_expires_at;
 
     if (
       req.mustResetPassword &&
-      !req.originalUrl.startsWith('/api/v1/auth/')
+      !req.originalUrl.startsWith(
+        '/api/v1/auth/'
+      )
     ) {
       return res.status(403).json({
-        error: 'You must set a new password before continuing.',
+        error:
+          'You must set a new password before continuing.',
         mustResetPassword: true,
       });
     }
 
-    // Universal request scope: all 24 modules now inherit the authenticated
-    // session context, including shared audit helpers.
     return runWithTenantContext(
       {
         sessionId: req.sessionId,

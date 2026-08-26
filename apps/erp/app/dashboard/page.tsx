@@ -45,8 +45,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('sukuu_token');
-    const userStr = localStorage.getItem('sukuu_user');
+    const token = 'cookie';
+    const userStr = sessionStorage.getItem('sukuu_user');
     if (!token) { router.push('/login'); return; }
     setUser(userStr ? JSON.parse(userStr) : null);
     getDashboardSummary(token)

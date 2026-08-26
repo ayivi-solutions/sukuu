@@ -37,8 +37,8 @@ export default function AdmissionsPage() {
   const [academicYears, setAcademicYears] = useState<any[]>([]);
 
   useEffect(() => {
-    const t = localStorage.getItem('sukuu_token');
-    const userStr = localStorage.getItem('sukuu_user');
+    const t = 'cookie';
+    const userStr = sessionStorage.getItem('sukuu_user');
     if (!t) { router.push('/login'); return; }
     setToken(t);
     setUser(userStr ? JSON.parse(userStr) : null);
