@@ -14,8 +14,10 @@ const workflow=source('.github/workflows/security-regression.yml');
 test('SystemX request entry uses authenticated tenant context',()=>{
   assert.match(router,/systemRouter\.use\(\s*authenticate,\s*attachTenantContext\s*\)/);
 });
-test('SystemX high-risk mutations use full access plus fresh step-up',()=>{
-  assert.match(router,/const F = requireModuleAccess\('system', 'full'\)/);
+test('SystemX high-risk mutations use action authority plus fresh step-up',()=>{
+  assert.match(router,/requireSystemAction/);
+  assert.match(router,/const APP = requireSystemAction\('approve'/);
+  assert.match(router,/const ADM = requireSystemAction\('administer'/);
   assert.match(router,/const S = requireStepUp/);
   for(const r of ['/users/:userId/suspend','/users/:userId/reinstate','/users/:userId/status','/users/:userId/reset-password','/sessions/:sessionId/revoke']) assert.ok(router.includes(r));
 });

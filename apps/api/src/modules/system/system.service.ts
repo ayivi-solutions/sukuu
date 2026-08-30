@@ -36,6 +36,12 @@ export async function transitionUserStatus(
   newStatus: UserStatus,
   reason: string,
 ) {
+  if (userId === ctx.userId) {
+    throw new Error(
+      'Segregation of duties: administrative status changes require another authorised actor.'
+    );
+  }
+
   return withTenantContext(ctx, async (tx) => {
     const user = await tx.systemUser.findUnique({ where: { id: userId } });
     if (!user) throw new Error('User not found or not visible in current context');
@@ -600,14 +606,50 @@ export async function assignPermission(ctx: TenantCtx, roleId: string, permissio
     // roster, decoupled from account creation), that's no longer
     // guaranteed for anyone onboarded through the new flow. Resolve the
     // real user_id explicitly rather than comparing staff_id directly.
-    const holders = await prisma.staffEmployment.findMany({ where: { role_id: roleId, is_current: true }, select: { staff_id: true } });
-    const holderStaff = await prisma.staffStaff.findMany({ where: { id: { in: holders.map(h => h.staff_id) } }, select: { user_id: true } });
-    const holderUserIds = holderStaff.map(s => s.user_id).filter((id): id is string => !!id);
-    const permission = await tx.systemPermission.findUnique({ where: { id: permissionId } });
-    const isPrivileged = permission?.action === 'full';
+    const holders = await prisma.staffEmployment.findMany({
+      where: { role_id: roleId, is_current: true },
+      select: { staff_id: true },
+    });
+    const holderStaff = await prisma.staffStaff.findMany({
+      where: { id: { in: holders.map(h => h.staff_id) } },
+      select: { user_id: true },
+    });
+    const directRoleHolders = await tx.systemUserRole.findMany({
+      where: {
+        role_id: roleId,
+        school_id: ctx.schoolId,
+        OR: [
+          { expires_at: null },
+          { expires_at: { gt: new Date() } },
+        ],
+      },
+      select: { user_id: true },
+    });
+    const holderUserIds = new Set([
+      ...holderStaff
+        .map(staff => staff.user_id)
+        .filter((id): id is string => !!id),
+      ...directRoleHolders.map(holder => holder.user_id),
+    ]);
+    const permission = await tx.systemPermission.findUnique({
+      where: { id: permissionId },
+    });
+    const PRIVILEGED_PERMISSION_ACTIONS = new Set([
+      'full',
+      'approve',
+      'release',
+      'correct',
+      'cancel',
+      'administer',
+    ]);
+    const isPrivileged =
+      !!permission &&
+      PRIVILEGED_PERMISSION_ACTIONS.has(permission.action);
 
-    if (isPrivileged && holderUserIds.length === 1 && holderUserIds[0] === ctx.userId) {
-      throw new Error('Maker-checker: you cannot grant a privileged permission to a role held only by yourself. Ask another administrator to approve this grant.');
+    if (isPrivileged && holderUserIds.has(ctx.userId)) {
+      throw new Error(
+        'Maker-checker: you cannot grant a privileged permission to a role you currently hold. Ask another authorised administrator to approve this grant.'
+      );
     }
 
     const grant = await tx.systemRolePermission.create({
@@ -676,9 +718,47 @@ export async function assignRoleToUser(ctx: TenantCtx, userId: string, roleId: s
     // a privileged (is_system) role to themselves. Ordinary roles are
     // unaffected — this specifically targets the ESS-named "self-approval"
     // threat for the highest-impact case (elevating your own access).
-    const role = await tx.systemRole.findUnique({ where: { id: roleId } });
-    if (role?.is_system && userId === ctx.userId) {
-      throw new Error('Maker-checker: you cannot assign yourself a system role. Ask another administrator to approve this.');
+    const role = await tx.systemRole.findUnique({
+      where: { id: roleId },
+    });
+
+    const roleLinks =
+      await tx.systemRolePermission.findMany({
+        where: { role_id: roleId },
+        select: { permission_id: true },
+      });
+    const rolePermissions =
+      await tx.systemPermission.findMany({
+        where: {
+          id: {
+            in: roleLinks.map(link => link.permission_id),
+          },
+        },
+        select: { action: true },
+      });
+    const privilegedActions = new Set([
+      'full',
+      'approve',
+      'release',
+      'correct',
+      'cancel',
+      'administer',
+    ]);
+    const roleCarriesPrivilegedPermission =
+      rolePermissions.some(permission =>
+        privilegedActions.has(permission.action)
+      );
+
+    if (
+      userId === ctx.userId &&
+      (
+        role?.is_system ||
+        roleCarriesPrivilegedPermission
+      )
+    ) {
+      throw new Error(
+        'Maker-checker: you cannot assign yourself a privileged role. Ask another authorised administrator to approve this.'
+      );
     }
 
     const existing = await tx.systemUserRole.findFirst({ where: { user_id: userId, role_id: roleId, school_id: ctx.schoolId } });
@@ -737,6 +817,12 @@ export async function revokeRoleAssignment(ctx: TenantCtx, assignmentId: string)
  * requireModuleAccess before this ever runs.
  */
 export async function adminResetPassword(ctx: TenantCtx, userId: string) {
+  if (userId === ctx.userId) {
+    throw new Error(
+      'Segregation of duties: use the self-service credential flow for your own password.'
+    );
+  }
+
   const newTempPassword = 'Sukuu@' + Math.random().toString(36).slice(2, 8) + '!';
   const hash = await bcrypt.hash(newTempPassword, 12);
 

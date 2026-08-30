@@ -1,81 +1,82 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
 import { attachTenantContext } from '../../middleware/attachTenantContext';
-import { requireModuleAccess } from '../../middleware/requireModuleAccess';
 import { requireStepUp } from '../../middleware/requireStepUp';
+import { requireSystemAction } from '../../middleware/requireSystemAction';
 import * as ctrl from './system.controller';
 
 export const systemRouter = Router();
 
-// Every route needs tenant context now (system.* tables are FORCE RLS —
-// no context means no rows, by design), so it's applied once here rather
-// than per-route.
-systemRouter.use(authenticate, attachTenantContext);
+systemRouter.use(
+  authenticate,
+  attachTenantContext
+);
 
-const R = requireModuleAccess('system', 'read');
-const F = requireModuleAccess('system', 'full');
+const V = requireSystemAction('view', 'system-record-view');
+const C = requireSystemAction('create', 'system-record-create');
+const SUB = requireSystemAction('submit', 'system-change-submit');
+const APP = requireSystemAction('approve', 'system-consequential-approve');
+const COR = requireSystemAction('correct', 'system-record-correct');
+const EXP = requireSystemAction('export', 'system-governed-export');
+const ADM = requireSystemAction('administer', 'system-security-administer');
 const S = requireStepUp;
 
-systemRouter.get('/roles', R, ctrl.getRoles);
-systemRouter.get('/permissions', R, ctrl.getPermissions);
-systemRouter.get('/roles/:roleId/permissions', R, ctrl.getRolePermissionsHandler);
-systemRouter.post('/roles/:roleId/permissions', F, S, ctrl.postAssignPermission);
-systemRouter.delete('/roles/:roleId/permissions/:permissionId', F, S, ctrl.deleteRemovePermission);
-systemRouter.patch('/roles/:roleId', F, S, ctrl.patchRole);
-systemRouter.post('/roles', F, S, ctrl.postRole);
+systemRouter.get('/roles', V, ctrl.getRoles);
+systemRouter.get('/permissions', V, ctrl.getPermissions);
+systemRouter.get('/roles/:roleId/permissions', V, ctrl.getRolePermissionsHandler);
+systemRouter.post('/roles/:roleId/permissions', ADM, S, ctrl.postAssignPermission);
+systemRouter.delete('/roles/:roleId/permissions/:permissionId', ADM, S, ctrl.deleteRemovePermission);
+systemRouter.patch('/roles/:roleId', ADM, S, ctrl.patchRole);
+systemRouter.post('/roles', C, S, ctrl.postRole);
 
-// User role assignment — multi-role, temporary (expiresAt optional)
-systemRouter.get('/users/:userId/role-assignments', R, ctrl.getUserRoleAssignments);
-systemRouter.post('/users/:userId/role-assignments', F, S, ctrl.postUserRoleAssignment);
-systemRouter.patch('/role-assignments/:assignmentId/revoke', F, S, ctrl.patchRevokeRoleAssignment);
+systemRouter.get('/users/:userId/role-assignments', V, ctrl.getUserRoleAssignments);
+systemRouter.post('/users/:userId/role-assignments', ADM, S, ctrl.postUserRoleAssignment);
+systemRouter.patch('/role-assignments/:assignmentId/revoke', ADM, S, ctrl.patchRevokeRoleAssignment);
 
-systemRouter.get('/users', R, ctrl.getUsers);
-systemRouter.post('/users', F, S, ctrl.postUser);
-systemRouter.get('/staff-roster/unlinked', R, ctrl.getUnlinkedStaff);
-systemRouter.post('/staff-roster', F, S, ctrl.postRosterEntry);
-systemRouter.patch('/users/:userId', F, S, ctrl.patchUser);
-systemRouter.patch('/users/:userId/suspend', F, S, ctrl.patchSuspend);
-systemRouter.patch('/users/:userId/reinstate', F, S, ctrl.patchReinstate);
-systemRouter.patch('/users/:userId/archive', F, S, ctrl.patchArchiveUser);
-systemRouter.patch('/users/:userId/status', F, S, ctrl.patchUserStatus);
-systemRouter.patch('/users/:userId/reset-password', F, S, ctrl.patchResetPassword);
-systemRouter.get('/users/:userId/identities', R, ctrl.getUserIdentities);
-systemRouter.post('/users/:userId/identities', F, S, ctrl.postUserIdentity);
+systemRouter.get('/users', V, ctrl.getUsers);
+systemRouter.post('/users', APP, S, ctrl.postUser);
+systemRouter.get('/staff-roster/unlinked', V, ctrl.getUnlinkedStaff);
+systemRouter.post('/staff-roster', C, S, ctrl.postRosterEntry);
+systemRouter.patch('/users/:userId', COR, S, ctrl.patchUser);
+systemRouter.patch('/users/:userId/suspend', APP, S, ctrl.patchSuspend);
+systemRouter.patch('/users/:userId/reinstate', APP, S, ctrl.patchReinstate);
+systemRouter.patch('/users/:userId/archive', APP, S, ctrl.patchArchiveUser);
+systemRouter.patch('/users/:userId/status', APP, S, ctrl.patchUserStatus);
+systemRouter.patch('/users/:userId/reset-password', ADM, S, ctrl.patchResetPassword);
+systemRouter.get('/users/:userId/identities', V, ctrl.getUserIdentities);
+systemRouter.post('/users/:userId/identities', ADM, S, ctrl.postUserIdentity);
 
-systemRouter.get('/flags', R, ctrl.getFlags);
-systemRouter.patch('/flags/:flagId', F, S, ctrl.patchFlag);
-systemRouter.post('/flags', F, S, ctrl.postFlag);
+systemRouter.get('/flags', V, ctrl.getFlags);
+systemRouter.patch('/flags/:flagId', ADM, S, ctrl.patchFlag);
+systemRouter.post('/flags', C, S, ctrl.postFlag);
 
-systemRouter.get('/audit-log', R, ctrl.getAuditLog);
-systemRouter.get('/sessions', R, ctrl.getSessions);
-systemRouter.patch('/sessions/:sessionId/revoke', F, S, ctrl.patchRevoke);
-systemRouter.get('/auth-log', R, ctrl.getAuthLog);
+systemRouter.get('/audit-log', V, ctrl.getAuditLog);
+systemRouter.get('/sessions', V, ctrl.getSessions);
+systemRouter.patch('/sessions/:sessionId/revoke', ADM, S, ctrl.patchRevoke);
+systemRouter.get('/auth-log', V, ctrl.getAuthLog);
 
-systemRouter.get('/password-policy', R, ctrl.getPwdPolicy);
-systemRouter.put('/password-policy', F, S, ctrl.putPwdPolicy);
-systemRouter.get('/security-policies', R, ctrl.getSecPolicies);
-systemRouter.put('/security-policies', F, S, ctrl.putSecPolicy);
+systemRouter.get('/password-policy', V, ctrl.getPwdPolicy);
+systemRouter.put('/password-policy', ADM, S, ctrl.putPwdPolicy);
+systemRouter.get('/security-policies', V, ctrl.getSecPolicies);
+systemRouter.put('/security-policies', ADM, S, ctrl.putSecPolicy);
 
-systemRouter.get('/api-keys', R, ctrl.getApiKeys);
-systemRouter.post('/api-keys', F, S, ctrl.postApiKey);
-systemRouter.patch('/api-keys/:id/revoke', F, S, ctrl.patchRevokeApiKey);
-systemRouter.get('/webhooks', R, ctrl.getWebhooks);
-systemRouter.post('/webhooks', F, S, ctrl.postWebhook);
-systemRouter.patch('/webhooks/:id', F, S, ctrl.patchWebhook);
+systemRouter.get('/api-keys', V, ctrl.getApiKeys);
+systemRouter.post('/api-keys', ADM, S, ctrl.postApiKey);
+systemRouter.patch('/api-keys/:id/revoke', ADM, S, ctrl.patchRevokeApiKey);
+systemRouter.get('/webhooks', V, ctrl.getWebhooks);
+systemRouter.post('/webhooks', ADM, S, ctrl.postWebhook);
+systemRouter.patch('/webhooks/:id', ADM, S, ctrl.patchWebhook);
 
-systemRouter.get('/summary', R, ctrl.getSummary);
+systemRouter.get('/summary', V, ctrl.getSummary);
 
-// Bulk import (EFS-SYS-0020)
-systemRouter.post('/users/bulk/preview', F, ctrl.postBulkPreview);
-systemRouter.post('/users/bulk/commit', F, S, ctrl.postBulkCommit);
+systemRouter.post('/users/bulk/preview', SUB, ctrl.postBulkPreview);
+systemRouter.post('/users/bulk/commit', APP, S, ctrl.postBulkCommit);
 
-// Six named governed reports (EFS-SYS-0040)
-systemRouter.get('/reports/user-role-register', R, ctrl.getReportUserRoleRegister);
-systemRouter.get('/reports/privileged-access-review', R, ctrl.getReportPrivilegedAccess);
-systemRouter.get('/reports/active-session-register', R, ctrl.getReportActiveSessions);
-systemRouter.get('/reports/failed-login-trend', R, ctrl.getReportFailedLoginTrend);
-systemRouter.get('/reports/feature-flag-history', R, ctrl.getReportFeatureFlagHistory);
-systemRouter.get('/reports/audit-export', R, ctrl.getReportAuditExport);
+systemRouter.get('/reports/user-role-register', EXP, ctrl.getReportUserRoleRegister);
+systemRouter.get('/reports/privileged-access-review', EXP, ctrl.getReportPrivilegedAccess);
+systemRouter.get('/reports/active-session-register', EXP, ctrl.getReportActiveSessions);
+systemRouter.get('/reports/failed-login-trend', EXP, ctrl.getReportFailedLoginTrend);
+systemRouter.get('/reports/feature-flag-history', EXP, ctrl.getReportFeatureFlagHistory);
+systemRouter.get('/reports/audit-export', EXP, ctrl.getReportAuditExport);
 
-// Event log viewer
-systemRouter.get('/events', R, ctrl.getEvents);
+systemRouter.get('/events', V, ctrl.getEvents);
