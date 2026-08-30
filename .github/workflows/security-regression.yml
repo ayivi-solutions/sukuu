@@ -13,7 +13,7 @@ permissions:
 jobs:
   api-security:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -27,6 +27,18 @@ jobs:
 
       - name: Install workspace dependencies
         run: npm ci
+
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+          DIRECT_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+        run: npx prisma generate --schema=packages/database/prisma/schema.prisma
+
+      - name: Validate Prisma schema
+        env:
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+          DIRECT_URL: postgresql://ci:ci@127.0.0.1:5432/ci
+        run: npx prisma validate --schema=packages/database/prisma/schema.prisma
 
       - name: Build API
         run: npm --prefix apps/api run build
