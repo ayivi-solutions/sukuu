@@ -11,9 +11,9 @@ permissions:
   contents: read
 
 jobs:
-  api-security:
+  systemx-security:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -42,6 +42,9 @@ jobs:
 
       - name: Build API
         run: npm --prefix apps/api run build
+
+      - name: Build ERP
+        run: npm --prefix apps/erp run build
 
       - name: Run security regression contracts
         run: npm --prefix apps/api run test:security

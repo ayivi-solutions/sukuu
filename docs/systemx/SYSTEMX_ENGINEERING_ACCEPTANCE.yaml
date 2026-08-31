@@ -1,0 +1,163 @@
+systemx_engineering_acceptance:
+  status: CANDIDATE_PENDING_STEP4_EXECUTION
+  production_authorisation: NOT_GRANTED_BY_ENGINEERING_ACCEPTANCE
+  authoritative_blueprints:
+    - ECD
+    - ETAS
+    - EFS
+    - EEAS
+    - PDDS
+    - ESS
+    - EUIXS
+    - EAIS
+  source_baseline:
+    branch: stage3/auth-rls-tenant-foundation
+    pre_step4_head: 206f3b792347018b431e1a307c652c0e2efaea54
+  cross_cutting_ayivi_infrastructure_standards:
+    authority_relationship: >
+      These company-level deployment and portability standards do not replace
+      the eight Sukuu Blueprints. They govern how the Blueprint-conformant
+      SystemX implementation is operated and migrated across environments.
+    documents:
+      - AYV-INF-DOC-001
+      - AYV-DB-STD-001
+      - AYV-DB-MIG-001
+      - AYV-CRI-ARC-001
+    managed_development_position: managed Supabase where appropriate
+    sovereign_target_position: standard PostgreSQL on AYIVI, customer or institution-controlled infrastructure
+    required_database_role_classes:
+      - sukuu_app_runtime
+      - sukuu_migration
+      - sukuu_reporting
+      - sukuu_integration
+      - sukuu_auditor
+      - sukuu_admin
+    self_hosted_managed_outcomes:
+      - high availability and controlled failover
+      - connection pooling through PgBouncer, Supavisor or approved equivalent
+      - WAL archiving and point-in-time recovery
+      - tested backups with off-site or immutable copy
+      - monitoring, alerting and capacity observability
+      - TLS and network security controls
+      - disaster recovery with measured RPO and RTO
+      - infrastructure-as-code and repeatable provisioning
+    sovereign_migration_acceptance:
+      - freeze and identify managed source version
+      - inventory PostgreSQL version, extensions and provider services
+      - export only approved roles, schema and data
+      - provision compatible target PostgreSQL and extensions
+      - restore roles, schema and data
+      - recreate target secrets and non-database services
+      - reconcile schema, data, constraints, indexes, functions, triggers, views and RLS
+      - execute positive and negative access tests by role and tenant
+      - run application regression and load tests
+      - approve cutover, switch endpoints and retain rollback window
+  requirement_groups:
+    identity_tenancy_action_authority:
+      anchors:
+        - EFS-SYS-0001..0010
+        - ETAS-ERP-004..006
+        - ESS-SYS-141..145
+      evidence:
+        - apps/api/src/middleware/authenticate.ts
+        - apps/api/src/lib/tenantContext.ts
+        - apps/api/src/lib/systemAuthorization.ts
+        - apps/api/src/middleware/requireSystemAction.ts
+        - apps/api/src/modules/system/system.router.ts
+    record_lifecycle_and_validation:
+      anchors:
+        - EFS-SYS-0011..0036
+      evidence:
+        - apps/api/src/modules/system/system.service.ts
+        - apps/api/src/modules/system/system.controller.ts
+        - apps/erp/app/systemx/page.tsx
+    events_audit_reports:
+      anchors:
+        - EFS-SYS-0037..0040
+        - EUIXS-REQ-0711..0715
+      evidence:
+        - apps/api/src/modules/system/system.service.ts
+        - apps/api/src/modules/system/system.controller.ts
+        - apps/erp/app/systemx/page.tsx
+    acceptance_regression:
+      anchors:
+        - EFS-SYS-0041
+        - EFS-SYS-0042
+        - ESS-SYS-144-E
+        - ESS-SYS-145-E
+        - EUIXS-REQ-0720..0725
+      evidence:
+        - apps/api/test/security-systemx-blueprint-contract.test.cjs
+        - apps/api/test/security-systemx-policy-sod-contract.test.cjs
+        - apps/api/test/security-systemx-workspace-report-contract.test.cjs
+        - apps/api/test/security-systemx-engineering-acceptance-contract.test.cjs
+        - docs/systemx/SYSTEMX_THREAT_MODEL.md
+        - docs/systemx/SYSTEMX_INCIDENT_RESPONSE_PLAYBOOK.md
+  persistent_ci:
+    workflow: .github/workflows/security-regression.yml
+    required_steps:
+      - npm ci
+      - prisma generate
+      - prisma validate
+      - API production build
+      - ERP production build
+      - full security regression
+  live_database_acceptance:
+    required:
+      system_tables: 43
+      rls_tables: 43
+      force_rls_tables: 43
+      trusted_helper_functions: 7
+      legacy_guc_policies: 0
+      unconditional_allow_policies: 0
+      runtime_role:
+        name: sukuu_app_runtime
+        rolsuper: false
+        rolbypassrls: false
+        rolcanlogin: true
+      system_action_permissions: 9
+      migration_ledger:
+        total_rows: 15
+        cleanly_applied: 13
+        rolled_back_attempts: 2
+        unresolved: 0
+      applied_migration_checksum_mismatches: 0
+  commissioning_pack:
+    approved_design_basis: eight_blueprints
+    component_references:
+      - SystemX API
+      - SystemX ERP workspace
+      - trusted tenant context
+      - PostgreSQL SystemX RLS
+      - SystemX security regression workflow
+    analytics_plan:
+      - authentication failure trend
+      - active session register
+      - privileged access review
+      - feature flag history
+      - audit export
+    operational_owner: AYIVI Systems Limited - Sukuu SystemX security owner
+    rollback_criteria:
+      - failed API or ERP production build
+      - failed SystemX security regression
+      - tenant isolation failure
+      - migration invariant failure
+      - critical or high severity security, privacy or source-authority defect
+  production_commissioning_holds:
+    - representative-user testing for highest-frequency, highest-risk and highest-volume tasks
+    - low-bandwidth and interrupted-session scenario evidence
+    - shared-device, screen-reader and 200-percent-zoom evidence
+    - denied-access and stale-data scenario evidence
+    - deployed API runtime DATABASE_URL proven non-superuser and non-BYPASSRLS
+    - deployment-specific incident-response exercise and rollback validation
+    - sovereign target source/target PostgreSQL and extension compatibility matrix
+    - sovereign target managed-operations evidence for HA, pooling, backup/PITR, monitoring, TLS/network controls and DR
+    - sovereign target database-role separation for runtime, migration, reporting, integration, auditor and administrator identities
+    - sovereign migration reconciliation, load test, cutover approval and rollback-window evidence
+  interpretation:
+    engineering_completion: >
+      Step 4 may accept the SystemX engineering implementation baseline when
+      source, build, test, database-structure and traceability gates pass.
+    production_completion: >
+      Production commissioning remains a separate release gate and cannot be
+      inferred from engineering completion while any commissioning hold remains.
