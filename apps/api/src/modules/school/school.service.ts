@@ -1,11 +1,13 @@
 import { prisma } from '../../lib/prisma';
+import { withTenantContext } from '../../lib/tenantContext';
 
 export async function getSchoolProfile(schoolId: string) {
   return prisma.schoolSchool.findUnique({ where: { id: schoolId } });
 }
 
 export async function updateSchoolProfile(schoolId: string, data: Record<string, any>) {
-  const allowed = ['name', 'short_name', 'address', 'city', 'region', 'country', 'phone', 'email', 'website', 'logo_url', 'ownership_type', 'founding_date', 'founder_name', 'registration_number', 'school_type', 'is_active'];
+  // Institution activation is a governed lifecycle transition, not profile CRUD.
+  const allowed = ['name', 'short_name', 'address', 'city', 'region', 'country', 'phone', 'email', 'website', 'logo_url', 'ownership_type', 'founding_date', 'founder_name', 'registration_number', 'school_type'];
   const update: Record<string, any> = {};
   for (const key of allowed) if (data[key] !== undefined) update[key] = data[key];
   return prisma.schoolSchool.update({ where: { id: schoolId }, data: update });
@@ -31,8 +33,15 @@ export async function createAccreditation(schoolId: string, data: {
   });
 }
 
-export async function archiveAccreditation(id: string) {
-  return prisma.schoolAccreditation.update({ where: { id }, data: { archived_at: new Date() } });
+export async function archiveAccreditation(schoolId: string, id: string) {
+  return withTenantContext(undefined, async (tx) => {
+    const result = await tx.schoolAccreditation.updateMany({
+      where: { id, school_id: schoolId, archived_at: null },
+      data: { archived_at: new Date() },
+    });
+    if (result.count === 0) return null;
+    return tx.schoolAccreditation.findFirst({ where: { id, school_id: schoolId } });
+  });
 }
 
 export async function listSchoolAuditLog(schoolId: string) {
@@ -50,8 +59,19 @@ export async function listContacts(schoolId: string) {
 export async function createContact(schoolId: string, data: { contactType: any; value: string; label?: string; isPrimary?: boolean }) {
   return prisma.schoolContact.create({ data: { school_id: schoolId, contact_type: data.contactType, value: data.value, label: data.label, is_primary: !!data.isPrimary } });
 }
-export async function updateContact(id: string, data: { value?: string; label?: string; isPrimary?: boolean }) {
-  return prisma.schoolContact.update({ where: { id }, data: { ...(data.value && { value: data.value }), ...(data.label && { label: data.label }), ...(data.isPrimary !== undefined && { is_primary: data.isPrimary }) } });
+export async function updateContact(schoolId: string, id: string, data: { value?: string; label?: string; isPrimary?: boolean }) {
+  return withTenantContext(undefined, async (tx) => {
+    const result = await tx.schoolContact.updateMany({
+      where: { id, school_id: schoolId },
+      data: {
+        ...(data.value !== undefined && { value: data.value }),
+        ...(data.label !== undefined && { label: data.label }),
+        ...(data.isPrimary !== undefined && { is_primary: data.isPrimary }),
+      },
+    });
+    if (result.count === 0) return null;
+    return tx.schoolContact.findFirst({ where: { id, school_id: schoolId } });
+  });
 }
 
 // Branding (single row per school)
@@ -71,8 +91,15 @@ export async function listCampuses(schoolId: string) {
 export async function createCampus(schoolId: string, data: { name: string; code: string; address?: string; phone?: string; isPrimary?: boolean }) {
   return prisma.schoolCampus.create({ data: { school_id: schoolId, name: data.name, code: data.code, address: data.address, phone: data.phone, is_primary: !!data.isPrimary, is_active: true } });
 }
-export async function toggleCampus(id: string, isActive: boolean) {
-  return prisma.schoolCampus.update({ where: { id }, data: { is_active: isActive } });
+export async function toggleCampus(schoolId: string, id: string, isActive: boolean) {
+  return withTenantContext(undefined, async (tx) => {
+    const result = await tx.schoolCampus.updateMany({
+      where: { id, school_id: schoolId },
+      data: { is_active: isActive },
+    });
+    if (result.count === 0) return null;
+    return tx.schoolCampus.findFirst({ where: { id, school_id: schoolId } });
+  });
 }
 
 // Term policy (single row per school)
@@ -112,25 +139,42 @@ export async function upsertSetting(schoolId: string, key: string, value: string
   return prisma.schoolSettings.create({ data: { school_id: schoolId, key, value, updated_by: updatedBy } });
 }
 
-export async function updateCampus(id: string, data: { name?: string; address?: string; phone?: string }) {
-  return prisma.schoolCampus.update({ where: { id }, data });
+export async function updateCampus(schoolId: string, id: string, data: { name?: string; address?: string; phone?: string }) {
+  return withTenantContext(undefined, async (tx) => {
+    const result = await tx.schoolCampus.updateMany({ where: { id, school_id: schoolId }, data });
+    if (result.count === 0) return null;
+    return tx.schoolCampus.findFirst({ where: { id, school_id: schoolId } });
+  });
 }
-export async function updateAccreditation(id: string, data: { authority?: string; accreditationNumber?: string; issueDate?: string; expiryDate?: string }) {
-  return prisma.schoolAccreditation.update({
-    where: { id },
-    data: {
-      ...(data.authority && { authority: data.authority }),
-      ...(data.accreditationNumber && { accreditation_number: data.accreditationNumber }),
-      ...(data.issueDate && { issue_date: data.issueDate }),
-      ...(data.expiryDate && { expiry_date: data.expiryDate }),
-    },
+export async function updateAccreditation(schoolId: string, id: string, data: { authority?: string; accreditationNumber?: string; issueDate?: string; expiryDate?: string }) {
+  return withTenantContext(undefined, async (tx) => {
+    const result = await tx.schoolAccreditation.updateMany({
+      where: { id, school_id: schoolId, archived_at: null },
+      data: {
+        ...(data.authority !== undefined && { authority: data.authority }),
+        ...(data.accreditationNumber !== undefined && { accreditation_number: data.accreditationNumber }),
+        ...(data.issueDate !== undefined && { issue_date: data.issueDate }),
+        ...(data.expiryDate !== undefined && { expiry_date: data.expiryDate }),
+      },
+    });
+    if (result.count === 0) return null;
+    return tx.schoolAccreditation.findFirst({ where: { id, school_id: schoolId, archived_at: null } });
   });
 }
 
-export async function archiveSetting(id: string) { return prisma.schoolSettings.update({ where: { id }, data: { archived_at: new Date() } }); }
-export async function getSettingSchoolId(id: string) { return (await prisma.schoolSettings.findUnique({ where: { id } }))?.school_id; }
+export async function archiveSetting(schoolId: string, id: string) {
+  return withTenantContext(undefined, async (tx) => {
+    const result = await tx.schoolSettings.updateMany({
+      where: { id, school_id: schoolId, archived_at: null },
+      data: { archived_at: new Date() },
+    });
+    if (result.count === 0) return null;
+    return tx.schoolSettings.findFirst({ where: { id, school_id: schoolId } });
+  });
+}
 export async function getSchoolSummary(schoolId: string) {
-  const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const in60Days = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
 
   const [campuses, accreditations, documents, subscription] = await Promise.all([
     prisma.schoolCampus.findMany({ where: { school_id: schoolId } }),
@@ -141,12 +185,12 @@ export async function getSchoolSummary(schoolId: string) {
 
   const expiringAccreditations = accreditations.filter(a => {
     const exp = new Date(a.expiry_date);
-    return !isNaN(exp.getTime()) && exp <= in60Days;
+    return !isNaN(exp.getTime()) && exp >= now && exp <= in60Days;
   });
   const expiringDocuments = documents.filter(d => {
     if (!d.expiry_date) return false;
     const exp = new Date(d.expiry_date);
-    return !isNaN(exp.getTime()) && exp <= in60Days;
+    return !isNaN(exp.getTime()) && exp >= now && exp <= in60Days;
   });
 
   return {

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, getSettingSchoolId, archiveSetting, getSchoolSummary } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, archiveSetting, getSchoolSummary } from './school.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -55,7 +55,9 @@ export async function postAccreditation(req: AuthRequest, res: Response) {
 
 export async function patchArchiveAccreditation(req: AuthRequest, res: Response) {
   try {
-    const archived = await archiveAccreditation(req.params.accreditationId);
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const archived = await archiveAccreditation(req.schoolId, req.params.accreditationId);
+    if (!archived) return res.status(404).json({ error: 'Record not found' });
     if (req.schoolId) await logSchoolAudit(req.schoolId, `ARCHIVE accreditation: ${req.params.accreditationId}`, req.userId || '');
     res.json({ id: archived.id, archived: true });
   } catch (err: any) {
@@ -85,7 +87,9 @@ export async function postContact(req: AuthRequest, res: Response) {
 }
 export async function patchContact(req: AuthRequest, res: Response) {
   try {
-    const r = await updateContact(req.params.id, req.body);
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const r = await updateContact(req.schoolId, req.params.id, req.body);
+    if (!r) return res.status(404).json({ error: 'Record not found' });
     if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE contact: ${req.params.id}`, req.userId || '');
     res.json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -114,7 +118,9 @@ export async function postCampus(req: AuthRequest, res: Response) {
 }
 export async function patchCampus(req: AuthRequest, res: Response) {
   try {
-    const r = await toggleCampus(req.params.id, !!req.body.isActive);
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const r = await toggleCampus(req.schoolId, req.params.id, !!req.body.isActive);
+    if (!r) return res.status(404).json({ error: 'Record not found' });
     if (req.schoolId) await logSchoolAudit(req.schoolId, `TOGGLE campus: ${req.params.id}`, req.userId || '');
     res.json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -162,14 +168,18 @@ export async function putSetting(req: AuthRequest, res: Response) {
 
 export async function patchCampusDetails(req: AuthRequest, res: Response) {
   try {
-    const r = await updateCampus(req.params.id, req.body);
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const r = await updateCampus(req.schoolId, req.params.id, req.body);
+    if (!r) return res.status(404).json({ error: 'Record not found' });
     if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE campus: ${req.params.id}`, req.userId || '');
     res.json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 }
 export async function patchAccreditation(req: AuthRequest, res: Response) {
   try {
-    const r = await updateAccreditation(req.params.accreditationId, req.body);
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const r = await updateAccreditation(req.schoolId, req.params.accreditationId, req.body);
+    if (!r) return res.status(404).json({ error: 'Record not found' });
     if (req.schoolId) await logSchoolAudit(req.schoolId, `UPDATE accreditation: ${req.params.accreditationId}`, req.userId || '');
     res.json(r);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
@@ -177,9 +187,10 @@ export async function patchAccreditation(req: AuthRequest, res: Response) {
 
 export async function patchArchiveSetting(req: AuthRequest, res: Response) {
   try {
-    const sid = await getSettingSchoolId(req.params.id);
-    if (!sid || sid !== req.schoolId) return res.status(403).json({ error: 'Not authorized for this setting' });
-    res.json(await archiveSetting(req.params.id));
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const archived = await archiveSetting(req.schoolId, req.params.id);
+    if (!archived) return res.status(404).json({ error: 'Record not found' });
+    res.json(archived);
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 }
 

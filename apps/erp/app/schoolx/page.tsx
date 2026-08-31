@@ -78,7 +78,7 @@ export default function SchoolXPage() {
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const updated = await authedFetch('/api/v1/school/profile', token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: school.name, address: school.address, city: school.city, region: school.region, country: school.country, phone: school.phone, email: school.email, website: school.website, logo_url: school.logo_url }) });
+    const updated = await authedFetch('/api/v1/school/profile', token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: school.name, short_name: school.short_name, address: school.address, city: school.city, region: school.region, country: school.country, phone: school.phone, email: school.email, website: school.website, logo_url: school.logo_url, ownership_type: school.ownership_type, founding_date: school.founding_date, founder_name: school.founder_name, registration_number: school.registration_number, school_type: school.school_type }) });
     setSchool(updated);
     setSaving(false);
   }
@@ -250,7 +250,7 @@ export default function SchoolXPage() {
             </button>
 
             <button className="fx-card-btn" onClick={() => setTab('accreditations')}>
-              <div className="sc" title="Non-archived accreditations with expiry_date within the next 60 days · live">
+              <div className="sc" title="Non-archived accreditations expiring within the next 60 days, excluding already-expired records · live">
                 <div className="sc-top">
                   <div className="sc-icon" style={{ background: summary.accreditations.expiringWithin60d > 0 ? 'var(--erB)' : 'var(--okB)' }}>📄</div>
                   {summary.accreditations.expiringWithin60d > 0 && <span className="bdg ber">{summary.accreditations.expiringWithin60d} expiring</span>}
@@ -261,7 +261,7 @@ export default function SchoolXPage() {
             </button>
 
             <button className="fx-card-btn" onClick={() => setTab('documents')}>
-              <div className="sc" title="School documents with expiry_date within the next 60 days · live">
+              <div className="sc" title="School documents expiring within the next 60 days, excluding already-expired records · live">
                 <div className="sc-top">
                   <div className="sc-icon" style={{ background: summary.documents.expiringWithin60d > 0 ? 'var(--erB)' : 'var(--okB)' }}>🗂️</div>
                   {summary.documents.expiringWithin60d > 0 && <span className="bdg ber">{summary.documents.expiringWithin60d} expiring</span>}
@@ -327,9 +327,7 @@ export default function SchoolXPage() {
                   <option value="BASIC">Basic</option><option value="JHS">JHS</option><option value="SHS">SHS</option><option value="COMBINED">Combined</option><option value="TERTIARY">Tertiary</option>
                 </select>
               </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 8 }}>
-                <input type="checkbox" checked={!!school.is_active} onChange={e => setSchool({ ...school, is_active: e.target.checked })} /> Active
-              </label>
+              <div className="fg"><label className="fl">INSTITUTION STATUS</label><div className="ri-s">{school.is_active ? 'Active' : 'Inactive'} · Lifecycle-managed; not editable from the profile form.</div></div>
               <button type="submit" disabled={saving} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginTop: 12 }}>{saving ? 'Saving...' : 'Save'}</button>
             </div>
           </form>
@@ -400,6 +398,7 @@ export default function SchoolXPage() {
               <div className="fg"><label className="fl">NAME</label><input className="fi" value={campusForm.name} onChange={e => setCampusForm({ ...campusForm, name: e.target.value })} required /></div>
               <div className="fg"><label className="fl">CODE</label><input className="fi" value={campusForm.code} onChange={e => setCampusForm({ ...campusForm, code: e.target.value })} required /></div>
               <div className="fg"><label className="fl">ADDRESS</label><input className="fi" value={campusForm.address} onChange={e => setCampusForm({ ...campusForm, address: e.target.value })} /></div>
+              <div className="fg"><label className="fl">PHONE</label><input className="fi" value={campusForm.phone} onChange={e => setCampusForm({ ...campusForm, phone: e.target.value })} /></div>
               <button type="submit" style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, alignSelf: 'end' }}>Add Campus</button>
             </div>
           </form>
