@@ -118,6 +118,10 @@ export default function SystemXPage() {
   const [summaryError, setSummaryError] = useState('');
   const [accessChecked, setAccessChecked] = useState(false);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [systemCapabilities, setSystemCapabilities] = useState<any>(null);
+  const [userQuery, setUserQuery] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+  const [userSort, setUserSort] = useState('name');
 
   async function systemFetch(
     path: string,
@@ -248,6 +252,21 @@ export default function SystemXPage() {
     setToken(t);
     setUser(userStr ? JSON.parse(userStr) : null);
 
+    try {
+      const savedView = JSON.parse(
+        localStorage.getItem(
+          'sukuu_systemx_user_view'
+        ) || '{}'
+      );
+      setUserQuery(savedView.query || '');
+      setUserStatusFilter(
+        savedView.status || 'ALL'
+      );
+      setUserSort(savedView.sort || 'name');
+    } catch {
+      // Invalid local presentation preference is ignored.
+    }
+
     // One lightweight check before the page's ~15 data requests fire —
     // if this role has no system access, say so once, cleanly, instead
     // of letting every one of those requests fail independently.
@@ -267,6 +286,8 @@ export default function SystemXPage() {
   }, [router]);
 
   function loadAll(t: string) {
+    systemFetch('/api/v1/system/capabilities', t)
+      .then(d => d && !d.error && setSystemCapabilities(d));
     systemFetch('/api/v1/system/users', t).then(d => Array.isArray(d) ? setUsers(d) : setError(d.error));
     systemFetch('/api/v1/system/roles', t).then(d => Array.isArray(d) && setRoles(d));
     systemFetch('/api/v1/system/permissions', t).then(d => Array.isArray(d) && setPermissions(d));
@@ -614,24 +635,114 @@ export default function SystemXPage() {
       url += `?${params.toString()}`;
     }
     const res = await systemFetch(url, token);
-    setReportData(Array.isArray(res) ? res : (res?.error ? [] : res));
+    setReportData(res?.error ? null : res);
     setReportLoading(false);
   }
+  const reportRows =
+    Array.isArray(reportData)
+      ? reportData
+      : (
+          Array.isArray(reportData?.rows)
+            ? reportData.rows
+            : []
+        );
+
+  const reportMeta =
+    !Array.isArray(reportData)
+      ? reportData?.metadata || null
+      : null;
+
+  function canSystemAction(action: string) {
+    return systemCapabilities?.actions?.[action] === true;
+  }
+
+  const currentSchoolContext =
+    user?.schoolName ||
+    user?.school_name ||
+    systemCapabilities?.schoolId ||
+    user?.schoolId ||
+    user?.school_id ||
+    'Current authenticated school';
+
+  const currentRoleContext =
+    systemCapabilities?.roles?.join(', ') ||
+    user?.roleLabel ||
+    user?.roleKey ||
+    user?.role_key ||
+    'Current authorised role';
+
+  const filteredUsers =
+    users
+      .filter(u => {
+        const q = userQuery.trim().toLowerCase();
+        const queryMatch =
+          !q ||
+          String(u.name || '').toLowerCase().includes(q) ||
+          String(u.email || '').toLowerCase().includes(q) ||
+          String(u.roleLabel || '').toLowerCase().includes(q);
+        const statusMatch =
+          userStatusFilter === 'ALL' ||
+          u.status === userStatusFilter;
+        return queryMatch && statusMatch;
+      })
+      .sort((a, b) => {
+        if (userSort === 'status') {
+          return String(a.status || '').localeCompare(
+            String(b.status || '')
+          );
+        }
+        if (userSort === 'role') {
+          return String(a.roleLabel || '').localeCompare(
+            String(b.roleLabel || '')
+          );
+        }
+        return String(a.name || '').localeCompare(
+          String(b.name || '')
+        );
+      });
+
+  useEffect(() => {
+    localStorage.setItem(
+      'sukuu_systemx_user_view',
+      JSON.stringify({
+        query: userQuery,
+        status: userStatusFilter,
+        sort: userSort,
+      })
+    );
+  }, [userQuery, userStatusFilter, userSort]);
+
   function downloadReportCsv() {
-    if (!Array.isArray(reportData) || reportData.length === 0) return;
-    const keys = Object.keys(reportData[0]);
-    const csv = keys.join(',') + '\n' + reportData.map((row: any) => keys.map(k => JSON.stringify(row[k] ?? '')).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    if (reportRows.length === 0) return;
+    const keys = Object.keys(reportRows[0]);
+    const csv =
+      keys.join(',') +
+      '\n' +
+      reportRows
+        .map((row: any) =>
+          keys
+            .map(k =>
+              JSON.stringify(row[k] ?? '')
+            )
+            .join(',')
+        )
+        .join('\n');
+    const blob = new Blob(
+      [csv],
+      { type: 'text/csv' }
+    );
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `${activeReport}.csv`; a.click();
+    a.href = url;
+    a.download = `${activeReport}.csv`;
+    a.click();
     URL.revokeObjectURL(url);
   }
 
   if (accessDenied) {
     return (
       <AppShell user={user}>
-        <div style={{ padding: '60px 40px', textAlign: 'center', maxWidth: 440, margin: '0 auto' }}>
+        <div role="alert" aria-live="polite" style={{ padding: '60px 40px', textAlign: 'center', maxWidth: 440, margin: '0 auto' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 22, marginBottom: 8 }}>You don't have access to SystemX</h2>
           <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>
@@ -642,7 +753,7 @@ export default function SystemXPage() {
     );
   }
   if (!accessChecked) {
-    return <AppShell user={user}><div style={{ padding: 40, color: 'var(--muted)' }}>Checking access…</div></AppShell>;
+    return <AppShell user={user}><div role="status" aria-live="polite" style={{ padding: 40, color: 'var(--muted)' }}>Checking access…</div></AppShell>;
   }
   if (error) return <AppShell user={user}><div style={{ padding: 40, color: 'var(--er)' }}>{error}</div></AppShell>;
 
@@ -651,18 +762,46 @@ export default function SystemXPage() {
       <div className="ph">
         <div className="ph-row">
           <div>
-            <div className="ph-ey">SUKUU ERP · SYSTEMX · 37 TABLES · sukuux SCHEMA</div>
+            <div className="ph-ey">
+              SUKUU ERP · SYSTEMX · CURRENT SCHOOL: {currentSchoolContext} · CURRENT ROLE: {currentRoleContext}
+            </div>
             <div className="ph-title">⚙️ SystemX</div>
-            <div className="ph-sub">Authentication · RBAC · Sessions · Audit · Feature Flags · Security · CRUAA enforced (no hard deletes)</div>
+            <div className="ph-sub">Authoritative source: SystemX · Authentication · Explicit action permissions · Sessions · Audit · Feature Flags · Security</div>
           </div>
-          <button onClick={() => setShowAddRoster(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Add to Roster</button>
-          <button onClick={() => { setShowGrantAccess(true); loadUnlinkedStaff(); }} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginLeft: 8 }}>+ Grant System Access</button>
+          {canSystemAction('create') && (
+            <button onClick={() => setShowAddRoster(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Add to Roster</button>
+          )}
+          {canSystemAction('approve') && (
+            <button onClick={() => { setShowGrantAccess(true); loadUnlinkedStaff(); }} style={{ background: 'var(--soft)', color: 'var(--ink)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600, marginLeft: 8 }}>+ Grant System Access</button>
+          )}
         </div>
       </div>
 
       {summaryError && (
         <div style={{ padding: '0 var(--pad)', marginBottom: 'var(--gap)' }}>
           <div className="alert al-er"><span className="al-ic">⚠️</span><div>Couldn't load the system overview: {summaryError}. Figures below may be out of date.</div></div>
+        </div>
+      )}
+
+      {summary && (
+        <div style={{ padding: '0 var(--pad)', marginBottom: 'var(--gap)' }}>
+          <div className="card">
+            <div className="ch"><span className="ch-t">PRIORITY WORK</span></div>
+            <div className="cb" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 10 }}>
+              <button className="fx-card-btn" onClick={() => setTab('security')}>
+                <div className="ri-t">Accounts without MFA</div>
+                <div className="ri-s">{Math.max(0, summary.users.total - summary.users.mfaEnabled)} require review</div>
+              </button>
+              <button className="fx-card-btn" onClick={() => setTab('events')}>
+                <div className="ri-t">Pending outbox events</div>
+                <div className="ri-s">{summary.pendingOutboxEvents} awaiting downstream processing</div>
+              </button>
+              <button className="fx-card-btn" onClick={() => setTab('sessions')}>
+                <div className="ri-t">Active sessions</div>
+                <div className="ri-s">{summary.activeSessions} sessions require ongoing governance</div>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -724,11 +863,40 @@ export default function SystemXPage() {
       </div>
 
       {tab === 'users' && (
-        <div className="tbl" style={{ padding: 'var(--pad)' }}>
+        <div style={{ padding: 'var(--pad)' }}>
+          <div className="card" style={{ marginBottom: 12 }}>
+            <div className="ch"><span className="ch-t">USER VIEW · SAVED AUTOMATICALLY</span></div>
+            <div className="cb" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                className="fi"
+                aria-label="Search SystemX users"
+                placeholder="Search name, email or role"
+                value={userQuery}
+                onChange={e => setUserQuery(e.target.value)}
+                style={{ minWidth: 220 }}
+              />
+              <select className="fi" aria-label="Filter SystemX users by status" value={userStatusFilter} onChange={e => setUserStatusFilter(e.target.value)}>
+                <option value="ALL">All statuses</option>
+                <option value="INVITED">Invited</option>
+                <option value="PENDING_VERIFICATION">Pending verification</option>
+                <option value="ACTIVE">Active</option>
+                <option value="LOCKED">Locked</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="CLOSED">Closed</option>
+              </select>
+              <select className="fi" aria-label="Sort SystemX users" value={userSort} onChange={e => setUserSort(e.target.value)}>
+                <option value="name">Sort by name</option>
+                <option value="role">Sort by role</option>
+                <option value="status">Sort by status</option>
+              </select>
+              <span style={{ fontSize: 11, color: 'var(--muted)', alignSelf: 'center' }}>{filteredUsers.length} of {users.length} records</span>
+            </div>
+          </div>
+          <div className="tbl">
           <table className="data-table">
             <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>MFA</th><th>Last Login</th><th></th></tr></thead>
             <tbody>
-              {users.map(u => (
+              {filteredUsers.map(u => (
                 <tr key={u.id}>
                   <td style={{ fontFamily: 'monospace', fontSize: 11 }}>{u.id.slice(0, 8)}</td>
                   <td><strong>{u.name}</strong></td>
@@ -738,26 +906,29 @@ export default function SystemXPage() {
                   <td style={{ textAlign: 'center' }}>{u.mfa ? '✅' : '—'}</td>
                   <td style={{ fontSize: 11, color: 'var(--muted)' }}>{u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never'}</td>
                   <td onClick={e => e.stopPropagation()} style={{ whiteSpace: 'nowrap', display: 'flex', gap: 6 }}>
-                    <button onClick={() => openEdit(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>
-                    <button onClick={() => openUserRoles(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600 }}>Roles</button>
-                    <button onClick={() => handleResetPassword(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Reset Password</button>
-                    {u.status === 'ACTIVE'
-                      ? <button onClick={() => handleSuspend(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
-                      : <button onClick={() => handleReinstate(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>}
-                    <button onClick={() => handleArchive(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>
+                    {canSystemAction('correct') && <button onClick={() => openEdit(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>}
+                    {canSystemAction('administer') && <button onClick={() => openUserRoles(u)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600 }}>Roles</button>}
+                    {canSystemAction('administer') && <button onClick={() => handleResetPassword(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Reset Password</button>}
+                    {canSystemAction('approve') && (
+                      u.status === 'ACTIVE'
+                        ? <button onClick={() => handleSuspend(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--wnB)', color: 'var(--wn)', fontWeight: 600 }}>Suspend</button>
+                        : <button onClick={() => handleReinstate(u.id, u.name)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--okB)', color: 'var(--ok)', fontWeight: 600 }}>Reinstate</button>
+                    )}
+                    {canSystemAction('approve') && <button onClick={() => handleArchive(u.id)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--erB)', color: 'var(--er)', fontWeight: 600 }}>Archive</button>}
                   </td>
                 </tr>
               ))}
-              {users.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>No users found</td></tr>}
+              {filteredUsers.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--muted)' }}>{users.length === 0 ? 'No users found.' : 'No users match the current saved view.'}</td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {tab === 'roles' && (
         <div style={{ padding: 'var(--pad)' }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-            <button onClick={() => setShowCreateRole(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Create Role</button>
+            {canSystemAction('create') && <button onClick={() => setShowCreateRole(true)} style={{ background: 'var(--navy)', color: 'var(--gold)', padding: '9px 16px', borderRadius: 'var(--rS)', fontSize: 12, fontWeight: 600 }}>+ Create Role</button>}
           </div>
           <div className="tbl">
             <table className="data-table">
@@ -771,7 +942,7 @@ export default function SystemXPage() {
                     <td><span className={`bdg ${r.is_system ? 'ber' : 'bok'}`}>{r.is_system ? 'System' : 'Custom'}</span></td>
                     <td onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 6 }}>
                       {!r.is_system && <button onClick={() => openRoleEdit(r)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Edit</button>}
-                      <button onClick={() => openManagePerms(r)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600 }}>Permissions</button>
+                      {canSystemAction('administer') && <button onClick={() => openManagePerms(r)} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--inB)', color: 'var(--in)', fontWeight: 600 }}>Permissions</button>}
                     </td>
                   </tr>
                 ))}
@@ -1337,24 +1508,25 @@ export default function SystemXPage() {
           <div className="card">
             <div className="ch" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="ch-t">{REPORTS.find(r => r.key === activeReport)?.label}</span>
-              {Array.isArray(reportData) && reportData.length > 0 && (
+              {reportRows.length > 0 && (
                 <button onClick={downloadReportCsv} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, background: 'var(--soft)', color: 'var(--ink)', fontWeight: 600 }}>Export CSV</button>
               )}
             </div>
-            <div style={{ padding: 12, fontSize: 11, color: 'var(--muted)' }}>
-              Source: system.* live records, school-scoped to your current tenant · refreshed on load
+            <div style={{ padding: 12, fontSize: 11, color: 'var(--muted)', lineHeight: 1.6 }}>
+              Source authority: {reportMeta?.sourceAuthority || 'SystemX'} · Rule version: {reportMeta?.ruleVersion || 'SUKUU-EFS-1.0'} · Tenant: {reportMeta?.tenantScope || currentSchoolContext}<br />
+              Generated: {reportMeta?.generatedAt ? new Date(reportMeta.generatedAt).toLocaleString() : 'not loaded'} · Purpose: {reportMeta?.purpose || 'governed SystemX report'}
             </div>
             {reportLoading ? (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Loading…</div>
-            ) : !Array.isArray(reportData) || reportData.length === 0 ? (
+              <div role="status" aria-live="polite" style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Loading governed report…</div>
+            ) : reportRows.length === 0 ? (
               <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>No data for this report yet.</div>
             ) : (
               <div className="tbl" style={{ overflowX: 'auto' }}>
                 <table className="data-table">
-                  <thead><tr>{Object.keys(reportData[0]).map(k => <th key={k}>{k}</th>)}</tr></thead>
+                  <thead><tr>{Object.keys(reportRows[0]).map(k => <th key={k}>{k}</th>)}</tr></thead>
                   <tbody>
-                    {reportData.map((row: any, i: number) => (
-                      <tr key={i}>{Object.keys(reportData[0]).map(k => <td key={k} style={{ fontSize: 11 }}>{typeof row[k] === 'object' ? JSON.stringify(row[k]) : String(row[k] ?? '—')}</td>)}</tr>
+                    {reportRows.map((row: any, i: number) => (
+                      <tr key={i}>{Object.keys(reportRows[0]).map(k => <td key={k} style={{ fontSize: 11 }}>{typeof row[k] === 'object' ? JSON.stringify(row[k]) : String(row[k] ?? '—')}</td>)}</tr>
                     ))}
                   </tbody>
                 </table>

@@ -16,6 +16,18 @@ export type SystemAction =
   | 'export'
   | 'administer';
 
+export const SYSTEM_ACTIONS: readonly SystemAction[] = [
+  'view',
+  'create',
+  'submit',
+  'approve',
+  'release',
+  'correct',
+  'cancel',
+  'export',
+  'administer',
+];
+
 export type SystemDecisionCode =
   | 'ALLOW_SYSTEM_ACTION'
   | 'DENY_MISSING_CONTEXT'
@@ -165,4 +177,38 @@ export async function evaluateSystemAction(input: {
       };
     }
   );
+}
+
+
+export async function listSystemCapabilities(input: {
+  userId?: string;
+  schoolId?: string;
+}) {
+  const actions = Object.fromEntries(
+    await Promise.all(
+      SYSTEM_ACTIONS.map(async action => {
+        const decision = await evaluateSystemAction({
+          ...input,
+          action,
+          purpose: 'system-workspace-disclosure',
+        });
+        return [action, decision.granted] as const;
+      })
+    )
+  ) as Record<SystemAction, boolean>;
+
+  const roles =
+    input.userId && input.schoolId
+      ? [...await getActiveRoleNames(
+          input.userId,
+          input.schoolId
+        )]
+      : [];
+
+  return {
+    sourceAuthority: 'SystemX',
+    schoolId: input.schoolId || null,
+    roles,
+    actions,
+  };
 }

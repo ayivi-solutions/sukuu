@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
 import { TenantCtx } from '../../lib/tenantContext';
 import * as svc from './system.service';
+import { listSystemCapabilities } from '../../lib/systemAuthorization';
 
 function ctxFrom(req: AuthRequest): TenantCtx {
   return {
@@ -42,6 +43,34 @@ function handleCreate(fn: (req: AuthRequest) => Promise<any>) {
     }
   };
 }
+
+function governedReport(
+  req: AuthRequest,
+  reportKey: string,
+  rows: any,
+  purpose: string
+) {
+  return {
+    metadata: {
+      reportKey,
+      sourceAuthority: 'SystemX',
+      ruleVersion: 'SUKUU-EFS-1.0',
+      effectivePeriod: 'generated-current-state',
+      generatedAt: new Date().toISOString(),
+      purpose,
+      tenantScope: req.schoolId || null,
+    },
+    rows: Array.isArray(rows) ? rows : [],
+  };
+}
+
+export const getCapabilities =
+  handle(req =>
+    listSystemCapabilities({
+      userId: req.userId,
+      schoolId: req.schoolId,
+    })
+  );
 
 export const getRoles = handle(req => svc.listRoles(ctxFrom(req)));
 export const getPermissions = handle(req => svc.listPermissions(ctxFrom(req)));
@@ -117,15 +146,78 @@ export const getSummary = handle(req => svc.getSystemSummary(ctxFrom(req)));
 export const postBulkPreview = handle(req => svc.previewBulkUserImport(ctxFrom(req), req.body.rows));
 export const postBulkCommit = handle(req => svc.commitBulkUserImport(ctxFrom(req), req.body.rows));
 
-export const getReportUserRoleRegister = handle(req => svc.reportUserAndRoleRegister(ctxFrom(req)));
-export const getReportPrivilegedAccess = handle(req => svc.reportPrivilegedAccessReview(ctxFrom(req)));
-export const getReportActiveSessions = handle(req => svc.reportActiveSessionRegister(ctxFrom(req)));
-export const getReportFailedLoginTrend = handle(req => svc.reportFailedLoginTrend(ctxFrom(req)));
-export const getReportFeatureFlagHistory = handle(req => svc.reportFeatureFlagHistory(ctxFrom(req)));
-export const getReportAuditExport = handle(req => svc.reportAuditExport(ctxFrom(req), {
-  entityType: req.query.entityType as string | undefined,
-  action: req.query.action as string | undefined,
-  fromDate: req.query.fromDate as string | undefined,
-  toDate: req.query.toDate as string | undefined,
-}));
+export const getReportUserRoleRegister =
+  handle(async req =>
+    governedReport(
+      req,
+      'user-role-register',
+      await svc.reportUserAndRoleRegister(ctxFrom(req)),
+      'authorised user and role governance'
+    )
+  );
+
+
+export const getReportPrivilegedAccess =
+  handle(async req =>
+    governedReport(
+      req,
+      'privileged-access-review',
+      await svc.reportPrivilegedAccessReview(ctxFrom(req)),
+      'privileged access review'
+    )
+  );
+
+
+export const getReportActiveSessions =
+  handle(async req =>
+    governedReport(
+      req,
+      'active-session-register',
+      await svc.reportActiveSessionRegister(ctxFrom(req)),
+      'active session governance'
+    )
+  );
+
+
+export const getReportFailedLoginTrend =
+  handle(async req =>
+    governedReport(
+      req,
+      'failed-login-trend',
+      await svc.reportFailedLoginTrend(ctxFrom(req)),
+      'authentication abuse monitoring'
+    )
+  );
+
+
+export const getReportFeatureFlagHistory =
+  handle(async req =>
+    governedReport(
+      req,
+      'feature-flag-history',
+      await svc.reportFeatureFlagHistory(ctxFrom(req)),
+      'feature flag change governance'
+    )
+  );
+
+
+export const getReportAuditExport =
+  handle(async req =>
+    governedReport(
+      req,
+      'audit-export',
+      await svc.reportAuditExport(
+        ctxFrom(req),
+        {
+          entityType: req.query.entityType as string | undefined,
+          action: req.query.action as string | undefined,
+          fromDate: req.query.fromDate as string | undefined,
+          toDate: req.query.toDate as string | undefined,
+        }
+      ),
+      'governed audit evidence export'
+    )
+  );
+
+
 export const getEvents = handle(req => svc.listDomainEvents(ctxFrom(req), req.query.limit ? Number(req.query.limit) : undefined));

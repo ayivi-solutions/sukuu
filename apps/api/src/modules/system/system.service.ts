@@ -1065,29 +1065,148 @@ export async function reportUserAndRoleRegister(ctx: TenantCtx) {
 /** 2. Privileged access review — who holds 'full' grants, via which role */
 export async function reportPrivilegedAccessReview(ctx: TenantCtx) {
   return withTenantContext(ctx, async (tx) => {
-    await logSensitiveView(ctx, 'report:privileged_access_review', ctx.schoolId);
-    const fullPerms = await tx.systemPermission.findMany({ where: { action: 'full' } });
-    const permIds = fullPerms.map(p => p.id);
-    const grants = await tx.systemRolePermission.findMany({ where: { permission_id: { in: permIds } } });
-    const roleIds = [...new Set(grants.map(g => g.role_id))];
-    const roles = await tx.systemRole.findMany({ where: { id: { in: roleIds }, OR: [{ school_id: ctx.schoolId }, { is_system: true }] } });
-    const employments = await prisma.staffEmployment.findMany({ where: { role_id: { in: roleIds }, school_id: ctx.schoolId, is_current: true } });
-    const staff = await prisma.staffStaff.findMany({ where: { id: { in: employments.map(e => e.staff_id) } } });
+    await logSensitiveView(
+      ctx,
+      'report:privileged_access_review',
+      ctx.schoolId
+    );
 
-    return roles.map(role => ({
-      roleId: role.id,
-      roleName: role.name,
-      roleLabel: role.label,
-      privilegedPermissions: fullPerms.filter(p => grants.some(g => g.role_id === role.id && g.permission_id === p.id)).map(p => `${p.module}:${p.action}`),
-      holders: employments.filter(e => e.role_id === role.id).map(e => {
-        const s = staff.find(x => x.id === e.staff_id);
-        return s ? `${s.first_name} ${s.last_name}` : e.staff_id;
-      }),
-    }));
+    const privilegedActions = [
+      'approve',
+      'release',
+      'correct',
+      'cancel',
+      'administer',
+    ];
+
+    const privilegedPermissions =
+      await tx.systemPermission.findMany({
+        where: {
+          module: 'system',
+          resource: '*',
+          action: { in: privilegedActions },
+        },
+      });
+
+    const permissionIds =
+      privilegedPermissions.map(
+        permission => permission.id
+      );
+
+    const grants =
+      await tx.systemRolePermission.findMany({
+        where: {
+          permission_id: {
+            in: permissionIds,
+          },
+        },
+      });
+
+    const roleIds = [
+      ...new Set(
+        grants.map(grant => grant.role_id)
+      ),
+    ];
+
+    const roles =
+      await tx.systemRole.findMany({
+        where: {
+          id: { in: roleIds },
+          OR: [
+            { school_id: ctx.schoolId },
+            { is_system: true },
+          ],
+        } as any,
+      });
+
+    const directAssignments =
+      await tx.systemUserRole.findMany({
+        where: {
+          school_id: ctx.schoolId,
+          role_id: { in: roleIds },
+          OR: [
+            { expires_at: null },
+            { expires_at: { gt: new Date() } },
+          ],
+        },
+      });
+
+    const employments =
+      await prisma.staffEmployment.findMany({
+        where: {
+          role_id: { in: roleIds },
+          school_id: ctx.schoolId,
+          is_current: true,
+        },
+      });
+
+    const staff =
+      await prisma.staffStaff.findMany({
+        where: {
+          id: {
+            in: employments.map(
+              employment => employment.staff_id
+            ),
+          },
+        },
+      });
+
+    return roles.map(role => {
+      const directHolders =
+        directAssignments
+          .filter(
+            assignment =>
+              assignment.role_id === role.id
+          )
+          .map(
+            assignment =>
+              assignment.user_id
+          );
+
+      const employmentHolders =
+        employments
+          .filter(
+            employment =>
+              employment.role_id === role.id
+          )
+          .map(employment => {
+            const person =
+              staff.find(
+                item =>
+                  item.id ===
+                  employment.staff_id
+              );
+            return person
+              ? `${person.first_name} ${person.last_name}`
+              : employment.staff_id;
+          });
+
+      return {
+        roleId: role.id,
+        roleName: role.name,
+        roleLabel: role.label,
+        privilegedPermissions:
+          privilegedPermissions
+            .filter(permission =>
+              grants.some(
+                grant =>
+                  grant.role_id === role.id &&
+                  grant.permission_id ===
+                    permission.id
+              )
+            )
+            .map(
+              permission =>
+                `${permission.module}:${permission.action}`
+            ),
+        directUserHolders: directHolders,
+        employmentHolders,
+      };
+    });
   });
 }
 
-/** 3. Active session register */
+
 export async function reportActiveSessionRegister(ctx: TenantCtx) {
   return withTenantContext(ctx, async (tx) => {
     const employments = await prisma.staffEmployment.findMany({ where: { school_id: ctx.schoolId, is_current: true } });

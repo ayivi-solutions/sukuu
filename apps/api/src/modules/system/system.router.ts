@@ -21,6 +21,7 @@ const EXP = requireSystemAction('export', 'system-governed-export');
 const ADM = requireSystemAction('administer', 'system-security-administer');
 const S = requireStepUp;
 
+systemRouter.get('/capabilities', V, ctrl.getCapabilities);
 systemRouter.get('/roles', V, ctrl.getRoles);
 systemRouter.get('/permissions', V, ctrl.getPermissions);
 systemRouter.get('/roles/:roleId/permissions', V, ctrl.getRolePermissionsHandler);
