@@ -1,5 +1,6 @@
 import { prisma } from '../../lib/prisma';
 import { withTenantContext } from '../../lib/tenantContext';
+import { randomUUID } from 'crypto';
 
 export async function getSchoolProfile(schoolId: string) {
   return prisma.schoolSchool.findUnique({ where: { id: schoolId } });
@@ -206,4 +207,228 @@ export async function getSchoolSummary(schoolId: string) {
         }
       : null,
   };
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// SCHOOLX INSTITUTION LIFECYCLE — EFS-SCH-0032..0035 / EEAS-SCH lifecycle
+// ═══════════════════════════════════════════════════════════════════════
+
+export type SchoolLifecycleStatus =
+  | 'DRAFT'
+  | 'UNDER_VERIFICATION'
+  | 'ACTIVE'
+  | 'SUSPENDED'
+  | 'ARCHIVED';
+
+const SCHOOL_LIFECYCLE_TRANSITIONS: Record<SchoolLifecycleStatus, SchoolLifecycleStatus[]> = {
+  DRAFT: ['UNDER_VERIFICATION', 'ARCHIVED'],
+  UNDER_VERIFICATION: ['DRAFT', 'ACTIVE', 'ARCHIVED'],
+  ACTIVE: ['SUSPENDED', 'ARCHIVED'],
+  SUSPENDED: ['ACTIVE', 'ARCHIVED'],
+  ARCHIVED: [],
+};
+
+export class InvalidSchoolLifecycleTransitionError extends Error {
+  constructor(public currentState: string, public attemptedState: string) {
+    super(
+      'School lifecycle transition is not permitted from ' +
+      currentState + ' to ' + attemptedState
+    );
+    this.name = 'InvalidSchoolLifecycleTransitionError';
+  }
+}
+
+export class SchoolMakerCheckerError extends Error {
+  constructor() {
+    super('Segregation of duties requires a different authorised actor to approve institution verification.');
+    this.name = 'SchoolMakerCheckerError';
+  }
+}
+
+export class ProviderSchoolAuthorityRequiredError extends Error {
+  constructor() {
+    super('Initial institution verification approval requires authorised AYIVI provider authority.');
+    this.name = 'ProviderSchoolAuthorityRequiredError';
+  }
+}
+
+export class SchoolLifecycleConflictError extends Error {
+  constructor() {
+    super('Institution lifecycle changed concurrently; reload the authoritative state before retrying.');
+    this.name = 'SchoolLifecycleConflictError';
+  }
+}
+
+function schoolLifecycleEvent(prior: SchoolLifecycleStatus, next: SchoolLifecycleStatus): string {
+  if (prior === 'DRAFT' && next === 'UNDER_VERIFICATION') return 'SchoolVerificationSubmitted';
+  if (prior === 'UNDER_VERIFICATION' && next === 'ACTIVE') return 'SchoolVerified';
+  if (prior === 'ACTIVE' && next === 'SUSPENDED') return 'SchoolSuspended';
+  if (prior === 'SUSPENDED' && next === 'ACTIVE') return 'SchoolReactivated';
+  if (next === 'ARCHIVED') return 'SchoolArchived';
+  if (next === 'DRAFT') return 'SchoolVerificationReturned';
+  return 'SchoolLifecycleChanged';
+}
+
+export async function getSchoolLifecycle(schoolId: string) {
+  return withTenantContext(undefined, async (tx) => {
+    const school = await tx.schoolSchool.findFirst({
+      where: { id: schoolId },
+      select: {
+        id: true,
+        status: true,
+        row_version: true,
+        is_active: true,
+        verified_at: true,
+        verified_by: true,
+        activated_at: true,
+        suspended_at: true,
+        archived_at: true,
+      },
+    });
+    if (!school) return null;
+    const history = await tx.schoolLifecycleTransition.findMany({
+      where: { school_id: schoolId },
+      orderBy: { created_at: 'desc' },
+      take: 25,
+    });
+    return { ...school, history };
+  });
+}
+
+export async function transitionSchoolLifecycle(input: {
+  schoolId: string;
+  actorId: string;
+  actorRole?: string;
+  authorityPlane: 'TENANT' | 'PROVIDER';
+  newStatus: SchoolLifecycleStatus;
+  action: string;
+  reason: string;
+}) {
+  const reason = String(input.reason || '').trim();
+  if (reason.length < 5) {
+    throw new Error('A lifecycle transition reason of at least 5 characters is required.');
+  }
+
+  return withTenantContext(undefined, async (tx) => {
+    const school = await tx.schoolSchool.findFirst({ where: { id: input.schoolId } });
+    if (!school) return null;
+
+    const current = ((school as any).status || ((school as any).is_active ? 'ACTIVE' : 'SUSPENDED')) as SchoolLifecycleStatus;
+    if (!SCHOOL_LIFECYCLE_TRANSITIONS[current]?.includes(input.newStatus)) {
+      throw new InvalidSchoolLifecycleTransitionError(current, input.newStatus);
+    }
+
+    if (
+      current === 'UNDER_VERIFICATION' &&
+      input.newStatus === 'ACTIVE' &&
+      input.authorityPlane !== 'PROVIDER'
+    ) {
+      throw new ProviderSchoolAuthorityRequiredError();
+    }
+
+    // Maker-checker: the actor who submitted DRAFT -> UNDER_VERIFICATION
+    // cannot approve UNDER_VERIFICATION -> ACTIVE, including the later
+    // provider-authority execution path.
+    if (current === 'UNDER_VERIFICATION' && input.newStatus === 'ACTIVE') {
+      const submission = await tx.schoolLifecycleTransition.findFirst({
+        where: {
+          school_id: input.schoolId,
+          new_state: 'UNDER_VERIFICATION',
+        },
+        orderBy: { created_at: 'desc' },
+      });
+      if (submission?.actor_id === input.actorId) {
+        throw new SchoolMakerCheckerError();
+      }
+    }
+
+    const now = new Date();
+    const correlationId = randomUUID();
+    const data: Record<string, any> = {
+      status: input.newStatus,
+      is_active: input.newStatus === 'ACTIVE',
+      row_version: { increment: 1 },
+    };
+
+    if (current === 'UNDER_VERIFICATION' && input.newStatus === 'ACTIVE') {
+      data.verified_at = now;
+      data.verified_by = input.actorId;
+      data.activated_at = now;
+      data.suspended_at = null;
+    } else if (current === 'SUSPENDED' && input.newStatus === 'ACTIVE') {
+      data.activated_at = now;
+      data.suspended_at = null;
+    } else if (input.newStatus === 'SUSPENDED') {
+      data.suspended_at = now;
+    } else if (input.newStatus === 'ARCHIVED') {
+      data.archived_at = now;
+    }
+
+    const currentVersion = Number((school as any).row_version || 1);
+    const updateResult = await tx.schoolSchool.updateMany({
+      where: { id: input.schoolId, row_version: currentVersion },
+      data,
+    });
+    if (updateResult.count !== 1) {
+      throw new SchoolLifecycleConflictError();
+    }
+    const updated = await tx.schoolSchool.findFirst({ where: { id: input.schoolId } });
+    if (!updated) {
+      throw new SchoolLifecycleConflictError();
+    }
+
+    await tx.schoolLifecycleTransition.create({
+      data: {
+        school_id: input.schoolId,
+        prior_state: current,
+        new_state: input.newStatus,
+        action: input.action,
+        actor_id: input.actorId,
+        actor_role: input.actorRole || null,
+        reason,
+        correlation_id: correlationId,
+      },
+    });
+
+    await tx.schoolAuditLog.create({
+      data: {
+        school_id: input.schoolId,
+        action: 'LIFECYCLE ' + current + ' -> ' + input.newStatus + ': ' + reason,
+        performed_by: input.actorId,
+      },
+    });
+
+    await tx.systemAuditEvent.create({
+      data: {
+        school_id: input.schoolId,
+        user_id: input.actorId,
+        action: 'SCHOOL_LIFECYCLE:' + current + '->' + input.newStatus,
+        entity_type: 'school_school',
+        entity_id: input.schoolId,
+        before_state: current,
+        after_state: input.newStatus,
+      },
+    });
+
+    await tx.systemDomainEvent.create({
+      data: {
+        aggregate_type: 'School',
+        aggregate_id: input.schoolId,
+        event_type: schoolLifecycleEvent(current, input.newStatus),
+        tenant_id: input.schoolId,
+        correlation_id: correlationId,
+        payload: {
+          priorState: current,
+          newState: input.newStatus,
+          reason,
+          actorId: input.actorId,
+          actorRole: input.actorRole || null,
+        },
+        status: 'PENDING',
+      },
+    });
+
+    return updated;
+  });
 }

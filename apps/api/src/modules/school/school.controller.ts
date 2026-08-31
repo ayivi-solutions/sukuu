@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
-import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, archiveSetting, getSchoolSummary } from './school.service';
+import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, archiveSetting, getSchoolSummary, getSchoolLifecycle, transitionSchoolLifecycle, InvalidSchoolLifecycleTransitionError, SchoolMakerCheckerError, ProviderSchoolAuthorityRequiredError, SchoolLifecycleConflictError, type SchoolLifecycleStatus } from './school.service';
+import { listSchoolCapabilities } from '../../lib/schoolAuthorization';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -203,3 +204,83 @@ export async function getSummary(req: AuthRequest, res: Response) {
     res.status(500).json({ error: err.message || 'Failed to fetch school summary' });
   }
 }
+
+
+export async function getCapabilities(req: AuthRequest, res: Response) {
+  try {
+    res.json(await listSchoolCapabilities({ userId: req.userId, schoolId: req.schoolId }));
+  } catch {
+    res.status(500).json({ error: 'Failed to resolve SchoolX capabilities' });
+  }
+}
+
+export async function getLifecycle(req: AuthRequest, res: Response) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const lifecycle = await getSchoolLifecycle(req.schoolId);
+    if (!lifecycle) return res.status(404).json({ error: 'School not found' });
+    res.json(lifecycle);
+  } catch {
+    res.status(500).json({ error: 'Failed to fetch institution lifecycle' });
+  }
+}
+
+async function executeLifecycle(
+  req: AuthRequest,
+  res: Response,
+  newStatus: SchoolLifecycleStatus,
+  action: string
+) {
+  try {
+    if (!req.schoolId || !req.userId) {
+      return res.status(400).json({ error: 'Complete authenticated school context is required' });
+    }
+    const updated = await transitionSchoolLifecycle({
+      schoolId: req.schoolId,
+      actorId: req.userId,
+      actorRole: req.roleKey,
+      authorityPlane: 'TENANT',
+      newStatus,
+      action,
+      reason: String(req.body?.reason || ''),
+    });
+    if (!updated) return res.status(404).json({ error: 'School not found' });
+    res.json(updated);
+  } catch (err: any) {
+    if (err instanceof InvalidSchoolLifecycleTransitionError) {
+      return res.status(409).json({
+        error: 'Institution lifecycle transition is not permitted',
+        currentState: err.currentState,
+        attemptedState: err.attemptedState,
+      });
+    }
+    if (err instanceof SchoolMakerCheckerError) {
+      return res.status(409).json({ error: err.message, code: 'MAKER_CHECKER_REQUIRED' });
+    }
+    if (err instanceof ProviderSchoolAuthorityRequiredError) {
+      return res.status(403).json({ error: 'Initial institution verification requires authorised AYIVI provider approval', code: 'PROVIDER_AUTHORITY_REQUIRED' });
+    }
+    if (err instanceof SchoolLifecycleConflictError) {
+      return res.status(409).json({ error: err.message, code: 'LIFECYCLE_CONFLICT' });
+    }
+    if (String(err?.message || '').includes('reason of at least 5 characters')) {
+      return res.status(400).json({ error: 'A lifecycle transition reason of at least 5 characters is required' });
+    }
+    return res.status(500).json({ error: 'Institution lifecycle transition failed' });
+  }
+}
+
+export const submitVerification = (req: AuthRequest, res: Response) =>
+  executeLifecycle(req, res, 'UNDER_VERIFICATION', 'submit');
+
+export const returnVerification = (req: AuthRequest, res: Response) =>
+  executeLifecycle(req, res, 'DRAFT', 'correct');
+
+export const suspendSchool = (req: AuthRequest, res: Response) =>
+  executeLifecycle(req, res, 'SUSPENDED', 'approve');
+
+export const reactivateSchool = (req: AuthRequest, res: Response) =>
+  executeLifecycle(req, res, 'ACTIVE', 'approve');
+
+export const archiveSchool = (req: AuthRequest, res: Response) =>
+  executeLifecycle(req, res, 'ARCHIVED', 'administer');

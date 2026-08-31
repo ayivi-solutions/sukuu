@@ -1342,11 +1342,37 @@ model SchoolSchool {
   founding_date                 String?
   founder_name                   String?
   is_active                      Boolean
+  status                         String  @default("DRAFT")
+  row_version                    Int  @default(1)
+  verified_at                    DateTime?
+  verified_by                    String?
+  activated_at                   DateTime?
+  suspended_at                   DateTime?
+  archived_at                    DateTime?
   created_at                     DateTime  @default(now())
   updated_at                     DateTime  @updatedAt
 
   @@schema("sukuux")
   @@map("school_school")
+}
+
+/// Append-only SchoolX institution lifecycle evidence for maker-checker and audit reconstruction
+model SchoolLifecycleTransition {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  prior_state                    String
+  new_state                      String
+  action                         String
+  actor_id                       String
+  actor_role                     String?
+  reason                         String
+  correlation_id                 String
+  created_at                     DateTime  @default(now())
+
+  @@index([school_id, created_at], map: "idx_school_lifecycle_transition_school_time")
+  @@index([school_id, new_state], map: "idx_school_lifecycle_transition_school_state")
+  @@schema("sukuux")
+  @@map("school_lifecycle_transition")
 }
 
 /// Individual campuses within a multi-campus school
