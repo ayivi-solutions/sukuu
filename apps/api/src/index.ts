@@ -35,6 +35,7 @@ import { workflowRouter } from './modules/workflow/workflow.router';
 import { notificationRouter } from './modules/notification/notification.router';
 import { communicationRouter } from './modules/communication/communication.router';
 import { analyticsRouter } from './modules/analytics/analytics.router';
+import { providerRouter } from './modules/provider/provider.router';
 
 validateRuntimeEnvironment();
 
@@ -85,6 +86,7 @@ app.get('/', (_req, res) => {
 });
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/provider', providerRouter);
 app.use('/api/v1/system', systemRouter);
 app.use('/api/v1/school', schoolRouter);
 app.use('/api/v1/dashboard', dashboardRouter);

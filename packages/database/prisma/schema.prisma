@@ -1320,6 +1320,112 @@ model SystemTenantPlan {
 }
 
 
+
+/// Dedicated AYIVI provider-global privileged identity. Never tenant-bound.
+model SystemProviderIdentity {
+  id                       String   @id @default(uuid())
+  login_name               String
+  display_name             String
+  status                   String   @default("PENDING_ENROLLMENT")
+  row_version              Int      @default(1)
+  bootstrap_token_hash     String?
+  bootstrap_expires_at     DateTime? @db.Timestamptz(6)
+  bootstrap_used_at        DateTime? @db.Timestamptz(6)
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+  activated_at             DateTime? @db.Timestamptz(6)
+  last_login_at            DateTime? @db.Timestamptz(6)
+  suspended_at             DateTime? @db.Timestamptz(6)
+  closed_at                DateTime? @db.Timestamptz(6)
+
+  authenticators           SystemProviderAuthenticator[]
+  challenges               SystemProviderChallenge[]
+  sessions                 SystemProviderSession[]
+
+  @@unique([login_name], map: "uq_system_provider_identity_login_name")
+  @@schema("system")
+  @@map("system_provider_identity")
+}
+
+/// Approved hardware-backed WebAuthn authenticators for provider authority.
+model SystemProviderAuthenticator {
+  id                       String   @id @default(uuid())
+  provider_id              String
+  credential_id            String
+  public_key               Bytes
+  counter                  BigInt   @default(0)
+  transports               String?
+  device_type              String
+  backed_up                Boolean  @default(false)
+  aaguid                   String?
+  attachment               String
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+  last_used_at             DateTime? @db.Timestamptz(6)
+  revoked_at               DateTime? @db.Timestamptz(6)
+
+  provider                 SystemProviderIdentity @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "system_provider_authenticator_provider_fk")
+
+  @@unique([credential_id], map: "uq_system_provider_authenticator_credential")
+  @@index([provider_id], map: "idx_system_provider_authenticator_provider")
+  @@schema("system")
+  @@map("system_provider_authenticator")
+}
+
+/// Short-lived registration and authentication challenges for provider WebAuthn.
+model SystemProviderChallenge {
+  id                       String   @id @default(uuid())
+  provider_id              String
+  purpose                  String
+  challenge                String
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+  expires_at               DateTime @db.Timestamptz(6)
+  consumed_at              DateTime? @db.Timestamptz(6)
+  revoked_at               DateTime? @db.Timestamptz(6)
+
+  provider                 SystemProviderIdentity @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "system_provider_challenge_provider_fk")
+
+  @@index([provider_id, purpose, created_at], map: "idx_system_provider_challenge_provider_purpose")
+  @@schema("system")
+  @@map("system_provider_challenge")
+}
+
+/// JIT provider session established only after approved WebAuthn verification.
+model SystemProviderSession {
+  id                       String   @id @default(uuid())
+  provider_id              String
+  credential_id            String
+  assurance                String   @default("WEBAUTHN_HARDWARE")
+  is_active                Boolean  @default(true)
+  ip_address               String?
+  user_agent               String?
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+  expires_at               DateTime @db.Timestamptz(6)
+  last_activity_at         DateTime @default(now()) @db.Timestamptz(6)
+  invalidated_at           DateTime? @db.Timestamptz(6)
+
+  provider                 SystemProviderIdentity @relation(fields: [provider_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "system_provider_session_provider_fk")
+
+  @@index([provider_id, is_active, expires_at], map: "idx_system_provider_session_provider")
+  @@schema("system")
+  @@map("system_provider_session")
+}
+
+/// Provider-global privileged-operation evidence.
+model SystemProviderAuditEvent {
+  id                       String   @id @default(uuid())
+  provider_id              String?
+  session_id               String?
+  action                   String
+  entity_type              String
+  entity_id                String?
+  purpose                  String
+  payload                  Json?
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([provider_id, created_at], map: "idx_system_provider_audit_event_provider_time")
+  @@schema("system")
+  @@map("system_provider_audit_event")
+}
+
 // ── SCHOOLX ────────────────────────────────────────────────
 
 /// Master school record — the root tenant entity
@@ -1373,6 +1479,36 @@ model SchoolLifecycleTransition {
   @@index([school_id, new_state], map: "idx_school_lifecycle_transition_school_state")
   @@schema("sukuux")
   @@map("school_lifecycle_transition")
+}
+
+
+/// Provider-approved initial institutional delegate and one-time Tenant Superadmin handoff.
+model SchoolDelegateNomination {
+  id                         String   @id @default(uuid())
+  school_id                  String
+  first_name                 String
+  last_name                  String
+  email                      String
+  phone                      String?
+  status                     String   @default("NOMINATED")
+  nominated_by_provider_id   String
+  nomination_reason          String
+  invite_token_hash          String
+  invite_expires_at          DateTime @db.Timestamptz(6)
+  invite_consumed_at         DateTime? @db.Timestamptz(6)
+  pending_mfa_secret_envelope String?
+  accept_started_at          DateTime? @db.Timestamptz(6)
+  attempt_count              Int      @default(0)
+  max_attempts               Int      @default(5)
+  activated_user_id          String?
+  activated_at               DateTime? @db.Timestamptz(6)
+  revoked_at                 DateTime? @db.Timestamptz(6)
+  created_at                 DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([invite_token_hash], map: "uq_school_delegate_nomination_token_hash")
+  @@index([school_id, created_at], map: "idx_school_delegate_nomination_school")
+  @@schema("sukuux")
+  @@map("school_delegate_nomination")
 }
 
 /// Individual campuses within a multi-campus school
