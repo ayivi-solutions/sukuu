@@ -28,6 +28,12 @@ import {
 import {
   withProviderContext,
 } from '../../lib/providerContext';
+import {
+  requestProviderCredentialReset,
+  listPendingProviderCredentialResets,
+  decideProviderCredentialReset,
+  ProviderCredentialResetDecisionError,
+} from './providerCredentialReset.service';
 
 function ipAddress(req: Request) {
   return (
@@ -300,5 +306,60 @@ export async function delegateAcceptanceComplete(
         error?.message ||
         'Delegate activation failed',
     });
+  }
+}
+
+export async function providerCredentialResetRequest(
+  req: Request,
+  res: Response
+) {
+  try {
+    const result = await requestProviderCredentialReset(
+      String(req.body?.loginName || ''),
+      String(req.body?.reason || '')
+    );
+    res.status(202).json(result);
+  } catch {
+    // Generic response even on unexpected failure -- never disclose
+    // whether a matching account exists.
+    res.status(202).json({
+      ok: true,
+      message:
+        'If a matching Platform Owner account exists, a reset request has been recorded.',
+    });
+  }
+}
+
+export async function providerCredentialResetPending(
+  req: ProviderAuthRequest,
+  res: Response
+) {
+  try {
+    const requests = await listPendingProviderCredentialResets(
+      req.providerId || ''
+    );
+    res.json({ requests });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function providerCredentialResetDecide(
+  req: ProviderAuthRequest,
+  res: Response
+) {
+  try {
+    const result = await decideProviderCredentialReset({
+      requestId: req.params.requestId,
+      approverProviderId: req.providerId || '',
+      decision: req.body?.decision === 'REJECT' ? 'REJECT' : 'APPROVE',
+      reason: req.body?.reason,
+    });
+    res.json(result);
+  } catch (err: any) {
+    if (err instanceof ProviderCredentialResetDecisionError) {
+      return res.status(409).json({ error: err.message, code: err.reasonCode });
+    }
+    res.status(500).json({ error: err.message });
   }
 }

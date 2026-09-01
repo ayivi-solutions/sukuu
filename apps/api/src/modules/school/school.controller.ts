@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../middleware/authenticate';
 import { getSchoolProfile, updateSchoolProfile, getSchoolSettings, listAccreditations, createAccreditation, archiveAccreditation, listSchoolAuditLog, logSchoolAudit, listContacts, createContact, updateContact, getBranding, upsertBranding, listCampuses, createCampus, toggleCampus, getTermPolicy, upsertTermPolicy, listDocuments, createDocument, getSubscription, updateSubscriptionStatus, upsertSetting, updateCampus, updateAccreditation, archiveSetting, getSchoolSummary, getSchoolLifecycle, transitionSchoolLifecycle, InvalidSchoolLifecycleTransitionError, SchoolMakerCheckerError, ProviderSchoolAuthorityRequiredError, SchoolLifecycleConflictError, type SchoolLifecycleStatus } from './school.service';
 import { listSchoolCapabilities } from '../../lib/schoolAuthorization';
+import { listAccountableOfficers, appointAccountableOfficer, removeAccountableOfficer, DuplicateAccountableOfficerError } from './schoolAccountableOfficer.service';
 
 export async function getProfile(req: AuthRequest, res: Response) {
   try {
@@ -284,3 +285,43 @@ export const reactivateSchool = (req: AuthRequest, res: Response) =>
 
 export const archiveSchool = (req: AuthRequest, res: Response) =>
   executeLifecycle(req, res, 'ARCHIVED', 'administer');
+
+
+export async function getAccountableOfficers(req, res) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    res.json(await listAccountableOfficers(req.schoolId));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+}
+
+export async function postAccountableOfficer(req, res) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    const r = await appointAccountableOfficer({
+      schoolId: req.schoolId,
+      officerType: req.body.officerType,
+      fullName: req.body.fullName,
+      email: req.body.email,
+      phone: req.body.phone,
+      appointedBy: req.userId || '',
+    });
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `APPOINT accountable officer: ${req.body.officerType}`, req.userId || '');
+    res.status(201).json(r);
+  } catch (err) {
+    if (err instanceof DuplicateAccountableOfficerError) return res.status(409).json({ error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function deleteAccountableOfficer(req, res) {
+  try {
+    if (!req.schoolId) return res.status(400).json({ error: 'No school associated with this user' });
+    await removeAccountableOfficer({
+      schoolId: req.schoolId,
+      officerId: req.params.id,
+      removedBy: req.userId || '',
+    });
+    if (req.schoolId) await logSchoolAudit(req.schoolId, `REMOVE accountable officer: ${req.params.id}`, req.userId || '');
+    res.status(204).end();
+  } catch (err) { res.status(500).json({ error: err.message }); }
+}

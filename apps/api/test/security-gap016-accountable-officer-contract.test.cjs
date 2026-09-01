@@ -1,0 +1,69 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'../../..');
+const src=p=>fs.readFileSync(path.join(root,p),'utf8').replace(/\r\n/g,'\n');
+
+const service=src('apps/api/src/modules/school/school.service.ts');
+const officerService=src('apps/api/src/modules/school/schoolAccountableOfficer.service.ts');
+const router=src('apps/api/src/modules/school/school.router.ts');
+const controller=src('apps/api/src/modules/school/school.controller.ts');
+const schema=src('packages/database/prisma/schema.prisma');
+const migration=src('packages/database/prisma/migrations/20260901000000_schoolx_accountable_officers/migration.sql');
+
+test('GAP-016: accountable officer model is represented with RLS in the Prisma schema', () => {
+  assert.match(schema, /model SchoolAccountableOfficer \{/);
+  assert.match(schema, /@@map\("school_accountable_officer"\)/);
+});
+
+test('GAP-016: accountable officer table is FORCE-RLS tenant-scoped via trusted context', () => {
+  assert.match(migration, /ALTER TABLE sukuux\.school_accountable_officer ENABLE ROW LEVEL SECURITY;/);
+  assert.match(migration, /ALTER TABLE sukuux\.school_accountable_officer FORCE ROW LEVEL SECURITY;/);
+  assert.match(migration, /USING \(school_id=system\.ctx_school_id\(\)\)/);
+});
+
+test('GAP-016: only one active officer per type per school is enforced at the database level', () => {
+  assert.match(migration, /CREATE UNIQUE INDEX uq_school_accountable_officer_active_type/);
+  assert.match(migration, /WHERE removed_at IS NULL/);
+});
+
+test('GAP-016: service rejects a duplicate active officer of the same type before insert', () => {
+  assert.match(officerService, /DuplicateAccountableOfficerError/);
+  assert.match(officerService, /removed_at:\s*null/);
+});
+
+test('GAP-016: go-live transition is gated on required accountable officers', () => {
+  assert.match(service, /hasRequiredAccountableOfficers\(tx, input\.schoolId\)/);
+  assert.match(service, /MissingAccountableOfficerError/);
+});
+
+test('GAP-016: the officer gate runs inside the same UNDER_VERIFICATION -> ACTIVE maker-checker block, not a separate uncommitted check', () => {
+  const blockStart = service.indexOf("if (current === 'UNDER_VERIFICATION' && input.newStatus === 'ACTIVE') {\n      const submission");
+  const blockEnd = service.indexOf('const now = new Date();', blockStart);
+  assert.ok(blockStart >= 0 && blockEnd > blockStart, 'could not locate the maker-checker block');
+  const makerCheckerBlock = service.slice(blockStart, blockEnd);
+  assert.match(makerCheckerBlock, /SchoolMakerCheckerError/);
+  assert.match(makerCheckerBlock, /hasRequiredAccountableOfficers/);
+  assert.match(makerCheckerBlock, /MissingAccountableOfficerError/);
+});
+
+test('GAP-016: required officer types include Head of School at minimum', () => {
+  assert.match(officerService, /REQUIRED_ACCOUNTABLE_OFFICER_TYPES\s*=\s*\['HEAD_OF_SCHOOL'\]/);
+});
+
+test('GAP-016: accountable officer routes are mounted under the same authenticated/action-gated pattern as other SchoolX sub-resources', () => {
+  assert.match(router, /schoolRouter\.get\('\/accountable-officers', authenticate, A\('view', 'schoolx-officer-view'\), ctrl\.getAccountableOfficers\)/);
+  assert.match(router, /schoolRouter\.post\('\/accountable-officers', authenticate, A\('create', 'schoolx-officer-create'\), ctrl\.postAccountableOfficer\)/);
+  assert.match(router, /schoolRouter\.delete\('\/accountable-officers\/:id', authenticate, A\('cancel', 'schoolx-officer-remove'\), ctrl\.deleteAccountableOfficer\)/);
+});
+
+test('GAP-016: controller returns 409 (not 500) on duplicate officer appointment', () => {
+  assert.match(controller, /DuplicateAccountableOfficerError/);
+  assert.match(controller, /res\.status\(409\)/);
+});
+
+test('GAP-016: officer appointment and removal are captured in the school audit log', () => {
+  assert.match(controller, /logSchoolAudit\(req\.schoolId, `APPOINT accountable officer/);
+  assert.match(controller, /logSchoolAudit\(req\.schoolId, `REMOVE accountable officer/);
+});

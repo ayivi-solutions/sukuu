@@ -28,6 +28,10 @@ schoolRouter.post('/campuses', authenticate, A('create', 'schoolx-campus-create'
 schoolRouter.patch('/campuses/:id', authenticate, A('correct', 'schoolx-campus-status-correct'), ctrl.patchCampus);
 schoolRouter.put('/campuses/:id', authenticate, A('correct', 'schoolx-campus-correct'), ctrl.patchCampusDetails);
 
+schoolRouter.get('/accountable-officers', authenticate, A('view', 'schoolx-officer-view'), ctrl.getAccountableOfficers);
+schoolRouter.post('/accountable-officers', authenticate, A('create', 'schoolx-officer-create'), ctrl.postAccountableOfficer);
+schoolRouter.delete('/accountable-officers/:id', authenticate, A('cancel', 'schoolx-officer-remove'), ctrl.deleteAccountableOfficer);
+
 schoolRouter.get('/term-policy', authenticate, A('view', 'schoolx-term-policy-view'), ctrl.getTermPolicyHandler);
 
 schoolRouter.get('/documents', authenticate, A('view', 'schoolx-document-view'), ctrl.getDocuments);

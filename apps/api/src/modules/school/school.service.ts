@@ -1,6 +1,7 @@
 import { prisma } from '../../lib/prisma';
 import { withTenantContext } from '../../lib/tenantContext';
 import { randomUUID } from 'crypto';
+import { hasRequiredAccountableOfficers } from './schoolAccountableOfficer.service';
 
 export async function getSchoolProfile(schoolId: string) {
   return prisma.schoolSchool.findUnique({ where: { id: schoolId } });
@@ -260,6 +261,13 @@ export class SchoolLifecycleConflictError extends Error {
   }
 }
 
+export class MissingAccountableOfficerError extends Error {
+  constructor() {
+    super('Institution activation requires an active Head of School accountable officer to be appointed first.');
+    this.name = 'MissingAccountableOfficerError';
+  }
+}
+
 function schoolLifecycleEvent(prior: SchoolLifecycleStatus, next: SchoolLifecycleStatus): string {
   if (prior === 'DRAFT' && next === 'UNDER_VERIFICATION') return 'SchoolVerificationSubmitted';
   if (prior === 'UNDER_VERIFICATION' && next === 'ACTIVE') return 'SchoolVerified';
@@ -340,6 +348,11 @@ export async function transitionSchoolLifecycle(input: {
       });
       if (submission?.actor_id === input.actorId) {
         throw new SchoolMakerCheckerError();
+      }
+
+      const hasOfficers = await hasRequiredAccountableOfficers(tx, input.schoolId);
+      if (!hasOfficers) {
+        throw new MissingAccountableOfficerError();
       }
     }
 

@@ -5631,3 +5631,70 @@ model SystemCredentialChallenge {
   @@map("system_credential_challenge")
   @@schema("system")
 }
+
+enum SchoolOfficerType {
+  HEAD_OF_SCHOOL
+  COMPLIANCE_OFFICER
+  DATA_PROTECTION_OFFICER
+
+  @@schema("sukuux")
+}
+
+/// Named individuals accountable for the institution, required before
+/// go-live (GAP-016). Distinct from SchoolDelegateNomination, which
+/// covers the one-time tenant Superadmin handoff, not ongoing
+/// operational accountability.
+model SchoolAccountableOfficer {
+  id                             String  @id @default(uuid())
+  school_id                      String
+  officer_type                   SchoolOfficerType
+  full_name                      String
+  email                          String
+  phone                          String?
+  appointed_by                   String
+  appointed_at                   DateTime
+  removed_by                     String?
+  removed_at                     DateTime?
+  row_version                    Int  @default(1)
+  created_at                     DateTime  @default(now())
+  updated_at                     DateTime  @updatedAt
+
+  @@index([school_id, officer_type], map: "idx_school_accountable_officer_school_type")
+  @@schema("sukuux")
+  @@map("school_accountable_officer")
+}
+
+/// Break-glass Platform Owner credential recovery request. A locked-out
+/// provider requests reset by login_name (no enumeration); requires two
+/// DISTINCT other Platform Owners to approve before a new bootstrap
+/// token is issued. Deny-by-default RLS: only trusted system.* functions
+/// may touch this table.
+model SystemProviderCredentialResetRequest {
+  id            String    @id @default(uuid())
+  provider_id   String
+  status        String    @default("PENDING")
+  reason        String?
+  created_at    DateTime  @default(now())
+  expires_at    DateTime
+  resolved_at   DateTime?
+
+  @@index([provider_id, status], map: "idx_provider_cred_reset_request_provider")
+  @@schema("system")
+  @@map("system_provider_credential_reset_request")
+}
+
+/// One approval/rejection decision by one OTHER Platform Owner on a
+/// pending reset request. Unique per (request, approver) so the same
+/// approver cannot double-count toward the required two.
+model SystemProviderCredentialResetApproval {
+  id                    String   @id @default(uuid())
+  request_id            String
+  approver_provider_id  String
+  decision              String
+  reason                String?
+  created_at            DateTime @default(now())
+
+  @@unique([request_id, approver_provider_id], map: "uq_provider_cred_reset_approval_once")
+  @@schema("system")
+  @@map("system_provider_credential_reset_approval")
+}

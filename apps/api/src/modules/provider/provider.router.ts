@@ -100,6 +100,24 @@ providerRouter.post(
 );
 
 providerRouter.post(
+  '/credential-reset/request',
+  providerIpLimiter,
+  ctrl.providerCredentialResetRequest
+);
+
+providerRouter.get(
+  '/credential-reset/pending',
+  authenticateProvider,
+  ctrl.providerCredentialResetPending
+);
+
+providerRouter.post(
+  '/credential-reset/:requestId/decide',
+  authenticateProvider,
+  ctrl.providerCredentialResetDecide
+);
+
+providerRouter.post(
   '/delegate/accept/start',
   delegateLimiter,
   ctrl.delegateAcceptanceStart
