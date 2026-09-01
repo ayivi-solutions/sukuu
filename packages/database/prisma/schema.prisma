@@ -991,6 +991,8 @@ model SystemUser {
   id                             String  @id @default(uuid())
   email                          String
   phone                          String?
+  first_name                     String?
+  last_name                      String?
   password_hash                  String
   is_active                      Boolean
   is_verified                    Boolean

@@ -287,7 +287,8 @@ export default function AppShell({ children, user, schoolName }: {
         </div>
         <NavList pathname={pathname} onNavigate={navigate} access={access} />
         <div className="sd-foot">
-          {canAccessSystem && <button className="sd-ftn" onClick={() => navigate('/systemx')}><span>⚙️</span>Settings</button>}
+          <button className="sd-ftn" onClick={() => navigate('/my-profile')}><span>👤</span>My Profile</button>
+          {canAccessSystem && <button className="sd-ftn" onClick={() => navigate('/systemx')}><span>⚙️</span>Admin</button>}
           <button className="sd-ftn" onClick={() => setShowLogoutConfirm(true)}><span>🚪</span>Sign Out</button>
         </div>
       </nav>

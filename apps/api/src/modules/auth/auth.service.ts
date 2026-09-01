@@ -566,6 +566,11 @@ export async function getCurrentSessionPresentation(
           where: { user_id: userId },
         });
 
+      const user =
+        await tx.systemUser.findUnique({
+          where: { id: userId },
+        });
+
       const role =
         await tx.systemRole.findFirst({
           where: {
@@ -580,9 +585,9 @@ export async function getCurrentSessionPresentation(
       return {
         user: {
           firstName:
-            staff?.first_name || null,
+            staff?.first_name || user?.first_name || null,
           lastName:
-            staff?.last_name || null,
+            staff?.last_name || user?.last_name || null,
           roleKey,
           roleLabel:
             role?.label || roleKey,

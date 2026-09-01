@@ -260,6 +260,21 @@ export async function listUsers(ctx: TenantCtx) {
 
     const userIds = staffRecords.map(s => s.user_id!);
     const users = await tx.systemUser.findMany({ where: { id: { in: userIds } } });
+
+    // Users with a direct SystemUserRole grant but no staff roster entry
+    // at all -- e.g. Superadmin, activated via the delegate handoff and
+    // never employed. Without this branch, they are structurally
+    // invisible here even though they can log in and hold the highest
+    // authority in the tenant.
+    const staffUserIdSet = new Set(userIds);
+    const directRoleGrants = await tx.systemUserRole.findMany({
+      where: { school_id: ctx.schoolId, user_id: { notIn: [...staffUserIdSet] } },
+    });
+    const directRoleIds = [...new Set(directRoleGrants.map(g => g.role_id))];
+    const directRoles = await tx.systemRole.findMany({ where: { id: { in: directRoleIds } } });
+    const directUserIds = [...new Set(directRoleGrants.map(g => g.user_id))];
+    const directUsers = await tx.systemUser.findMany({ where: { id: { in: directUserIds } } });
+
     const mfaRecords = await tx.$queryRaw<Array<{
       user_id: string;
       method: string;
@@ -276,7 +291,25 @@ export async function listUsers(ctx: TenantCtx) {
 
     await logSensitiveView(ctx, 'system_user', 'LIST');
 
-    return staffRecords.map(staff => {
+    const directRows = directUsers.map(user => {
+      const grant = directRoleGrants.find(g => g.user_id === user.id);
+      const role = directRoles.find(r => r.id === grant?.role_id);
+      const mfa = mfaRecords.find(m => m.user_id === user.id);
+      const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
+      return {
+        id: user.id,
+        name: name || user.email,
+        email: user.email,
+        phone: user.phone,
+        role: role?.name || null,
+        roleLabel: role?.label || null,
+        status: (user as any).status || (user.is_active ? 'ACTIVE' : 'SUSPENDED'),
+        mfa: mfa?.is_enabled || false,
+        lastLogin: user.last_login_at || null,
+      };
+    });
+
+    const staffRows = staffRecords.map(staff => {
       const employment = employments.find(e => e.staff_id === staff.id);
       const role = roles.find(r => r.id === employment?.role_id);
       const user: any = users.find(u => u.id === staff.user_id);
@@ -293,6 +326,8 @@ export async function listUsers(ctx: TenantCtx) {
         lastLogin: user?.last_login_at || null,
       };
     });
+
+    return [...staffRows, ...directRows];
   });
 }
 
